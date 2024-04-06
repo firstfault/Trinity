@@ -63,7 +63,7 @@ public final class DisplayManager extends Application {
     private final DragAndDropHandler dragAndDropHandler = new DragAndDropHandler();
     private final PopupMenu popupMenu = new PopupMenu();
     private final Queue<FutureTask<?>> scheduledTasks;
-    private boolean maximized;
+    private boolean initialized;
 
     public DisplayManager(String windowTitle, Queue<FutureTask<?>> scheduledTasks) {
         this.windowTitle = windowTitle;
@@ -109,14 +109,12 @@ public final class DisplayManager extends Application {
 
     @Override
     protected void startFrame() {
+        if (!this.initialized) {
+            this.initializeWindow();
+            this.initialized = true;
+        }
+        
         super.startFrame();
-        GLFW.glfwSetWindowCloseCallback(getHandle(), GLFWWindowCloseCallback.create((hnd) -> {
-            if (trinity != null) {
-                addPopup(new SavingDatabasePopup(trinity, (status) -> System.exit(0)));
-                GLFW.glfwSetWindowShouldClose(getHandle(), false);
-            }
-        }));
-        GLFW.glfwSetDropCallback(getHandle(), GLFWDropCallback.create(this.dragAndDropHandler));
     }
 
     @Override
@@ -178,6 +176,7 @@ public final class DisplayManager extends Application {
         }
     }
 
+
     @Override
     protected void postRun() {
         super.postRun();
@@ -195,10 +194,6 @@ public final class DisplayManager extends Application {
 
     @Override
     public void process() {
-        if (!this.maximized) {
-            GLFW.glfwMaximizeWindow(getHandle());
-            this.maximized = true;
-        }
 //        ImGui.showDemoWindow();
         ImGui.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.F);
         ImGuiViewport viewport = ImGui.getMainViewport();
@@ -240,6 +235,17 @@ public final class DisplayManager extends Application {
         this.notificationRenderer.draw();
         this.drawPopups();
         this.dragAndDropHandler.draw();
+    }
+
+    private void initializeWindow() {
+        GLFW.glfwMaximizeWindow(getHandle());
+        GLFW.glfwSetWindowCloseCallback(getHandle(), GLFWWindowCloseCallback.create((hnd) -> {
+            if (trinity != null) {
+                addPopup(new SavingDatabasePopup(trinity, (status) -> System.exit(0)));
+                GLFW.glfwSetWindowShouldClose(getHandle(), false);
+            }
+        }));
+        GLFW.glfwSetDropCallback(getHandle(), GLFWDropCallback.create(this.dragAndDropHandler));
     }
 
     private void homepage(ImGuiViewport viewport) {
