@@ -63,6 +63,7 @@ public final class DisplayManager extends Application {
     private final DragAndDropHandler dragAndDropHandler = new DragAndDropHandler();
     private final PopupMenu popupMenu = new PopupMenu();
     private final Queue<FutureTask<?>> scheduledTasks;
+    private boolean maximized;
 
     public DisplayManager(String windowTitle, Queue<FutureTask<?>> scheduledTasks) {
         this.windowTitle = windowTitle;
@@ -167,7 +168,6 @@ public final class DisplayManager extends Application {
                 SystemUtil.copyToClipboard(str);
             }
         });
-        GLFW.glfwMaximizeWindow(getHandle());
     }
 
     private static byte[] loadFromResources(String name) {
@@ -195,6 +195,10 @@ public final class DisplayManager extends Application {
 
     @Override
     public void process() {
+        if (!this.maximized) {
+            GLFW.glfwMaximizeWindow(getHandle());
+            this.maximized = true;
+        }
 //        ImGui.showDemoWindow();
         ImGui.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.F);
         ImGuiViewport viewport = ImGui.getMainViewport();
