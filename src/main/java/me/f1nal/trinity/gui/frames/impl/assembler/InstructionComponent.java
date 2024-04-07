@@ -4,6 +4,7 @@ import imgui.ImColor;
 import imgui.ImDrawList;
 import imgui.ImGui;
 import imgui.ImVec4;
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.frames.impl.assembler.args.AbstractInsnArgument;
@@ -39,7 +40,7 @@ public class InstructionComponent {
     }
 
     public void setBounds(AssemblerInstructionTable table, float x, float y) {
-        this.bounds = new ImVec4(x, y, 0x10000, 17.F);
+        this.bounds = new ImVec4(x, y, 0x10000, 3.F + Main.getDisplayManager().getFontManager().getFontSize());
     }
 
     public ImVec4 getBounds() {
@@ -100,7 +101,7 @@ public class InstructionComponent {
         float lineY = y + this.bounds.w - 1;
         drawList.addLine(0, lineY, 0x10004, lineY, ImColor.rgba(45, 45, 49, 130));
 
-        float argStartX = x + table.instructionStartX + 100;
+        float argStartX = x + table.instructionOperandsStartX;
         float argX = argStartX;
 
         List<AbstractInsnArgument> arguments = new ArrayList<>(this.getArguments());

@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.frames.impl.assembler.line;
 
 import imgui.*;
 import imgui.flag.ImGuiCol;
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.frames.impl.assembler.AssemblerFrame;
 import me.f1nal.trinity.gui.frames.impl.assembler.InstructionComponent;
 import me.f1nal.trinity.gui.frames.impl.assembler.InstructionList;
@@ -20,6 +21,7 @@ public class AssemblerInstructionTable {
     private InstructionComponent draggingInstruction;
     private InstructionReferenceArrow hoveredReferenceArrow;
     public float instructionStartX;
+    public float instructionOperandsStartX;
     /**
      * If non-null, then every instruction that isn't in this list gets a lower opacity.
      */
@@ -98,8 +100,12 @@ public class AssemblerInstructionTable {
     }
 
     public float draw(ImVec2 vMin, ImVec2 vMax) {
-        this.instructionStartX = 58 + (instructions.getMaximumReferenceArrowDepth() * 4.F);
-        this.sourceFileStartX = 58.F;
+        float fontSize = Main.getDisplayManager().getFontManager().getFontSize();
+        float spacing = fontSize * 0.5F;
+
+        this.instructionStartX = 58 + (instructions.getMaximumReferenceArrowDepth() * 4.F) + spacing;
+        this.instructionOperandsStartX = this.instructionStartX + fontSize * 7;
+        this.sourceFileStartX = 58.F + fontSize * 2.F;
 
         float x = vMin.x, y = vMin.y + 1.F;
 

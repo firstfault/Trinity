@@ -1,12 +1,14 @@
 package me.f1nal.trinity.gui;
 
 import com.google.common.io.Resources;
+import com.sun.jdi.PrimitiveValue;
 import imgui.*;
 import imgui.app.Application;
 import imgui.app.Configuration;
 import imgui.callback.ImStrConsumer;
 import imgui.callback.ImStrSupplier;
 import imgui.flag.*;
+import imgui.glfw.ImGuiImplGlfw;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.RecentDatabaseEntry;
@@ -30,6 +32,7 @@ import me.f1nal.trinity.gui.frames.impl.entryviewer.ArchiveEntryViewerFacade;
 import me.f1nal.trinity.gui.frames.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerWindow;
 import me.f1nal.trinity.gui.frames.impl.project.create.NewProjectFrame;
+import me.f1nal.trinity.gui.viewport.FontManager;
 import me.f1nal.trinity.gui.viewport.MainMenuBar;
 import me.f1nal.trinity.gui.viewport.NotificationRenderer;
 import me.f1nal.trinity.gui.viewport.dnd.DragAndDropHandler;
@@ -63,6 +66,7 @@ public final class DisplayManager extends Application {
     private final DragAndDropHandler dragAndDropHandler = new DragAndDropHandler();
     private final PopupMenu popupMenu = new PopupMenu();
     private final Queue<FutureTask<?>> scheduledTasks;
+    private final FontManager fontManager = new FontManager();
     private boolean initialized;
 
     public DisplayManager(String windowTitle, Queue<FutureTask<?>> scheduledTasks) {
@@ -109,6 +113,7 @@ public final class DisplayManager extends Application {
 
     @Override
     protected void startFrame() {
+//        fontManager.resetFontsIfNeeded(this.imGuiGl3);
         if (!this.initialized) {
             this.initializeWindow();
             this.initialized = true;
@@ -118,28 +123,18 @@ public final class DisplayManager extends Application {
     }
 
     @Override
+    protected void endFrame() {
+        super.endFrame();
+    }
+
+    @Override
     protected void initImGui(Configuration config) {
         super.initImGui(config);
         ImGuiIO io = ImGui.getIO();
-
-        ImFont regular = io.getFonts().addFontFromMemoryTTF(loadFromResources("fonts/inter-regular.ttf"), 14.F);
-
-        final ImFontConfig fontConfig = new ImFontConfig();
-        fontConfig.setMergeMode(true);
         io.setIniFilename(new File(Main.getAppDataManager().getDirectory(), "gui.ini").getAbsolutePath());
-
-        final ImFontGlyphRangesBuilder rangesBuilder = new ImFontGlyphRangesBuilder();
-        rangesBuilder.addRanges(io.getFonts().getGlyphRangesDefault());
-        rangesBuilder.addRanges(FontAwesomeIcons._IconRange);
-
-        final short[] glyphRanges = rangesBuilder.buildRanges();
-
-        io.getFonts().addFontFromMemoryTTF(loadFromResources("fonts/fa-solid-900.ttf"), 14, fontConfig, glyphRanges);
-
-        io.getFonts().addFontDefault(fontConfig);
         io.setConfigFlags(io.getConfigFlags() | ImGuiConfigFlags.DockingEnable);
         io.setConfigFlags(io.getConfigFlags() | ImGuiConfigFlags.NavEnableKeyboard);
-
+        fontManager.setupFonts();
         ImGuiStyle style = ImGui.getStyle();
         style.setColor(ImGuiCol.WindowBg, 0.12f, 0.12f, 0.12f, 1.00f);
         style.setColor(ImGuiCol.FrameBg, 0.21f, 0.21f, 0.21f, 0.54f);
@@ -168,15 +163,6 @@ public final class DisplayManager extends Application {
         });
     }
 
-    private static byte[] loadFromResources(String name) {
-        try {
-            return Resources.toByteArray(Resources.getResource(name));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
     @Override
     protected void postRun() {
         super.postRun();
@@ -194,7 +180,7 @@ public final class DisplayManager extends Application {
 
     @Override
     public void process() {
-        ImGui.getIO().setFontGlobalScale(Main.getPreferences().getGlobalScale());
+        ImGui.getIO().setFontGlobalScale(this.fontManager.getGlobalScale());
 
 //        ImGui.showDemoWindow();
         ImGui.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.F);
@@ -243,7 +229,9 @@ public final class DisplayManager extends Application {
         GLFW.glfwMaximizeWindow(getHandle());
         GLFW.glfwSetWindowCloseCallback(getHandle(), GLFWWindowCloseCallback.create((hnd) -> {
             if (trinity != null) {
-                addPopup(new SavingDatabasePopup(trinity, (status) -> System.exit(0)));
+                addPopup(new SavingDatabasePopup(trinity, (status) -> {
+                    Runtime.getRuntime().exit(0);
+                }));
                 GLFW.glfwSetWindowShouldClose(getHandle(), false);
             }
         }));
@@ -407,5 +395,9 @@ public final class DisplayManager extends Application {
 
     public void showPopup(PopupItemBuilder popup) {
         getPopupMenu().show(popup);
+    }
+
+    public FontManager getFontManager() {
+        return fontManager;
     }
 }

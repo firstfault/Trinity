@@ -1,5 +1,6 @@
 package me.f1nal.trinity;
 
+import imgui.app.Application;
 import me.f1nal.trinity.appdata.AppDataManager;
 import me.f1nal.trinity.appdata.PreferencesFile;
 import me.f1nal.trinity.gui.DisplayManager;
@@ -9,7 +10,6 @@ import com.google.common.collect.Queues;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
-import imgui.app.Application;
 
 import java.io.*;
 import java.util.Queue;
@@ -56,7 +56,7 @@ public class Main {
         appDataManager.getState().setLastLaunchedVersion(VERSION);
         Application.launch(displayManager);
         System.out.println("see you later!");
-        System.exit(0);
+        Runtime.getRuntime().exit(0);
     }
 
     public static ListenableFuture<Object> runLater(Runnable task) {

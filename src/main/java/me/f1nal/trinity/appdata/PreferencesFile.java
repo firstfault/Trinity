@@ -4,6 +4,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.appdata.keybindings.KeyBindingData;
 import me.f1nal.trinity.decompiler.output.component.number.NumberDisplayTypeEnum;
 import me.f1nal.trinity.gui.frames.impl.xref.SearchMaxDisplay;
+import me.f1nal.trinity.gui.viewport.FontManager;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;
 
@@ -22,18 +23,18 @@ public class PreferencesFile extends AppDataFile {
     private String currentTheme;
     private final Set<KeyBindingData> keyBindingData = new HashSet<>();
     private final Map<String, Boolean> memorizedCheckboxes = new HashMap<>();
-    private float globalScale = 1.F;
+    private float fontSize = FontManager.DEFAULT_SIZE;
 
     public void setDecompilerNormalizeText(boolean decompilerNormalizeText) {
         this.decompilerNormalizeText = decompilerNormalizeText;
     }
 
-    public void setGlobalScale(float globalScale) {
-        this.globalScale = globalScale;
+    public void setFontSize(float fontSize) {
+        this.fontSize = fontSize;
     }
 
-    public float getGlobalScale() {
-        return Math.min(Math.max(globalScale, 0.3F), 2.F);
+    public float getFontSize() {
+        return Math.min(Math.max(fontSize, 12.F), 30.F);
     }
 
     public Map<String, Boolean> getMemorizedCheckboxes() {

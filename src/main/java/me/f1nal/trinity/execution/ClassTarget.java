@@ -23,7 +23,6 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
         this.realName = realName;
     }
 
-
     @Override
     protected RenameHandler getRenameHandler() {
         return new RenameHandler() {
