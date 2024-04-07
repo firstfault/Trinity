@@ -96,6 +96,10 @@ public class NameUtil {
         return Printer.OPCODES[opcode];
     }
 
+    public static String[] getWordList() {
+        return wordList;
+    }
+
     static {
         final InputStream stream = NameUtil.class.getClassLoader().getResourceAsStream("wordlist");
         if (stream == null) {
