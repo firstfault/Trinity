@@ -27,7 +27,7 @@ public class AsynchronousLoad extends Thread {
                 task.runImpl();
             } catch (Throwable throwable) {
                 new RuntimeException("Running load task '" + (task == null ? "null" : task.getName()) + "'", throwable).printStackTrace();
-                System.exit(0);
+                Runtime.getRuntime().exit(0);
             }
         }
 

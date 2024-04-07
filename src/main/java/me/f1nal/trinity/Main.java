@@ -1,8 +1,8 @@
 package me.f1nal.trinity;
 
+import imgui.app.Application;
 import me.f1nal.trinity.appdata.AppDataManager;
 import me.f1nal.trinity.appdata.PreferencesFile;
-import me.f1nal.trinity.gui.Application;
 import me.f1nal.trinity.gui.DisplayManager;
 import me.f1nal.trinity.keybindings.KeyBindManager;
 import me.f1nal.trinity.theme.ThemeManager;
@@ -56,7 +56,7 @@ public class Main {
         appDataManager.getState().setLastLaunchedVersion(VERSION);
         Application.launch(displayManager);
         System.out.println("see you later!");
-        System.exit(0);
+        Runtime.getRuntime().exit(0);
     }
 
     public static ListenableFuture<Object> runLater(Runnable task) {

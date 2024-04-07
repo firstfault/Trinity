@@ -3,6 +3,7 @@ package me.f1nal.trinity.gui;
 import com.google.common.io.Resources;
 import com.sun.jdi.PrimitiveValue;
 import imgui.*;
+import imgui.app.Application;
 import imgui.app.Configuration;
 import imgui.callback.ImStrConsumer;
 import imgui.callback.ImStrSupplier;
@@ -228,7 +229,9 @@ public final class DisplayManager extends Application {
         GLFW.glfwMaximizeWindow(getHandle());
         GLFW.glfwSetWindowCloseCallback(getHandle(), GLFWWindowCloseCallback.create((hnd) -> {
             if (trinity != null) {
-                addPopup(new SavingDatabasePopup(trinity, (status) -> System.exit(0)));
+                addPopup(new SavingDatabasePopup(trinity, (status) -> {
+                    Runtime.getRuntime().exit(0);
+                }));
                 GLFW.glfwSetWindowShouldClose(getHandle(), false);
             }
         }));

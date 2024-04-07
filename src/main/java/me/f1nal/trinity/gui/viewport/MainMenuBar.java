@@ -178,7 +178,7 @@ public class MainMenuBar {
 
         ImGui.separator();
         if (ImGui.menuItem("Quit Trinity")) {
-            System.exit(0);
+            Runtime.getRuntime().exit(0);
         }
 
     }
