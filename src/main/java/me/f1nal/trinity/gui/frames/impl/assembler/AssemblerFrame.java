@@ -24,6 +24,8 @@ import me.f1nal.trinity.gui.frames.impl.assembler.line.InstructionDrag;
 import me.f1nal.trinity.gui.frames.impl.assembler.line.InstructionReferenceArrow;
 import me.f1nal.trinity.gui.frames.impl.assembler.popup.AssemblerBytecodeGoToIndexPopup;
 import me.f1nal.trinity.gui.frames.impl.assembler.popup.edit.AssemblerEditInstructionPopup;
+import me.f1nal.trinity.gui.frames.impl.assembler.popup.edit.EditField;
+import me.f1nal.trinity.gui.frames.impl.assembler.popup.edit.EditingInstruction;
 import me.f1nal.trinity.gui.viewport.notifications.ICaption;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
@@ -299,7 +301,17 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             this.setInstruction(index, result.getInsnNode());
         });
 
-        popup.setOpcodeName(instructions.get(index).getName());
+        final var component = instructions.get(index);
+        final var editingInstruction = new EditingInstruction(component.getInstruction());
+
+        popup.setOpcodeName(component.getName());
+        editingInstruction.addInstructionFields(popup.getMethodInput());
+        popup.setInstruction(editingInstruction);
+
+        for (final EditField<?> editField : popup.getInstruction().getEditFieldList()) {
+            editField.updateField();
+        }
+
         Main.getDisplayManager().addPopup(popup);
     }
 

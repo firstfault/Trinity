@@ -9,12 +9,13 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class EditFieldLabel extends EditFieldText<MethodLabel> {
     private final LabelTable table;
 
-    EditFieldLabel(LabelTable table, Consumer<MethodLabel> setter) {
-        super(100, "Label Name", "L0", setter);
+    EditFieldLabel(LabelTable table, Supplier<MethodLabel> getter, Consumer<MethodLabel> setter) {
+        super(100, "Label Name", "L0", getter, setter);
         this.table = table;
     }
 
@@ -49,5 +50,10 @@ public class EditFieldLabel extends EditFieldText<MethodLabel> {
             throw new InvalidEditInputException();
         }
         return label;
+    }
+
+    @Override
+    public void updateField() {
+        text.set(get().getName());
     }
 }

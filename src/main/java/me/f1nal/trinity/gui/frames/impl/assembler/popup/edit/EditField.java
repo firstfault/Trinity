@@ -1,12 +1,15 @@
 package me.f1nal.trinity.gui.frames.impl.assembler.popup.edit;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public abstract class EditField<T> {
+    private final Supplier<T> getterSupplier;
     private final Consumer<T> setterConsumer;
     private Runnable updateEvent;
 
-    EditField(Consumer<T> setter) {
+    EditField(Supplier<T> getterSupplier, Consumer<T> setter) {
+        this.getterSupplier = getterSupplier;
         this.setterConsumer = setter;
     }
 
@@ -15,11 +18,16 @@ public abstract class EditField<T> {
     }
 
     public abstract void draw();
-
+    public abstract void updateField();
+    
     /**
      * @return If the input in this field is valid and the instruction may be edited with this data.
      */
     public abstract boolean isValidInput();
+
+    protected final T get() {
+        return getterSupplier.get();
+    }
 
     /**
      * To be called by overriding classes when this value is changed.

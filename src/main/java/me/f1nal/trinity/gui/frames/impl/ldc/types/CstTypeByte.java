@@ -7,7 +7,7 @@ import me.f1nal.trinity.gui.frames.impl.ldc.CstType;
 public class CstTypeByte extends CstType<Byte> {
     public CstTypeByte() {
         super("Byte");
-        this.addField(new EditFieldInteger("Value", (val) -> {
+        this.addField(new EditFieldInteger("Value", () -> Integer.valueOf(getValue()), (val) -> {
             this.setValue(val.byteValue());
         }, ImGuiDataType.S8));
     }

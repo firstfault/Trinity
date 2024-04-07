@@ -125,37 +125,22 @@ public class AssemblerEditInstructionPopup extends Popup {
                     OpcodeClasses.setInstructionOpcode(insnNode, opcodeIndex);
                 }
                 EditingInstruction editingInstruction = new EditingInstruction(insnNode);
-                this.addInstructionFields(editingInstruction);
+                editingInstruction.addInstructionFields(methodInput);
                 this.instruction = editingInstruction;
             }
         }
     }
 
-    private void addInstructionFields(EditingInstruction editingInstruction) {
-        AbstractInsnNode insnNode = editingInstruction.getInsnNode();
-        List<EditField<?>> fields = editingInstruction.getEditFieldList();
+    public EditingInstruction getInstruction() {
+        return instruction;
+    }
 
-        if (insnNode instanceof TypeInsnNode) {
-            fields.add(new EditFieldDescriptor((desc) -> ((TypeInsnNode) insnNode).desc = desc));
-        } else if (insnNode instanceof IntInsnNode) {
-            fields.add(new EditFieldInteger("Operand", (operand) -> ((IntInsnNode) insnNode).operand = operand, ImGuiDataType.S32));
-        } else if (insnNode instanceof VarInsnNode) {
-            fields.add(new EditFieldVariable(methodInput.getVariableTable(), (variable) -> ((VarInsnNode) insnNode).var = variable.findIndex()));
-        } else if (insnNode instanceof IincInsnNode) {
-            fields.add(new EditFieldVariable(methodInput.getVariableTable(), (variable) -> ((IincInsnNode) insnNode).var = variable.findIndex()));
-            fields.add(new EditFieldInteger("Increment", (incr) -> ((IincInsnNode) insnNode).incr = incr, ImGuiDataType.S32));
-        } else if (insnNode instanceof MultiANewArrayInsnNode) {
-            fields.add(new EditFieldDescriptor((desc) -> ((MultiANewArrayInsnNode) insnNode).desc = desc));
-            fields.add(new EditFieldInteger("Dimensions", (dim) -> ((MultiANewArrayInsnNode) insnNode).dims = dim, ImGuiDataType.U8));
-        } else if (insnNode instanceof JumpInsnNode) {
-            fields.add(new EditFieldLabel(methodInput.getLabelTable(), (label) -> ((JumpInsnNode) insnNode).label = new LabelNode(label.findOriginal())));
-        }
+    public void setInstruction(EditingInstruction instruction) {
+        this.instruction = instruction;
+    }
 
-        for (EditField<?> editField : fields) {
-            editField.setUpdateEvent(editingInstruction::update);
-        }
-
-        editingInstruction.update();
+    public MethodInput getMethodInput() {
+        return methodInput;
     }
 
     private boolean isOpcodeMatche(String opcode, String search) {

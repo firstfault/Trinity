@@ -5,15 +5,16 @@ import imgui.flag.ImGuiInputTextFlags;
 import imgui.type.ImString;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public abstract class EditFieldText<T> extends EditField<T> {
     private final String label, hint;
-    private final ImString text;
+    protected final ImString text;
     protected int inputTextFlags = ImGuiInputTextFlags.None;
     private Boolean valid;
 
-    EditFieldText(int length, String label, String hint, Consumer<T> setter) {
-        super(setter);
+    EditFieldText(int length, String label, String hint, Supplier<T> getter, Consumer<T> setter) {
+        super(getter, setter);
         this.text = new ImString(length);
         this.label = label;
         this.hint = hint;

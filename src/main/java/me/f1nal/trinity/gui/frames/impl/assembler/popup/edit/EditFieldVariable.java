@@ -9,12 +9,13 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class EditFieldVariable extends EditFieldText<Variable> {
     private final VariableTable table;
 
-    EditFieldVariable(VariableTable table, Consumer<Variable> setter) {
-        super(100, "Variable", "var0", setter);
+    EditFieldVariable(VariableTable table, Supplier<Variable> getter, Consumer<Variable> setter) {
+        super(100, "Variable", "var0", getter, setter);
         this.table = table;
     }
 
@@ -40,6 +41,11 @@ public class EditFieldVariable extends EditFieldText<Variable> {
                 ImGui.popStyleColor();
             }
         }
+    }
+
+    @Override
+    public void updateField() {
+        text.set(get().getName());
     }
 
     @Override
