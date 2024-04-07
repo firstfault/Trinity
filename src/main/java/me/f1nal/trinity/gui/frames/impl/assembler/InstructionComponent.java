@@ -131,6 +131,7 @@ public class InstructionComponent {
 
         popup.separator();
 
+        popup.menuItem("Edit...", () -> af.openEditDialog(af.getInstructions().indexOf(this)));
         popup.menuItem("Insert...", () -> af.openInsertDialog(af.getInstructions().indexOf(this)));
 
         popup.separator();
