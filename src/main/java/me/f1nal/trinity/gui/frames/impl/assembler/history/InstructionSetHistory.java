@@ -8,11 +8,13 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.List;
 
-public class InstructionInsertHistory extends AssemblerHistory {
+public class InstructionSetHistory extends AssemblerHistory {
+    private final InstructionComponent oldInstruction;
     private final InstructionPosition position;
 
-    public InstructionInsertHistory(InstructionPosition position) {
+    public InstructionSetHistory(InstructionComponent oldInstruction, InstructionPosition position) {
         super(FontAwesomeIcons.Paste);
+        this.oldInstruction = oldInstruction;
         this.position = position;
     }
 
@@ -23,7 +25,7 @@ public class InstructionInsertHistory extends AssemblerHistory {
 
     @Override
     protected void createText(List<ColoredString> text) {
-        text.add(new ColoredString("Inserted instruction ", CodeColorScheme.TEXT));
+        text.add(new ColoredString("Set instruction ", CodeColorScheme.TEXT));
         text.add(new ColoredString("#" + position.getIndex() + " ", CodeColorScheme.DISABLED));
         text.addAll(position.getComponent().asText());
     }
@@ -35,7 +37,7 @@ public class InstructionInsertHistory extends AssemblerHistory {
 
     @Override
     public void undo() {
-        this.position.getList().set(position.getIndex(), position.getComponent());
+        this.position.getList().set(position.getIndex(), oldInstruction);
         this.position.getList().queueIdReset();
     }
 

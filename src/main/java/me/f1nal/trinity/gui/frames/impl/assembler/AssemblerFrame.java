@@ -293,11 +293,26 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         }));
     }
 
+    public void openEditDialog(int index) {
+        Main.getDisplayManager().addPopup(new AssemblerEditInstructionPopup(trinity, methodInput, (result) -> {
+            this.setInstruction(index, result.getInsnNode());
+        }));
+    }
+
     private void insertInstruction(int index, AbstractInsnNode insnNode) {
         InstructionComponent component = decoder.translateInstruction(insnNode);
         instructions.add(index, component);
         instructions.queueIdReset();
         this.addHistory(new InstructionInsertHistory(new InstructionPosition(this.instructions, component, instructions.indexOf(component))));
+    }
+
+    private void setInstruction(final int index, final AbstractInsnNode instruction) {
+        InstructionComponent oldInstruction = instructions.get(index);
+        InstructionComponent component = decoder.translateInstruction(instruction);
+
+        instructions.set(index, component);
+        instructions.queueIdReset();
+        this.addHistory(new InstructionSetHistory(oldInstruction, new InstructionPosition(this.instructions, component, instructions.indexOf(component))));
     }
 
     private static String getInstructionRawText(InstructionComponent instruction) {
