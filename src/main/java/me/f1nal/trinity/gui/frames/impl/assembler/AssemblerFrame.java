@@ -29,6 +29,7 @@ import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.util.ModifyPriority;
+import me.f1nal.trinity.util.NameUtil;
 import me.f1nal.trinity.util.SystemUtil;
 import me.f1nal.trinity.util.animation.Animation;
 import me.f1nal.trinity.util.animation.Easing;
@@ -294,9 +295,12 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public void openEditDialog(int index) {
-        Main.getDisplayManager().addPopup(new AssemblerEditInstructionPopup(trinity, methodInput, (result) -> {
+        final var popup = new AssemblerEditInstructionPopup(trinity, methodInput, (result) -> {
             this.setInstruction(index, result.getInsnNode());
-        }));
+        });
+
+        popup.setOpcodeName(instructions.get(index).getName());
+        Main.getDisplayManager().addPopup(popup);
     }
 
     private void insertInstruction(int index, AbstractInsnNode insnNode) {

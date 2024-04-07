@@ -74,6 +74,10 @@ public class AssemblerEditInstructionPopup extends Popup {
         return super.canCloseOnEscapeNow();
     }
 
+    public void setOpcodeName(final String opcodeName) {
+        this.opcodeName.set(opcodeName);
+    }
+
     private void renderOpcodeComplete() {
         boolean resetOpcode = false;
         if (!opcodeName.get().isEmpty()) {
