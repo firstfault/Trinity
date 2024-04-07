@@ -16,6 +16,7 @@ import org.objectweb.asm.tree.MethodNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICaption {
@@ -97,12 +98,15 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
         return classTarget;
     }
 
-
     private ClassNode readClassNode(byte[] bytes) {
+        return Objects.requireNonNullElseGet(this.readClassNode(bytes, 0), () -> this.readClassNode(bytes, ClassReader.SKIP_DEBUG));
+    }
+
+    private ClassNode readClassNode(byte[] bytes, int flags) {
         try {
             ClassNode classNode = new ClassNode();
             ClassReader classReader = new ClassReader(bytes);
-            classReader.accept(classNode, 0);
+            classReader.accept(classNode, flags);
             return classNode;
         } catch (Throwable throwable) {
             throwable.printStackTrace();

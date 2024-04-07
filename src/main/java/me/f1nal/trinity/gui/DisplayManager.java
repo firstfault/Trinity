@@ -194,7 +194,9 @@ public final class DisplayManager extends Application {
 
     @Override
     public void process() {
-//        ImGui.showDemoWindow();
+        ImGui.getIO().setFontGlobalScale(Main.getPreferences().getGlobalScale());
+
+        ImGui.showDemoWindow();
         ImGui.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.F);
         ImGuiViewport viewport = ImGui.getMainViewport();
         ImGui.setNextWindowPos(viewport.getWorkPosX(), viewport.getWorkPosY());

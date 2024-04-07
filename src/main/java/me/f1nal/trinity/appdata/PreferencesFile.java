@@ -22,9 +22,18 @@ public class PreferencesFile extends AppDataFile {
     private String currentTheme;
     private final Set<KeyBindingData> keyBindingData = new HashSet<>();
     private final Map<String, Boolean> memorizedCheckboxes = new HashMap<>();
+    private float globalScale = 1.F;
 
     public void setDecompilerNormalizeText(boolean decompilerNormalizeText) {
         this.decompilerNormalizeText = decompilerNormalizeText;
+    }
+
+    public void setGlobalScale(float globalScale) {
+        this.globalScale = globalScale;
+    }
+
+    public float getGlobalScale() {
+        return Math.min(Math.max(globalScale, 0.3F), 2.F);
     }
 
     public Map<String, Boolean> getMemorizedCheckboxes() {

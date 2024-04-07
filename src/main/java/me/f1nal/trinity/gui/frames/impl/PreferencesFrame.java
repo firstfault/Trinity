@@ -1,6 +1,7 @@
 package me.f1nal.trinity.gui.frames.impl;
 
 import imgui.ImGui;
+import imgui.flag.ImGuiSliderFlags;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.PreferencesFile;
@@ -41,6 +42,15 @@ public class PreferencesFrame extends ClosableWindow {
                     }
                     ImGui.endCombo();
                 }
+
+                float[] globalScale = {Main.getPreferences().getGlobalScale()};
+                ImGui.dragFloat("Global Scale", globalScale, 0.005f, 0.3F, 2.F, "%.2f", ImGuiSliderFlags.AlwaysClamp);
+                if (globalScale[0] != 1.F) {
+                    ImGui.sameLine();
+                    if (ImGui.smallButton("Revert###GlobalScaleRevert")) globalScale[0] = 1.F;
+                }
+                Main.getPreferences().setGlobalScale(globalScale[0]);
+
                 ImGui.endTabItem();
             }
 
