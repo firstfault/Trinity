@@ -2,6 +2,7 @@ package me.f1nal.trinity;
 
 import me.f1nal.trinity.appdata.AppDataManager;
 import me.f1nal.trinity.appdata.PreferencesFile;
+import me.f1nal.trinity.gui.Application;
 import me.f1nal.trinity.gui.DisplayManager;
 import me.f1nal.trinity.keybindings.KeyBindManager;
 import me.f1nal.trinity.theme.ThemeManager;
@@ -9,7 +10,6 @@ import com.google.common.collect.Queues;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
-import imgui.app.Application;
 
 import java.io.*;
 import java.util.Queue;

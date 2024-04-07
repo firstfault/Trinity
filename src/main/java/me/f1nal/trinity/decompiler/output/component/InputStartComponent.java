@@ -41,14 +41,14 @@ public class InputStartComponent extends RawTextComponent {
     public void handleAfterDrawing() {
         ImGui.text("");
         ImGui.sameLine(0.F, 0.F);
-        float globalScale = Main.getPreferences().getGlobalScale();
+        float fontSize = Math.max(Main.getDisplayManager().getFontManager().getFontSize() - 1.F, 12.F);
+        float globalScale = fontSize / 14;
         ImVec2 rectMin = ImGui.getItemRectMin().plus(addX * globalScale, 0.F);
         ImFont font = ImGui.getFont();
         String text = this.xrefs.size() + " usage" + (this.xrefs.size() == 1 ? "" : "s");
-        float fontSize = 13.F * globalScale;
         ImVec2 textSize = font.calcTextSizeA(fontSize, Float.MAX_VALUE, -1.F, text);
         ImVec2 mousePos = ImGui.getMousePos();
-        boolean hovered = mousePos.x >= rectMin.x && mousePos.y >= rectMin.y && mousePos.x <= rectMin.x + textSize.x && mousePos.y <= rectMin.y + textSize.y;
+        boolean hovered = ImGui.isWindowHovered() && mousePos.x >= rectMin.x && mousePos.y >= rectMin.y && mousePos.x <= rectMin.x + textSize.x && mousePos.y <= rectMin.y + textSize.y;
         ImGui.getWindowDrawList().addText(font, fontSize, rectMin.x, rectMin.y - globalScale, hovered ? CodeColorScheme.TEXT : CodeColorScheme.DISABLED, text);
         if (hovered) {
             ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
