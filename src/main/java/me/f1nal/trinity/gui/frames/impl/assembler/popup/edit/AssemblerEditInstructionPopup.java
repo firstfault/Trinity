@@ -69,8 +69,10 @@ public class AssemblerEditInstructionPopup extends Popup {
     public boolean canCloseOnEscapeNow() {
         if (!this.opcodeName.get().isEmpty()) {
             this.opcodeName.set("");
+            this.setAutocompletedInstructions();
             return false;
         }
+
         return super.canCloseOnEscapeNow();
     }
 
