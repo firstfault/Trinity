@@ -69,11 +69,9 @@ public final class XrefMap extends ProgressiveLoadTask {
             XrefWhereMethod whereMethod = new XrefWhereMethod(methodInput);
 
             for (AbstractInsnNode instruction : methodInput.getInstructions()) {
-                if (instruction instanceof MethodInsnNode) {
-                    MethodInsnNode min = (MethodInsnNode) instruction;
+                if (instruction instanceof MethodInsnNode min) {
                     this.addReference(min.owner, min.name, min.desc, new MemberXref(methodInput, instruction));
-                } else if (instruction instanceof FieldInsnNode) {
-                    FieldInsnNode fin = (FieldInsnNode) instruction;
+                } else if (instruction instanceof FieldInsnNode fin) {
                     this.addReference(fin.owner, fin.name, fin.desc, new MemberXref(methodInput, instruction));
                 } else if (instruction instanceof TypeInsnNode) {
                     this.processTypeInstruction(whereMethod, (TypeInsnNode) instruction);
@@ -112,31 +110,31 @@ public final class XrefMap extends ProgressiveLoadTask {
             if (elementType.getSort() == Type.ARRAY) this.processClassLiteralLdc(where, elementType.getElementType());
             return;
         }
-        classReferenceList.put(NameUtil.internalToNormal(elementType.getClassName()), ClassXref.classLiteral(where));
+        putClassReference(NameUtil.internalToNormal(elementType.getClassName()), ClassXref.classLiteral(where));
     }
 
     private void processTypeInstruction(XrefWhereMethod where, TypeInsnNode instruction) {
-        classReferenceList.put(NameUtil.internalToNormal(instruction.desc), ClassXref.typeInstruction(where, instruction.getOpcode()));
+        putClassReference(NameUtil.internalToNormal(instruction.desc), ClassXref.typeInstruction(where, instruction.getOpcode()));
     }
 
     private void processTryCatchHandlers(XrefWhereMethod where, List<TryCatchBlockNode> tryCatchBlocks) {
         if (tryCatchBlocks != null) for (TryCatchBlockNode block : tryCatchBlocks) {
             if (block.type == null) continue;
-            this.classReferenceList.put(NameUtil.internalToNormal(block.type), new ClassXref(where, XrefAccessType.READ, "Catch", XrefKind.EXCEPTION));
+            this.putClassReference(NameUtil.internalToNormal(block.type), new ClassXref(where, XrefAccessType.READ, "Catch", XrefKind.EXCEPTION));
         }
     }
 
     private void processThrows(XrefWhereMethod whereMethod, List<String> exceptions) {
         if (exceptions != null) for (String exception : exceptions) {
-            classReferenceList.put(exception, new ClassXref(whereMethod, XrefAccessType.READ, "Throws", XrefKind.EXCEPTION));
+            putClassReference(exception, new ClassXref(whereMethod, XrefAccessType.READ, "Throws", XrefKind.EXCEPTION));
         }
     }
 
     private void processClassSupers(XrefWhereClass where, ClassInput classInput) {
-        classReferenceList.put(classInput.getSuperName(), ClassXref.extendsClass(where, false));
+        if (classInput.getSuperName() != null) putClassReference(classInput.getSuperName(), ClassXref.extendsClass(where, false));
         List<String> interfaces = classInput.getClassNode().interfaces;
         if (interfaces != null) for (String itf : interfaces) {
-            classReferenceList.put(itf, ClassXref.extendsClass(where, true));
+            if (itf != null) putClassReference(itf, ClassXref.extendsClass(where, true));
         }
     }
 
@@ -152,7 +150,7 @@ public final class XrefMap extends ProgressiveLoadTask {
                 Logging.warn("Failed to process annotation descriptor: {} inside {}", node.desc, where);
                 continue;
             }
-            classReferenceList.put(NameUtil.internalToNormal(type.getClassName()), new ClassXref(where, XrefAccessType.READ, "@" + where.getName(), XrefKind.ANNOTATION));
+            putClassReference(NameUtil.internalToNormal(type.getClassName()), new ClassXref(where, XrefAccessType.READ, "@" + where.getName(), XrefKind.ANNOTATION));
             this.processAnnotationArgs(where, node.values);
         }
     }
@@ -168,7 +166,7 @@ public final class XrefMap extends ProgressiveLoadTask {
     private void processArgumentXrefs(MethodInput methodInput, String descriptor) {
         Type returnType = Type.getReturnType(descriptor);
         if (returnType.getSort() == Type.OBJECT) {
-            classReferenceList.put(NameUtil.internalToNormal(returnType.getClassName()), ClassXref.returnsClass(new XrefWhereMethod(methodInput)));
+            putClassReference(NameUtil.internalToNormal(returnType.getClassName()), ClassXref.returnsClass(new XrefWhereMethod(methodInput)));
         }
         Type[] argumentTypes = Type.getArgumentTypes(descriptor);
         int index = 0;
@@ -187,7 +185,7 @@ public final class XrefMap extends ProgressiveLoadTask {
     }
 
     private void addMethodArgumentXref(MethodInput methodInput, int index, Type elementType) {
-        classReferenceList.put(NameUtil.internalToNormal(elementType.getClassName()), ClassXref.parameter(new XrefWhereMethod(methodInput)));
+        putClassReference(NameUtil.internalToNormal(elementType.getClassName()), ClassXref.parameter(new XrefWhereMethod(methodInput)));
     }
 
     /**
@@ -199,10 +197,33 @@ public final class XrefMap extends ProgressiveLoadTask {
      * @param referencer The method responsible for the reference.
      */
     public void addReference(String owner, String name, String desc, MemberXref referencer) {
+        owner = clearDescriptorFromOwner(owner);
+
         final String key = String.format("%s.%s.%s", owner, name, desc);
         List<MemberXref> list = this.memberReferenceList.computeIfAbsent(key, k -> new ArrayList<>());
         list.add(referencer);
-        classReferenceList.put(owner, new ClassXref(referencer.getWhere(), referencer.getAccess(), referencer.getInvocation(), referencer.getKind()));
+        putClassReference(owner, new ClassXref(referencer.getWhere(), referencer.getAccess(), referencer.getInvocation(), referencer.getKind()));
+    }
+
+    private void putClassReference(String owner, ClassXref ref) {
+        classReferenceList.put(clearDescriptorFromOwner(owner), ref);
+    }
+
+    private static String clearDescriptorFromOwner(String owner) {
+        int index = 0;
+
+        while (index != owner.length()) {
+            if (owner.charAt(index) == '[') {
+                ++index;
+                continue;
+            }
+            if (owner.charAt(index) == 'L' && owner.charAt(owner.length() - 1) == ';') {
+                return owner.substring(index + 1, owner.length() - 1);
+            }
+            break;
+        }
+
+        return owner;
     }
 
     /**

@@ -5,14 +5,19 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.gui.components.ClassSelectComponent;
 import me.f1nal.trinity.gui.components.MemberSelectComponent;
+import me.f1nal.trinity.gui.components.MemorableCheckboxComponent;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderMemberRefPattern;
+import me.f1nal.trinity.logging.Logging;
+import me.f1nal.trinity.util.GuiUtil;
 
 import java.util.regex.Pattern;
 
 public class XrefSearchTypeMember extends XrefSearchType {
     private final MemberSelectComponent memberSelectComponent;
     private MemberDetails details;
+    private static final MemorableCheckboxComponent exact = new MemorableCheckboxComponent("xrefSearchMemberCaseInsensitive", true);
+    private static final MemorableCheckboxComponent caseInsensitive = new MemorableCheckboxComponent("xrefSearchMemberCaseInsensitive", true);
 
     protected XrefSearchTypeMember(Trinity trinity, ClassSelectComponent classSelectComponent) {
         super("Method/Field", trinity);
@@ -22,7 +27,10 @@ public class XrefSearchTypeMember extends XrefSearchType {
     @Override
     public boolean draw() {
         this.details = memberSelectComponent.draw();
-        ImGui.textDisabled("(Leave empty to match anything)");
+        GuiUtil.smallWidget(() -> exact.drawCheckbox("Exact"));
+        GuiUtil.tooltip("If not exact, the field only has to contain the provided string.");
+        ImGui.sameLine();
+        GuiUtil.smallWidget(() -> caseInsensitive.drawCheckbox("Case Insensitive"));
         return true;
     }
 
@@ -38,14 +46,24 @@ public class XrefSearchTypeMember extends XrefSearchType {
         addPattern(pattern, this.details.getName());
         pattern.append("\\.");
         addPattern(pattern, this.details.getDesc());
+
+        Logging.debug("Search pattern is {}", pattern.toString());
         return Pattern.compile(pattern.toString());
     }
 
     private void addPattern(StringBuilder pattern, String field) {
+        if (caseInsensitive.getState()) pattern.append("(?i)");
+
         if (field.isEmpty()) {
             pattern.append("(?s).*");
         } else {
-            pattern.append(Pattern.quote(field));
+            final String quote = Pattern.quote(field);
+            if (exact.getState()) {
+                pattern.append(quote);
+            } else {
+                // FIXME: This (contains) is broken
+                pattern.append("/^.*").append(quote).append(".*$/");
+            }
         }
     }
 }

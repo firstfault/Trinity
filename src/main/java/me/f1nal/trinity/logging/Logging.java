@@ -46,4 +46,8 @@ public class Logging {
     public static void warn(Object format, Object... args) {
         log("\033[33mWARN\033[0m", format, args);
     }
+
+    public static void debug(Object format, Object... args) {
+        log("\033[35mDEBUG\033[0m", format, args);
+    }
 }

@@ -55,7 +55,7 @@ public final class Execution {
 
         if (!this.trinity.getDatabase().addLoadTasks(this.asynchronousLoad)) {
             // If this method returned false, we are creating a new database.
-            if (classPath.getWarnings() != -1) {
+            if (classPath.getWarnings() != 0) {
                 Main.getDisplayManager().addNotification(new Notification(NotificationType.WARNING, new SimpleCaption("Class Path"), ColoredStringBuilder.create()
                         .fmt("Finished reading input with {} warnings", classPath.getWarnings()).get()));
             }
@@ -156,6 +156,9 @@ public final class Execution {
     }
 
     public void addClassTarget(String className) {
+        if (className == null) {
+            return;
+        }
         classTargetMap.computeIfAbsent(className, k -> new ClassTarget(k, 0));
     }
 

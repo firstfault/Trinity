@@ -31,7 +31,7 @@ public class ClassSelectComponent {
     }
 
     public void draw() {
-        if (ImGui.inputText("Class Name###ClassName" + id, className)) {
+        if (ImGui.inputTextWithHint("Class Name###ClassName" + id, "java/lang/Object", className)) {
             this.queryClassInput();
         }
         ImGui.sameLine();

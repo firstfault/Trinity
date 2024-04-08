@@ -26,10 +26,10 @@ public class MemorableCheckboxComponent {
 
     public void drawCheckbox(String label) {
         boolean state = getState();
-        boolean newState = ImGui.checkbox(label, state);
+        boolean newState = ImGui.checkbox(label, this.state);
 
-        if (state != newState) {
-            setState(newState);
+        if (state != this.state.get()) {
+            setState(this.state.get());
         }
     }
 

@@ -16,8 +16,8 @@ public class MemberSelectComponent {
 
     public MemberDetails draw() {
         classSelectComponent.draw();
-        ImGui.inputText("Name###Name" + id, name);
-        ImGui.inputText("Descriptor###Desc" + id, descriptor);
+        ImGui.inputTextWithHint("Name###Name" + id, "toString", name);
+        ImGui.inputTextWithHint("Descriptor###Desc" + id, "()Ljava/lang/String", descriptor);
         return new MemberDetails(classSelectComponent.getClassName(), name.get(), descriptor.get());
     }
 

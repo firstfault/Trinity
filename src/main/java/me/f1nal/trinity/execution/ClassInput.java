@@ -1,8 +1,11 @@
 package me.f1nal.trinity.execution;
 
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.execution.xref.ClassXref;
 import me.f1nal.trinity.execution.xref.XrefMap;
+import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
+import me.f1nal.trinity.gui.frames.impl.classes.classhierarchy.ClassHierarchyWindow;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.remap.Remapper;
@@ -89,6 +92,11 @@ public final class ClassInput extends Input implements ModifyNotifiable {
             }
         }
         return null;
+    }
+
+    @Override
+    public void populatePopup(PopupItemBuilder builder) {
+//        builder.menuItem("View Hierarchy", () -> Main.getDisplayManager().addClosableWindow(new ClassHierarchyWindow(this.getOwningClass().getExecution().getTrinity(), this)));
     }
 
     public Map<String, MethodInput> getMethodList() {
