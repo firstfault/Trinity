@@ -27,7 +27,7 @@ public class GuiUtil {
                 if (ImGui.isMouseClicked(i)) return true;
             }
         }
-        return false;
+        return !ImGui.isItemFocused();
     }
 
     public static void disabledWidget(boolean disabled, Runnable draw) {
