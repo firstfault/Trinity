@@ -131,13 +131,14 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
         if (showFilter.getShowFilter().getState()) {
             if (showFilter.isSetFocus()) ImGui.setKeyboardFocusHere();
+
             if(this.searchBar.draw()) {
-                shouldSearch = true;
+                this.shouldSearch = true;
             }
         }
 
         ImGui.beginChild("DecompilerWindowChild");
-        showFilter.runControls();
+        showFilter.runControls(); // needed so even if user focuses the decompiler window, we still can use show filter shortcut
 
         DecompiledClass decompiledClass = this.getDecompiledClass();
         if (decompiledClass == null) {
@@ -222,14 +223,14 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             });
         }
 
-        if (this.isSearching() && shouldSearch) {
+        if (this.isSearching() && this.shouldSearch) {
             final String searchText = this.searchBar.getText();
 
             groupList.stream().filter(componentGroup -> componentGroup.getComponent().getText().contains(searchText)).forEach(componentGroup -> {
                 this.highlight = new DecompilerHighlight(componentGroup.getComponent());
             });
 
-            shouldSearch = false;
+            this.shouldSearch = false;
         }
 
         this.hoveredGroup = null;
