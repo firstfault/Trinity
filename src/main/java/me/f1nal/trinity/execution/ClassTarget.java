@@ -24,7 +24,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
     }
 
     @Override
-    protected RenameHandler getRenameHandler() {
+    public RenameHandler getRenameHandler() {
         return new RenameHandler() {
             @Override
             public void rename(String newName) {
@@ -38,6 +38,14 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
                 return getDisplayOrRealName();
             }
         };
+    }
+
+    /**
+     * Simply put, tells us if our class path contains this class.
+     * @return If we have a {@link ClassInput} linked to this reference.
+     */
+    public boolean isInputAvailable() {
+        return this.getInput() != null;
     }
 
     @Override

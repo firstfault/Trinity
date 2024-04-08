@@ -7,7 +7,7 @@ import imgui.type.ImFloat;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.PreferencesFile;
-import me.f1nal.trinity.decompiler.output.component.number.NumberDisplayTypeEnum;
+import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
 import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.general.EnumComboBox;
 import me.f1nal.trinity.gui.frames.ClosableWindow;

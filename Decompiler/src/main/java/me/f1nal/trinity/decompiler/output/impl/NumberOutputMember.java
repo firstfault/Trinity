@@ -1,21 +1,22 @@
 package me.f1nal.trinity.decompiler.output.impl;
 
 import me.f1nal.trinity.decompiler.output.OutputMember;
+import me.f1nal.trinity.decompiler.output.OutputMemberVisitor;
 import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-public class ConstOutputMember extends OutputMember {
+public class NumberOutputMember extends OutputMember {
     private ConstType type;
     private Number number;
 
-    public ConstOutputMember(int length) {
+    public NumberOutputMember(int length) {
         super(length);
     }
 
-    public ConstOutputMember(int length, ConstType type, Number value) {
+    public NumberOutputMember(int length, ConstType type, Number value) {
         super(length);
         this.type = type;
         this.number = value;
@@ -33,8 +34,13 @@ public class ConstOutputMember extends OutputMember {
         number = type.deserialize(dataInput);
     }
 
+    @Override
+    public void visit(OutputMemberVisitor visitor) {
+        visitor.visitNumber(this);
+    }
+
     public static String getConst(String string, ConstType type, Number value) {
-        return OutputMemberSerializer.tag(string, l -> new ConstOutputMember(l, type, value));
+        return OutputMemberSerializer.tag(string, l -> new NumberOutputMember(l, type, value));
     }
 
     public ConstType getType() {

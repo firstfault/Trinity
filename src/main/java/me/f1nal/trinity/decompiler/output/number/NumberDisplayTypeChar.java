@@ -1,4 +1,4 @@
-package me.f1nal.trinity.decompiler.output.component.number;
+package me.f1nal.trinity.decompiler.output.number;
 
 import java.nio.ByteBuffer;
 import java.util.LinkedHashMap;

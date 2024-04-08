@@ -1,7 +1,7 @@
 // Copyright 2000-2022 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package me.f1nal.trinity.decompiler.modules.decompiler.exps;
 
-import me.f1nal.trinity.decompiler.output.impl.ConstOutputMember;
+import me.f1nal.trinity.decompiler.output.impl.NumberOutputMember;
 import me.f1nal.trinity.decompiler.output.impl.StringOutputMember;
 import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.decompiler.code.CodeConstants;
@@ -149,7 +149,7 @@ public class ConstExprent extends Exprent {
             ret = TextUtil.charToUnicodeLiteral(c);
           }
         }
-        yield new TextBuffer(ConstOutputMember.getConst(ret, ConstOutputMember.ConstType.CHAR, val)).enclose("'", "'");
+        yield new TextBuffer(NumberOutputMember.getConst(ret, NumberOutputMember.ConstType.CHAR, val)).enclose("'", "'");
       }
       case CodeConstants.TYPE_BYTE -> new TextBuffer(value.toString());
       case CodeConstants.TYPE_BYTECHAR, CodeConstants.TYPE_SHORT -> {
@@ -162,7 +162,7 @@ public class ConstExprent extends Exprent {
             yield new FieldExprent(MIN_VAL, SHORT_SIG, true, null, FieldDescriptor.SHORT_DESCRIPTOR, bytecode).toJava(0, tracer);
           }
         }
-        yield new TextBuffer(ConstOutputMember.getConst(value.toString(), ConstOutputMember.ConstType.SHORT, shortVal));
+        yield new TextBuffer(NumberOutputMember.getConst(value.toString(), NumberOutputMember.ConstType.SHORT, shortVal));
       }
       case CodeConstants.TYPE_SHORTCHAR, CodeConstants.TYPE_INT -> {
         int intVal = (Integer)value;
@@ -174,7 +174,7 @@ public class ConstExprent extends Exprent {
             yield new FieldExprent(MIN_VAL, INT_SIG, true, null, FieldDescriptor.INTEGER_DESCRIPTOR, bytecode).toJava(0, tracer);
           }
         }
-        yield new TextBuffer(ConstOutputMember.getConst(value.toString(), ConstOutputMember.ConstType.INTEGER, intVal));
+        yield new TextBuffer(NumberOutputMember.getConst(value.toString(), NumberOutputMember.ConstType.INTEGER, intVal));
       }
       case CodeConstants.TYPE_LONG -> {
         long longVal = (Long)value;
@@ -186,7 +186,7 @@ public class ConstExprent extends Exprent {
             yield new FieldExprent(MIN_VAL, LONG_SIG, true, null, FieldDescriptor.LONG_DESCRIPTOR, bytecode).toJava(0, tracer);
           }
         }
-        yield new TextBuffer(ConstOutputMember.getConst(value.toString(), ConstOutputMember.ConstType.LONG, longVal)).append('L');
+        yield new TextBuffer(NumberOutputMember.getConst(value.toString(), NumberOutputMember.ConstType.LONG, longVal)).append('L');
       }
       case CodeConstants.TYPE_FLOAT -> {
         float floatVal = (Float)value;
@@ -219,7 +219,7 @@ public class ConstExprent extends Exprent {
         else if (floatVal == Float.NEGATIVE_INFINITY) {
           yield new TextBuffer("-1.0F / 0.0F");
         }
-        yield new TextBuffer(ConstOutputMember.getConst(value.toString(), ConstOutputMember.ConstType.FLOAT, floatVal)).append('F');
+        yield new TextBuffer(NumberOutputMember.getConst(value.toString(), NumberOutputMember.ConstType.FLOAT, floatVal)).append('F');
       }
       case CodeConstants.TYPE_DOUBLE -> {
         double doubleVal = (Double)value;
@@ -258,7 +258,7 @@ public class ConstExprent extends Exprent {
         else if (doubleVal == Double.NEGATIVE_INFINITY) {
           yield new TextBuffer("-1.0 / 0.0");
         }
-        yield new TextBuffer(ConstOutputMember.getConst(value.toString(), ConstOutputMember.ConstType.DOUBLE, doubleVal));
+        yield new TextBuffer(NumberOutputMember.getConst(value.toString(), NumberOutputMember.ConstType.DOUBLE, doubleVal));
       }
       case CodeConstants.TYPE_NULL -> new TextBuffer("null");
       case CodeConstants.TYPE_OBJECT -> {

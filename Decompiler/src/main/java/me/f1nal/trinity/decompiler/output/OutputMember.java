@@ -18,6 +18,8 @@ public abstract class OutputMember {
     protected abstract void serializeImpl(DataOutput dataOutput) throws IOException;
     protected abstract void deserializeImpl(DataInput dataInput) throws IOException;
 
+    public abstract void visit(OutputMemberVisitor visitor);
+
     public void serialize(DataOutput dataOutput) throws IOException {
         dataOutput.writeInt(this.length);
         serializeImpl(dataOutput);

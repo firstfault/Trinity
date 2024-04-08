@@ -7,6 +7,7 @@ import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.frames.impl.cp.BrowserViewerNode;
 import me.f1nal.trinity.gui.frames.impl.cp.IBrowserViewerNode;
+import me.f1nal.trinity.gui.frames.impl.cp.IRenameHandler;
 import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.frames.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.util.ByteUtil;
@@ -15,7 +16,7 @@ import me.f1nal.trinity.util.SystemUtil;
 import java.util.Arrays;
 import java.util.Objects;
 
-public abstract class ArchiveEntry implements IBrowserViewerNode {
+public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler {
     private Package targetPackage;
     private final String size;
     private final int sizeInBytes;
@@ -37,8 +38,6 @@ public abstract class ArchiveEntry implements IBrowserViewerNode {
             }
         });
     }
-
-    protected abstract RenameHandler getRenameHandler();
 
     public ArchiveEntryViewerWindow<?> getDefaultViewer() {
         return viewerTypes[0].getWindow(this);
@@ -81,6 +80,8 @@ public abstract class ArchiveEntry implements IBrowserViewerNode {
      * Creates a popup for this archive entry. Inheritors can override the super method and adapt the builder correspondingly.
      */
     public PopupItemBuilder createPopup(PopupItemBuilder builder) {
+        if (getPackage() == null) throw new NullPointerException(String.format("Archive entry '%s' does not have a package.", this.getDisplayOrRealName()));
+
         return builder.
                 menu("Open", (open) -> {
                     for (ArchiveEntryViewerType viewerType : this.getViewerTypes()) {
@@ -89,7 +90,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode {
                 }).
                 menuItem("Copy Path", () -> SystemUtil.copyToClipboard(this.getDisplayOrRealName())).
                 separator().
-                predicate(() -> getPackage().isOpen() && getBrowserViewerNode().isRenameAvailable(),
+                predicate(() -> getPackage() != null && getPackage().isOpen() && getBrowserViewerNode().isRenameAvailable(),
                         items -> items.menuItem("Rename", () -> this.getBrowserViewerNode().beginRenaming())).
                 predicate(() -> this instanceof ResourceArchiveEntry,
                         items -> items.menuItem(FontAwesomeIcons.TrashAlt + " Delete", () -> Main.getTrinity().getExecution().deleteResource((ResourceArchiveEntry) this))).

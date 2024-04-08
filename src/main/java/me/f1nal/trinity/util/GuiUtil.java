@@ -3,6 +3,7 @@ package me.f1nal.trinity.util;
 import imgui.ImGui;
 import imgui.ImGuiStyle;
 import imgui.ImVec2;
+import imgui.flag.ImGuiMouseButton;
 import imgui.type.ImBoolean;
 
 import java.util.function.Supplier;
@@ -18,6 +19,15 @@ public class GuiUtil {
             runnable.run();
             ImGui.endPopup();
         }
+    }
+
+    public static boolean isMouseClickedElsewhere() {
+        if (!ImGui.isItemHovered()) {
+            for (int i = 0; i < ImGuiMouseButton.COUNT; i++) {
+                if (ImGui.isMouseClicked(i)) return true;
+            }
+        }
+        return false;
     }
 
     public static void disabledWidget(boolean disabled, Runnable draw) {

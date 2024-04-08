@@ -3,14 +3,15 @@ package me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler;
 import com.google.common.eventbus.Subscribe;
 import imgui.ImColor;
 import imgui.ImGui;
+import imgui.ImVec2;
+import imgui.flag.ImGuiMouseButton;
+import imgui.flag.ImGuiMouseCursor;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.object.DatabaseDecompiler;
 import me.f1nal.trinity.decompiler.DecompiledClass;
-import me.f1nal.trinity.decompiler.output.component.InputStartComponent;
-import me.f1nal.trinity.decompiler.output.effect.TextComponentEffect;
-import me.f1nal.trinity.decompiler.output.lines.ComponentGroup;
+import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.events.api.IEventListener;
@@ -18,15 +19,14 @@ import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
-import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.SearchBar;
 import me.f1nal.trinity.gui.components.filter.misc.ShowFilterOption;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
-import me.f1nal.trinity.gui.components.popup.PopupMenu;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
 import me.f1nal.trinity.gui.frames.impl.classstructure.ClassStructure;
 import me.f1nal.trinity.gui.frames.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.frames.impl.entryviewer.ArchiveEntryViewerWindow;
+import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.SystemUtil;
 import me.f1nal.trinity.util.TimedStopwatch;
 
@@ -40,11 +40,11 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
      * Notifies the selected class must be refreshed.
      */
     private TimedStopwatch forceRefresh;
-    private DecompilerHighlight highlight;
-    public ComponentGroup hoveredGroup;
-    private PopupMenu popupMenu;
+    /**
+     * Text component that is currently hovered.
+     */
+    private DecompilerComponent hoveredComponent;
     private boolean resetLines, shouldSearch;
-    private Input autoscrollTo;
     private final SearchBar searchBar = new SearchBar();
     private static final ShowFilterOption showFilter = new ShowFilterOption("decompilerWindow");
 
@@ -159,10 +159,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     private void runControls() {
-        if (this.highlight != null && this.highlight.isFinished()) this.highlight = null;
         showFilter.runControls();
 
-        boolean decompiling = trinity.getDecompiler().isDecompiling(selectedClass);
         boolean refreshDecompiler = (this.forceRefresh != null && this.forceRefresh.hasPassed());
         if (refreshDecompiler) {
             this.forceRefresh = null;
@@ -178,6 +176,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (trinity.getDecompiler().isDecompileFailed(selectedClass)) {
             ImGui.textColored(ImColor.rgb(245, 80, 80), "Decompilation failed");
         }
+
         if (decompilingInput != selectedClass) {
             if (trinity.getDecompiler().getFromCache(selectedClass) == null) {
                 try {
@@ -194,9 +193,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private String getText() {
         DecompiledClass decompiled = getDecompiledClass();
         StringBuilder output = new StringBuilder();
-        if (decompiled != null) {
-            decompiled.getComponentGroupList().forEach(g -> output.append(g.getComponent().getText()));
-        }
         return output.toString();
     }
 
@@ -209,46 +205,59 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     private void drawDecompiledOutput(DecompiledClass decompiledClass) {
-        List<ComponentGroup> groupList = decompiledClass.getComponentGroupList();
+        this.hoveredComponent = null;
 
-        if (this.autoscrollTo != null) {
-            groupList.stream().filter(componentGroup -> componentGroup.getComponent() instanceof InputStartComponent).filter(componentGroup -> ((InputStartComponent) componentGroup.getComponent()).getInput() == this.autoscrollTo).forEach(componentGroup -> {
-                ComponentGroup targetGroup = componentGroup;
-                final int indexOf = groupList.indexOf(componentGroup);
-                if (indexOf != groupList.size() - 1) {
-                    targetGroup = groupList.get(indexOf + 1);
+        ImVec2 textSize = ImGui.calcTextSize(String.valueOf(decompiledClass.getLines().size() + 1));
+        float lineNumberSpacing = 3.F + textSize.x;
+        float cursorPosX = ImGui.getCursorPosX();
+
+        for (DecompilerLine line : decompiledClass.getLines()) {
+            float mousePosY = ImGui.getMousePosY() + ImGui.getScrollY() - ImGui.getWindowPosY();
+            float cursorPosY = ImGui.getCursorPosY();
+            boolean hovered = mousePosY >= cursorPosY && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
+
+            ImGui.textColored(CodeColorScheme.LINE_NUMBER, String.valueOf(line.getLineNumber()));
+            ImGui.sameLine();
+            ImGui.setCursorPosX(cursorPosX + lineNumberSpacing);
+
+            for (DecompilerLineText text : line.getComponents()) {
+                text.render();
+                if (this.hoveredComponent == null && ImGui.isItemHovered()) {
+                    this.hoveredComponent = text.getComponent();
                 }
-                this.highlight = new DecompilerHighlight(targetGroup.getComponent());
-                this.autoscrollTo = null;
-            });
+                ImGui.sameLine(0.F, 0.F);
+            }
+
+            ImGui.newLine();
         }
 
-        if (this.isSearching() && this.shouldSearch) {
-            final String searchText = this.searchBar.getText();
+        if (this.hoveredComponent != null) {
+            List<ColoredString> tooltip = this.hoveredComponent.createTooltip();
 
-            groupList.stream().filter(componentGroup -> componentGroup.getComponent().getText().contains(searchText)).forEach(componentGroup -> {
-                this.highlight = new DecompilerHighlight(componentGroup.getComponent());
-            });
+            if (tooltip != null) {
+                ImGui.beginTooltip();
 
-            this.shouldSearch = false;
-        }
+                ColoredString.drawText(tooltip);
 
-        this.hoveredGroup = null;
+                ImGui.endTooltip();
+            }
 
-        groupList.forEach(g -> g.render(this));
+            if (this.hoveredComponent.getRenameHandler() != null && this.hoveredComponent.getRenameState() == null) {
+                if (ImGui.isMouseClicked(0)) {
+                    this.hoveredComponent.beginRenaming();
+                }
 
-        boolean consumedHover = false;
+                ImGui.setMouseCursor(ImGuiMouseCursor.TextInput);
+            }
 
-        if (this.hoveredGroup != null) {
-            List<TextComponentEffect> effectList = this.hoveredGroup.getComponent().getEffectList();
-            consumedHover = this.hoveredGroup.getComponent().handleItemHover();
+            if (ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
+                PopupItemBuilder popup = this.hoveredComponent.createPopup();
 
-            for (TextComponentEffect effect : effectList) {
-                effect.handleHover();
+                if (!popup.isEmpty()) {
+                    Main.getDisplayManager().showPopup(popup);
+                }
             }
         }
-
-        if (popupMenu != null && !popupMenu.draw()) popupMenu = null;
     }
 
     private String formatClassName() {
@@ -256,12 +265,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     public void setDecompileTarget(Input input) {
-        this.autoscrollTo = input;
+//        this.autoscrollTo = input;
         this.setDecompileTarget(input.getOwningClass());
-    }
-
-    public DecompilerHighlight getHighlight() {
-        return highlight;
     }
 
     @Override

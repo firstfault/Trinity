@@ -4,8 +4,10 @@ import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.object.AbstractDatabaseObject;
 import me.f1nal.trinity.database.object.DatabaseVariable;
 import imgui.type.ImString;
+import me.f1nal.trinity.gui.frames.impl.cp.IRenameHandler;
+import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
 
-public class Variable implements IDatabaseSavable {
+public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHandler {
     private final VariableTable table;
     private ImString nameProperty;
     private String name;
@@ -39,7 +41,23 @@ public class Variable implements IDatabaseSavable {
     }
 
     @Override
-    public AbstractDatabaseObject createDatabaseObject() {
+    public DatabaseVariable createDatabaseObject() {
         return new DatabaseVariable(table.getMethod().getDetails(), findIndex(), this.getName());
+    }
+
+    @Override
+    public RenameHandler getRenameHandler() {
+        return new RenameHandler() {
+            @Override
+            public String getFullName() {
+                return getName();
+            }
+
+            @Override
+            public void rename(String newName) {
+                getNameProperty().set(newName);
+                save();
+            }
+        };
     }
 }

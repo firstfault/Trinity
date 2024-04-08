@@ -2,6 +2,7 @@ package me.f1nal.trinity.decompiler.output.impl;
 
 import me.f1nal.trinity.decompiler.output.IMemberDetails;
 import me.f1nal.trinity.decompiler.output.OutputMember;
+import me.f1nal.trinity.decompiler.output.OutputMemberVisitor;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -34,6 +35,11 @@ public class FieldOutputMember extends OutputMember implements IMemberDetails {
         ownerName = dataInput.readUTF();
         fieldName = dataInput.readUTF();
         fieldDescriptor = dataInput.readUTF();
+    }
+
+    @Override
+    public void visit(OutputMemberVisitor visitor) {
+        visitor.visitField(this);
     }
 
     public String getOwnerName() {

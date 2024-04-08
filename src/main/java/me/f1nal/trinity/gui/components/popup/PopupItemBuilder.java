@@ -61,4 +61,8 @@ public class PopupItemBuilder {
     public List<PopupItem> get() {
         return items;
     }
+
+    public boolean isEmpty() {
+        return this.items.isEmpty();
+    }
 }

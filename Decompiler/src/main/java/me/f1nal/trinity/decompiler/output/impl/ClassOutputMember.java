@@ -1,6 +1,7 @@
 package me.f1nal.trinity.decompiler.output.impl;
 
 import me.f1nal.trinity.decompiler.output.OutputMember;
+import me.f1nal.trinity.decompiler.output.OutputMemberVisitor;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -34,6 +35,11 @@ public class ClassOutputMember extends OutputMember {
     protected void deserializeImpl(DataInput dataInput) throws IOException {
         this.className = dataInput.readUTF();
         isImport = dataInput.readBoolean();
+    }
+
+    @Override
+    public void visit(OutputMemberVisitor visitor) {
+        visitor.visitClass(this);
     }
 
     public String getClassName() {

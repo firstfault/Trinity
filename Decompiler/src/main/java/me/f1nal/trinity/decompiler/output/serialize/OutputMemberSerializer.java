@@ -1,7 +1,7 @@
 package me.f1nal.trinity.decompiler.output.serialize;
 
 import me.f1nal.trinity.decompiler.output.OutputMember;
-import me.f1nal.trinity.decompiler.output.impl.KeywordOutputMember;
+import me.f1nal.trinity.decompiler.output.impl.*;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
@@ -10,10 +10,41 @@ import java.util.Base64;
 import java.util.function.Function;
 
 public final class OutputMemberSerializer {
+    public static Class<?> getClass(int id) {
+        if (id < 0 || id >= instantiable.length) {
+            return null;
+        }
+        return instantiable[id];
+    }
+
+    public static int getId(Class<? extends OutputMember> clazz) {
+        for (int i = 0; i < instantiable.length; i++) {
+            if (clazz == instantiable[i]) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static final Class<?>[] instantiable = new Class[] {
+            MethodOutputMember.class,
+            ClassOutputMember.class,
+            KeywordOutputMember.class,
+            VariableOutputMember.class,
+            FieldOutputMember.class,
+            MethodStartEndOutputMember.class,
+            NumberOutputMember.class,
+            FieldDeclarationOutputMember.class,
+            CommentOutputMember.class,
+            PackageOutputMember.class,
+            StringOutputMember.class,
+            BytecodeMarkerOutputMember.class,
+    };
+
     public static String serialize(OutputMember outputMember) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(baos);
-        dos.writeByte(OutputMemberFactory.getId(outputMember.getClass()));
+        dos.writeByte(getId(outputMember.getClass()));
         outputMember.serialize(dos);
         return Base64.getEncoder().encodeToString(baos.toByteArray());
     }
@@ -38,17 +69,17 @@ public final class OutputMemberSerializer {
         ByteArrayInputStream bais = new ByteArrayInputStream(Base64.getDecoder().decode(encoded));
         DataInputStream dis = new DataInputStream(bais);
         int id = dis.readUnsignedByte();
-        Class<?> clazz = OutputMemberFactory.getClass(id);
+        Class<?> clazz = getClass(id);
         if (clazz == null) {
             throw new IOException("Unknown output member type: " + id);
         }
-        Constructor<?> constructor = null;
+        Constructor<?> constructor;
         try {
             constructor = clazz.getConstructor(int.class);
         } catch (NoSuchMethodException e) {
             throw new IOException("Constructor not found for type: " + clazz.getSimpleName(), e);
         }
-        Object instance = null;
+        Object instance;
         try {
             instance = constructor.newInstance(dis.readInt());
             if (!(instance instanceof OutputMember)) {

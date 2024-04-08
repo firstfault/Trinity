@@ -1,8 +1,10 @@
 package me.f1nal.trinity.execution;
 
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.object.DatabaseFieldDisplayName;
 import me.f1nal.trinity.execution.xref.XrefMap;
+import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.Remapper;
@@ -25,6 +27,20 @@ public class FieldInput extends Input implements IDatabaseSavable<DatabaseFieldD
 
     public String getDisplayName() {
         return displayName;
+    }
+
+    public RenameHandler getRenameHandler() {
+        return new RenameHandler() {
+            @Override
+            public String getFullName() {
+                return getDisplayName();
+            }
+
+            @Override
+            public void rename(String newName) {
+                FieldInput.this.rename(Main.getTrinity().getRemapper(), newName);
+            }
+        };
     }
 
     private String getName() {
@@ -64,7 +80,7 @@ public class FieldInput extends Input implements IDatabaseSavable<DatabaseFieldD
     }
 
     @Override
-    protected XrefBuilder createXrefBuilder(XrefMap xrefMap) {
+    public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
         return new XrefBuilderMemberRef(xrefMap, this.getDetails());
     }
 

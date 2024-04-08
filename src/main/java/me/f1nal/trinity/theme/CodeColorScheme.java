@@ -36,6 +36,8 @@ public final class CodeColorScheme {
     public static int PACKAGE = getRgb(new Color(157, 101, 71));
     @LabeledColor(category = CODE_EDITOR, label = "String")
     public static int STRING = getRgb(new Color(211, 211, 211));
+    @LabeledColor(category = CODE_EDITOR, label = "Line Number")
+    public static int LINE_NUMBER = getRgb(new Color(66, 110, 66));
 
     /////////////////////////
     // Notify Colors

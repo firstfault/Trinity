@@ -1,17 +1,18 @@
 package me.f1nal.trinity.decompiler.output;
 
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.decompiler.DecompiledMethod;
 import me.f1nal.trinity.decompiler.output.impl.*;
 import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
-import me.f1nal.trinity.decompiler.output.component.*;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.execution.var.Variable;
 import me.f1nal.trinity.gui.frames.impl.assembler.line.MethodOpcodeSource;
+import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.logging.Logging;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
@@ -23,7 +24,7 @@ import java.util.Objects;
 public class DecompilerMemberReader {
     private final DecompiledClass decompiledClass;
     private DecompiledMethod currentMethod;
-    private final List<AbstractTextComponent> componentList = new ArrayList<>();
+    private final List<DecompilerComponent> componentList = new ArrayList<>();
     private List<AbstractInsnNode> instructionsLinkedToComponent;
     private List<AbstractInsnNode> lastInstructionsLinkedToComponent;
 
@@ -33,9 +34,9 @@ public class DecompilerMemberReader {
     public DecompilerMemberReader(DecompiledClass decompiledClass, String rawOutput) throws IOException {
         this.decompiledClass = decompiledClass;
         this.decode(rawOutput);
-    }
+    }/*
 
-    private AbstractTextComponent convertToComponent(String text, OutputMember outputMember) throws IOException {
+    private DecompilerComponent convertToComponent(String text, OutputMember outputMember) throws IOException {
         final Trinity trinity = decompiledClass.getTrinity();
 
         if (outputMember instanceof MethodOutputMember) {
@@ -90,7 +91,7 @@ public class DecompilerMemberReader {
             return null;
         }
         throw new IOException("Don't know how to handle member type " + outputMember.getClass().getSimpleName());
-    }
+    }*/
 
     private void handleBytecodeMarker(BytecodeMarkerOutputMember marker) {
         ClassInput classInput = decompiledClass.getClassInput();
@@ -172,7 +173,7 @@ public class DecompilerMemberReader {
             if (start >= 0) {
                 line = line.substring(0, start);
             } else {
-                this.addComponent(new RawTextComponent(text));
+                this.addComponent(new DecompilerComponent(text));
                 break;
             }
             if (end == -1) {
@@ -188,33 +189,51 @@ public class DecompilerMemberReader {
             text = text.substring(end + tagNameEnd.length() + outputMember.getLength());
             String targetString = toEnd.substring(0, outputMember.getLength());
             if (!line.isEmpty()) {
-                this.addComponent(new RawTextComponent(line));
+                this.addComponent(new DecompilerComponent(line));
             }
             while (targetString.contains(tagNameStart)) targetString = sanityCheckEncoded(outputMember, targetString);
             if (outputMember instanceof BytecodeMarkerOutputMember) {
                 this.handleBytecodeMarker((BytecodeMarkerOutputMember) outputMember);
                 continue;
             }
-            AbstractTextComponent component = this.convertToComponent(targetString, outputMember);
-            if (component == null) {
-                continue;
+            if (outputMember instanceof MethodStartEndOutputMember) {
+                MethodStartEndOutputMember mse = (MethodStartEndOutputMember) outputMember;
+                if (mse.isStart()) {
+                    ClassInput classInput = Main.getTrinity().getExecution().getClassInput(mse.getOwner());
+                    if (classInput == null) {
+                        throw new NullPointerException(String.format("Class input is null for %s.", mse.getOwner()));
+                    }
+                    this.currentMethod = decompiledClass.createMethod(Objects.requireNonNull(classInput).createMethod(mse.getName(), mse.getDesc()));
+//                    if (currentMethod != null) {
+//                        return new InputStartComponent(this.currentMethod.getMethodInput());
+//                    }
+                } else {
+                    if (this.currentMethod == null) {
+                        throw new RuntimeException();
+                    }
+                    this.currentMethod = null;
+                }
+//                return null;
             }
+            DecompilerComponent component = new DecompilerComponent(targetString);
+            DecompilerComponentInitializer initializer = new DecompilerComponentInitializer(Main.getTrinity(), component, targetString, decompiledClass.getClassInput(), currentMethod);
+            outputMember.visit(initializer);
             this.addComponent(component);
         }
 
         this.setBytecodeMarkers();
     }
 
-    private void addComponent(AbstractTextComponent component) {
-        if (this.instructionsLinkedToComponent != null) {
-            component.setLinkedInstructions(this.lastInstructionsLinkedToComponent = this.instructionsLinkedToComponent);
-            this.instructionsLinkedToComponent = null;
-        }
+    private void addComponent(DecompilerComponent component) {
+//        if (this.instructionsLinkedToComponent != null) {
+//            component.setLinkedInstructions(this.lastInstructionsLinkedToComponent = this.instructionsLinkedToComponent);
+//            this.instructionsLinkedToComponent = null;
+//        }
 
         this.componentList.add(component);
     }
 
-    public List<AbstractTextComponent> getComponentList() {
+    public List<DecompilerComponent> getComponentList() {
         return componentList;
     }
 

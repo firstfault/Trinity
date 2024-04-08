@@ -11,6 +11,7 @@ import me.f1nal.trinity.execution.xref.where.XrefWhereMethod;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.frames.impl.assembler.AssemblerFrame;
 import me.f1nal.trinity.gui.frames.impl.assembler.line.Instruction2SourceMapping;
+import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.Remapper;
@@ -33,8 +34,8 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
         this.owningClass = owningClass;
         this.methodNode = methodNode;
         this.accessFlags = new AccessFlags(this.getOwningClass(), this);
-        this.variableTable = new VariableTable(this);
         this.setDisplayName(this.getName());
+        this.variableTable = new VariableTable(this);
     }
 
     public XrefWhere getXrefWhere() {
@@ -42,6 +43,20 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
             xrefWhere = new XrefWhereMethod(this);
         }
         return xrefWhere;
+    }
+
+    public RenameHandler getRenameHandler() {
+        return isInit() ? getOwningClass().getRenameHandler() : new RenameHandler() {
+            @Override
+            public String getFullName() {
+                return getDisplayName();
+            }
+
+            @Override
+            public void rename(String newName) {
+                MethodInput.this.rename(Main.getTrinity().getRemapper(), newName);
+            }
+        };
     }
 
     public void setDisplayName(String displayName) {
@@ -101,7 +116,7 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
     }
 
     @Override
-    protected XrefBuilder createXrefBuilder(XrefMap xrefMap) {
+    public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
         return new XrefBuilderMemberRef(xrefMap, this.getDetails());
     }
 

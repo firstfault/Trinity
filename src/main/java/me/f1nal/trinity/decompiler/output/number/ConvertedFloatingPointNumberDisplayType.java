@@ -1,4 +1,4 @@
-package me.f1nal.trinity.decompiler.output.component.number;
+package me.f1nal.trinity.decompiler.output.number;
 
 public abstract class ConvertedFloatingPointNumberDisplayType extends NumberDisplayType {
     @Override

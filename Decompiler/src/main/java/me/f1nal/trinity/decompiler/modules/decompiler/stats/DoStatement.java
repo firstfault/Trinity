@@ -67,7 +67,7 @@ public final class DoStatement extends Statement {
     }
     switch (loopType) {
       case DO -> {
-        buf.appendIndent(indent).append(OutputMemberSerializer.keyword("while") + "(true/*do_x1*/) {").appendLineSeparator();
+        buf.appendIndent(indent).append(OutputMemberSerializer.keyword("while") + "(true) {").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
         buf.append(ExprProcessor.jmpWrapper(first, indent + 1, false, tracer));
         buf.appendIndent(indent).append("}").appendLineSeparator();

@@ -1,6 +1,7 @@
 package me.f1nal.trinity.decompiler.output.impl;
 
 import me.f1nal.trinity.decompiler.output.OutputMember;
+import me.f1nal.trinity.decompiler.output.OutputMemberVisitor;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -19,5 +20,10 @@ public class KeywordOutputMember extends OutputMember {
     @Override
     protected void deserializeImpl(DataInput dataInput) throws IOException {
 
+    }
+
+    @Override
+    public void visit(OutputMemberVisitor visitor) {
+        visitor.visitKeyword(this);
     }
 }

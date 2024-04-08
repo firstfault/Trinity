@@ -2,6 +2,7 @@ package me.f1nal.trinity.decompiler.output.impl;
 
 import me.f1nal.trinity.decompiler.output.IMemberDetails;
 import me.f1nal.trinity.decompiler.output.OutputMember;
+import me.f1nal.trinity.decompiler.output.OutputMemberVisitor;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -50,6 +51,11 @@ public class MethodStartEndOutputMember extends OutputMember implements IMemberD
             this.name = dataInput.readUTF();
             this.desc = dataInput.readUTF();
         }
+    }
+
+    @Override
+    public void visit(OutputMemberVisitor visitor) {
+        visitor.visitMethodStartEnd(this);
     }
 
     @Override

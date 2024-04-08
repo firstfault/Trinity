@@ -6,6 +6,7 @@ import me.f1nal.trinity.execution.xref.ClassXref;
 import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.frames.impl.classes.classhierarchy.ClassHierarchyWindow;
+import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.remap.Remapper;
@@ -194,7 +195,7 @@ public final class ClassInput extends Input implements ModifyNotifiable {
     }
 
     @Override
-    protected XrefBuilder createXrefBuilder(XrefMap xrefMap) {
+    public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
         return new XrefBuilderClassRef(xrefMap, this.getFullName());
     }
 
@@ -214,5 +215,10 @@ public final class ClassInput extends Input implements ModifyNotifiable {
     @Override
     public ClassInput getOwningClass() {
         return this;
+    }
+
+    @Override
+    public RenameHandler getRenameHandler() {
+        return getClassTarget().getRenameHandler();
     }
 }

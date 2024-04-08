@@ -1,4 +1,4 @@
-package me.f1nal.trinity.decompiler.output.component.number;
+package me.f1nal.trinity.decompiler.output.number;
 
 import me.f1nal.trinity.util.INameable;
 

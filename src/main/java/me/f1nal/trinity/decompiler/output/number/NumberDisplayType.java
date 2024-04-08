@@ -1,8 +1,10 @@
-package me.f1nal.trinity.decompiler.output.component.number;
+package me.f1nal.trinity.decompiler.output.number;
 
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.gui.frames.impl.constant.search.ConstantSearchType;
 import me.f1nal.trinity.gui.frames.impl.constant.search.ConstantSearchTypeNumber;
+
+import java.util.ArrayList;
 
 public abstract class NumberDisplayType {
     public String getText(Number number) {

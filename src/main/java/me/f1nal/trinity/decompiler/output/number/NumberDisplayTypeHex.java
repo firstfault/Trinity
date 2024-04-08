@@ -1,4 +1,4 @@
-package me.f1nal.trinity.decompiler.output.component.number;
+package me.f1nal.trinity.decompiler.output.number;
 
 public class NumberDisplayTypeHex extends NumberDisplayType {
     @Override

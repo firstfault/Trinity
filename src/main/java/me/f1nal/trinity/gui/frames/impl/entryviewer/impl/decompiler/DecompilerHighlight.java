@@ -1,16 +1,15 @@
 package me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler;
 
 import imgui.ImColor;
-import me.f1nal.trinity.decompiler.output.component.AbstractTextComponent;
 import me.f1nal.trinity.util.animation.Animation;
 import me.f1nal.trinity.util.animation.Easing;
 
 public class DecompilerHighlight {
-    private final AbstractTextComponent textComponent;
+    private final DecompilerComponent textComponent;
     private final Animation animation = new Animation(Easing.LINEAR, 1550L, 1.F);
     private boolean scrolled;
 
-    public DecompilerHighlight(AbstractTextComponent textComponent) {
+    public DecompilerHighlight(DecompilerComponent textComponent) {
         this.textComponent = textComponent;
     }
 
@@ -22,7 +21,7 @@ public class DecompilerHighlight {
         return scrolled;
     }
 
-    public AbstractTextComponent getTextComponent() {
+    public DecompilerComponent getTextComponent() {
         return textComponent;
     }
 

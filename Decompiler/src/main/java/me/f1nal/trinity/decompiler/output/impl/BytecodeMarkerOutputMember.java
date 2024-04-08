@@ -1,6 +1,7 @@
 package me.f1nal.trinity.decompiler.output.impl;
 
 import me.f1nal.trinity.decompiler.output.OutputMember;
+import me.f1nal.trinity.decompiler.output.OutputMemberVisitor;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -39,6 +40,11 @@ public class BytecodeMarkerOutputMember extends OutputMember {
         method = dataInput.readInt();
         opcode = dataInput.readUnsignedByte();
         offsetFromStart = dataInput.readInt();
+    }
+
+    @Override
+    public void visit(OutputMemberVisitor visitor) {
+        visitor.visitBytecodeMarker(this);
     }
 
     public int getMethod() {

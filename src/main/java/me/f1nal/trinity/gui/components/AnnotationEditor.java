@@ -3,7 +3,6 @@ package me.f1nal.trinity.gui.components;
 import imgui.ImGui;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
-import me.f1nal.trinity.decompiler.output.component.ClassComponent;
 import me.f1nal.trinity.gui.frames.impl.annotation.AnnotationInsertPopup;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AnnotationNode;
@@ -105,13 +104,6 @@ public class AnnotationEditor {
 
         if (value instanceof Type) {
             String className = ((Type) value).getClassName().replace('.', '/');
-            ClassComponent comp = new ClassComponent(className, className, false, trinity.getExecution().getClassInput(className), trinity);
-            ImGui.textColored(comp.getTextColor(), comp.getText());
-            comp.setId(id);
-            if (ImGui.isItemHovered()) {
-                comp.handleItemHover();
-            }
-            comp.handleAfterDrawing();
             return;
         }
 

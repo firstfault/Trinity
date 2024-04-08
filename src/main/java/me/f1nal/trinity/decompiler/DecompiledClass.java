@@ -3,12 +3,11 @@ package me.f1nal.trinity.decompiler;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.output.DecompilerMemberReader;
-import me.f1nal.trinity.decompiler.output.component.AbstractTextComponent;
-import me.f1nal.trinity.decompiler.output.lines.ComponentGroup;
-import me.f1nal.trinity.decompiler.output.lines.LineText;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.MethodInput;
-import me.f1nal.trinity.util.StringUtil;
+import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerComponent;
+import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerLine;
+import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerLineText;
 
 import java.io.IOException;
 import java.util.*;
@@ -16,40 +15,42 @@ import java.util.*;
 public final class DecompiledClass {
     private final Trinity trinity;
     private final ClassInput classInput;
-    private final List<ComponentGroup> componentGroupList = new ArrayList<>();
     private final Map<MethodInput, DecompiledMethod> decompiledMethodMap = new HashMap<>();
+    private final List<DecompilerComponent> componentList;
+    /**
+     * Lines of the decompiled source code file, each containing a {@link DecompilerLine} which holds the
+     * text components to be rendered on that specific line.
+     */
+    private final List<DecompilerLine> lines = new ArrayList<>();
 
     public DecompiledClass(Trinity trinity, ClassInput classInput, final String rawOutput) throws IOException {
         this.trinity = trinity;
         this.classInput = classInput;
 
         final DecompilerMemberReader reader = new DecompilerMemberReader(this, rawOutput);
-        this.addLines(reader.getComponentList());
+        this.componentList = reader.getComponentList();
 
+        this.resetLines();
         System.out.println("Decompiling " + classInput.getFullName());
     }
 
     public void resetLines() {
-        List<AbstractTextComponent> componentList = new ArrayList<>(getComponentGroupList().size());
-        for (ComponentGroup group : getComponentGroupList()) {
-            componentList.add(group.getComponent());
-        }
-        this.componentGroupList.clear();
-        this.addLines(componentList);
+        this.addLines(this.componentList);
     }
 
-    private void addLines(List<AbstractTextComponent> componentList) {
-        boolean normalizeText = Main.getPreferences().isDecompilerNormalizeText();
+    private DecompilerLine newLine() {
+        DecompilerLine line = new DecompilerLine(this.lines.size() + 1);
+        this.lines.add(line);
+        return line;
+    }
 
-        for (int j = 0, textComponentListSize = componentList.size(); j < textComponentListSize; j++) {
-            AbstractTextComponent textComponent = componentList.get(j);
+    private void addLines(List<DecompilerComponent> componentList) {
+        this.lines.clear();
 
-//            if (textComponent.getText().isEmpty()) {
-//                continue;
-//            }
+        DecompilerLine sourceLine = this.newLine();
 
-            ComponentGroup group = this.beginGroup(textComponent);
-            textComponent.setId(j);
+        for (DecompilerComponent textComponent : componentList) {
+            textComponent.refreshText();
 
             String text = textComponent.getText();
             String[] split = text.split("\n");
@@ -62,26 +63,16 @@ public final class DecompiledClass {
             }
 
             for (String line : split) {
-                if (line == null || line.isEmpty()) {
-                    group.addText(new LineText.LineTextNewline());
-                } else {
-                    group.addText(new LineText.LineTextComponent(normalizeText ? StringUtil.convertStringToJava(line, true) : line, textComponent::getTextColor));
+                if (line != null && !line.isEmpty()) {
+                    sourceLine.addComponent(new DecompilerLineText(line, textComponent));
                 }
-                --lines;
-            }
-            if (lines < 0) {
-                group.addText(new LineText.LineTextSameLine());
+
+                if (lines-- > 0) sourceLine = this.newLine();
             }
             for (int i = 0; i < lines; i++) {
-                group.addText(new LineText.LineTextNewline());
+                sourceLine = this.newLine();
             }
         }
-    }
-
-    private ComponentGroup beginGroup(AbstractTextComponent component) {
-        ComponentGroup group = new ComponentGroup(component);
-        this.componentGroupList.add(group);
-        return group;
     }
 
     public DecompiledMethod getMethod(MethodInput methodInput) {
@@ -104,14 +95,16 @@ public final class DecompiledClass {
         return trinity;
     }
 
-    public List<ComponentGroup> getComponentGroupList() {
-        return componentGroupList;
+    public List<DecompilerLine> getLines() {
+        return lines;
     }
 
-    public boolean containsComponent(AbstractTextComponent component) {
-        for (ComponentGroup group : componentGroupList) {
-            if (group.getComponent().equals(component)) {
-                return true;
+    public boolean containsComponent(DecompilerComponent component) {
+        for (DecompilerLine line : lines) {
+            for (DecompilerLineText lineComponent : line.getComponents()) {
+                if (lineComponent.getComponent().equals(component)) {
+                    return true;
+                }
             }
         }
         return false;

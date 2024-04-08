@@ -1,8 +1,6 @@
 package me.f1nal.trinity.gui.frames.impl.assembler.line;
 
 import me.f1nal.trinity.decompiler.DecompiledClass;
-import me.f1nal.trinity.decompiler.output.component.AbstractTextComponent;
-import me.f1nal.trinity.decompiler.output.lines.ComponentGroup;
 import me.f1nal.trinity.execution.ClassInput;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
@@ -23,21 +21,6 @@ public class Instruction2SourceMapping {
 
     public Instruction2SourceMapping(DecompiledClass decompiledClass) {
         this.decompiledClass = decompiledClass;
-
-        for (ComponentGroup group : decompiledClass.getComponentGroupList()) {
-            AbstractTextComponent component = group.getComponent();
-
-            if (component.getLinkedInstructions() != null) {
-                SourceLineNumber sourceLine = this.getSourceLine(this.lineNumber);
-
-                for (AbstractInsnNode linkedInstruction : component.getLinkedInstructions()) {
-                    this.instruction2source.put(linkedInstruction, sourceLine);
-                }
-            }
-
-            this.lineNumber += getNewlineCount(component.getText().toCharArray());
-        }
-
 
         this.className = this.getClassName(decompiledClass.getClassInput());
     }
