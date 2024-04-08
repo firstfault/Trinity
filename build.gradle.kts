@@ -1,4 +1,5 @@
 plugins {
+    id("com.github.johnrengelman.shadow") version "8.1.1"
     id("java")
 }
 
@@ -23,6 +24,30 @@ dependencies {
     implementation("org.ow2.asm:asm-tree:9.7")
     implementation("org.ow2.asm:asm-util:9.7")
     implementation("io.github.spair:imgui-java-app:1.86.11")
+}
+
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<Jar> {
+    manifest {
+        attributes["Main-Class"] = "me.f1nal.trinity.Main"
+    }
+}
+
+tasks.shadowJar {
+    archiveClassifier.set("")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    configurations = listOf(project.configurations.runtimeClasspath.get())
+    manifest {
+        attributes["Main-Class"] = "me.f1nal.trinity.Main"
+    }
+    mergeServiceFiles()
+}
+
+tasks.build {
+    dependsOn(tasks.shadowJar)
 }
 
 tasks.test {
