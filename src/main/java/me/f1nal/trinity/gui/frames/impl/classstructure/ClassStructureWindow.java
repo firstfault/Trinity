@@ -31,6 +31,7 @@ public class ClassStructureWindow extends StaticWindow {
         super("Class Structure", 600, 400, trinity);
         this.kindFilter.setExclude(new IKindType[]{StructureKind.CLASSES});
         this.windowFlags |= ImGuiWindowFlags.MenuBar;
+        this.windowFlags |= ImGuiWindowFlags.HorizontalScrollbar;
     }
 
     public void setClassStructure(ClassStructure classStructure) {
