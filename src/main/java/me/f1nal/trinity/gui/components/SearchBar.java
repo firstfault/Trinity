@@ -1,6 +1,7 @@
 package me.f1nal.trinity.gui.components;
 
 import imgui.ImGui;
+import imgui.flag.ImGuiInputTextFlags;
 import imgui.type.ImString;
 
 public class SearchBar {
@@ -21,7 +22,7 @@ public class SearchBar {
     }
 
     public boolean draw() {
-        return ImGui.inputText("Search###" + id, searchText);
+        return ImGui.inputText("Search###" + id, searchText, ImGuiInputTextFlags.EnterReturnsTrue);
     }
 
     public String getText() {
