@@ -31,7 +31,7 @@ public class DecompilerComponentRenameState {
         GuiUtil.smallWidget(() -> ImGui.inputText("###" + this.id, this.text));
         ImGui.popItemWidth();
 
-        if (ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Enter)) || (this.focusGrabbed && GuiUtil.isMouseClickedElsewhere())) {
+        if (ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Enter)) || (this.focusGrabbed && GuiUtil.isFocusLostOnItem())) {
             component.stopRenaming(this.text.get());
         } else if (ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Escape))) {
             component.stopRenaming(null);

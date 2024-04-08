@@ -21,7 +21,7 @@ public class GuiUtil {
         }
     }
 
-    public static boolean isMouseClickedElsewhere() {
+    public static boolean isFocusLostOnItem() {
         if (!ImGui.isItemHovered()) {
             for (int i = 0; i < ImGuiMouseButton.COUNT; i++) {
                 if (ImGui.isMouseClicked(i)) return true;

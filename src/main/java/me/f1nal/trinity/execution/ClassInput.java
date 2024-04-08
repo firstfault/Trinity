@@ -98,6 +98,7 @@ public final class ClassInput extends Input implements ModifyNotifiable {
     @Override
     public void populatePopup(PopupItemBuilder builder) {
 //        builder.menuItem("View Hierarchy", () -> Main.getDisplayManager().addClosableWindow(new ClassHierarchyWindow(this.getOwningClass().getExecution().getTrinity(), this)));
+        super.populatePopup(builder);
     }
 
     public Map<String, MethodInput> getMethodList() {

@@ -132,7 +132,7 @@ public class BrowserViewerNode {
                 GuiUtil.smallWidget(() -> {
                     ImGui.setKeyboardFocusHere();
                     ImGui.inputText("###" + this.renamingId, this.renamingText);
-                    if ((this.renamingSetFocus && GuiUtil.isMouseClickedElsewhere()) || ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Enter))) {
+                    if ((this.renamingSetFocus && GuiUtil.isFocusLostOnItem()) || ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Enter))) {
                         final String newName = this.renamingText.get();
                         this.renamingText = null;
                         Main.runLater(() -> this.rename.rename(newName));

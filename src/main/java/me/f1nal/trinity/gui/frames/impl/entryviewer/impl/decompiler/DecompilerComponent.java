@@ -63,14 +63,7 @@ public class DecompilerComponent {
 
     public void addInputControls(Input input) {
         this.setRenameHandler(input.getRenameHandler());
-        this.addPopupBuilder(builder -> {
-            builder.menuItem("View Xrefs", () -> {
-                Main.getDisplayManager().addClosableWindow(new XrefViewerFrame(input.createXrefBuilder(Main.getTrinity().getExecution().getXrefMap()), Main.getTrinity()));
-            });
-            builder.menuItem("View Member", () -> {
-                Main.getDisplayManager().openDecompilerView(input);
-            });
-        });
+        this.addPopupBuilder(input::populatePopup);
     }
 
     public void stopRenaming(@Nullable String newName) {
