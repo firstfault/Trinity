@@ -1,7 +1,9 @@
 package me.f1nal.trinity.execution;
 
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.ClassPath;
+import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
 import me.f1nal.trinity.execution.loading.AsynchronousLoad;
@@ -9,6 +11,9 @@ import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
 import me.f1nal.trinity.execution.xref.XrefMap;
+import me.f1nal.trinity.gui.viewport.notifications.Notification;
+import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
+import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -49,7 +54,11 @@ public final class Execution {
         this.asynchronousLoad = new AsynchronousLoad(this.getTrinity());
 
         if (!this.trinity.getDatabase().addLoadTasks(this.asynchronousLoad)) {
-            // Newly created database
+            // If this method returned false, we are creating a new database.
+            if (classPath.getWarnings() != -1) {
+                Main.getDisplayManager().addNotification(new Notification(NotificationType.WARNING, new SimpleCaption("Class Path"), ColoredStringBuilder.create()
+                        .fmt("Finished reading input with {} warnings", classPath.getWarnings()).get()));
+            }
             this.asynchronousLoad.add(new ClassInputReaderLoadTask(classPath.createClassByteList(), classPath.resources));
         }
 

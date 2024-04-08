@@ -47,18 +47,7 @@ public class FileListBoxComponent<T extends ListedFile> implements ICaption {
         ImGui.text(this.label);
         listBoxComponent.draw(ImGui.getContentRegionAvailX(), 80.F);
         if (ImGui.button(FontAwesomeIcons.Plus + " Add")) {
-            File file = fileSelectorComponent.openFileChooser();
-            if (file != null) {
-                T listedFile = this.listedFileFactory.create(file);
-                if (listedFile != null) {
-                    listBoxComponent.addElement(listedFile);
-
-                    if (this.elementAddEvent != null) this.elementAddEvent.accept(listedFile);
-                } else {
-                    Main.getDisplayManager().addNotification(new Notification(NotificationType.INFO, this,
-                            ColoredStringBuilder.create().fmt("File {} is invalid or could not be read", file.getName()).get()));
-                }
-            }
+            this.addFile(fileSelectorComponent.openFileChooser());
         }
         ImGui.sameLine();
         if (GuiUtil.disabledWidget(listBoxComponent.getSelection() == null, () -> ImGui.button(FontAwesomeIcons.Trash + " Remove"))) {
@@ -74,6 +63,24 @@ public class FileListBoxComponent<T extends ListedFile> implements ICaption {
                 listedFileFactory.view(listBoxComponent.getSelection());
             }
         });
+    }
+
+    public void addFile(File file) {
+        if (file == null) {
+            return;
+        }
+
+        T listedFile = this.listedFileFactory.create(file);
+
+        if (listedFile == null) {
+            Main.getDisplayManager().addNotification(new Notification(NotificationType.INFO, this,
+                    ColoredStringBuilder.create().fmt("File {} is invalid or could not be read", file.getName()).get()));
+            return;
+        }
+
+        listBoxComponent.addElement(listedFile);
+
+        if (this.elementAddEvent != null) this.elementAddEvent.accept(listedFile);
     }
 
     @Override

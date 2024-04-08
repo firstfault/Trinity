@@ -45,9 +45,9 @@ public class EntryPoint {
                     return null;
                 }
                 final MethodInput main = input.createMethod("main", "([Ljava/lang/String;)V");
-                if (main == null) {
-                    throw new MissingEntryPointException(mainClass);
-                }
+//                if (main == null) {
+//                    throw new MissingEntryPointException(mainClass);
+//                }
                 Logging.info("Found main class {}.{}. Project java version {} (V21)", mainClass, main.getName(), input.getClassNode().version);
                 return main;
             }

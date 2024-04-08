@@ -20,16 +20,16 @@ public class ProjectInputJARFile extends AbstractProjectInputFile {
         try (ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(bytes))) {
             ZipEntry jarEntry;
             while ((jarEntry = zipInputStream.getNextEntry()) != null) {
-                String entryName = jarEntry.getName();
+                String entryName = cleanEntryName(jarEntry.getName());
                 byte[] entryBytes = zipInputStream.readAllBytes();
 
                 hasEntry = true;
 
-                if (!jarEntry.isDirectory()) {
+                if (!jarEntry.isDirectory() || entryBytes.length != 0) {
                     if (entryName.endsWith(".class")) {
                         this.getClassPath().getClasses().add(new UnreadClassBytes(entryName, entryBytes));
                     } else {
-                        this.getClassPath().getResources().put(entryName, entryBytes);
+                        this.getClassPath().putResource(entryName, entryBytes);
                     }
                 }
 
@@ -39,5 +39,10 @@ public class ProjectInputJARFile extends AbstractProjectInputFile {
         if (!hasEntry) {
             throw new IOException("Empty ZIP file");
         }
+    }
+
+    private static String cleanEntryName(String name) {
+        while (name.endsWith("/")) name = name.substring(0, name.length() - 1);
+        return name;
     }
 }

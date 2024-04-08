@@ -178,9 +178,8 @@ public class MainMenuBar {
 
         ImGui.separator();
         if (ImGui.menuItem("Quit Trinity")) {
-            Runtime.getRuntime().exit(0);
+            displayManager.closeDatabase(() -> Runtime.getRuntime().exit(0));
         }
-
     }
 
     public void openLocalProject() {

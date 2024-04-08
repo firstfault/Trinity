@@ -190,7 +190,7 @@ public class DecompilerMemberReader {
             if (!line.isEmpty()) {
                 this.addComponent(new RawTextComponent(line));
             }
-            targetString = sanityCheckEncoded(outputMember, targetString);
+            while (targetString.contains(tagNameStart)) targetString = sanityCheckEncoded(outputMember, targetString);
             if (outputMember instanceof BytecodeMarkerOutputMember) {
                 this.handleBytecodeMarker((BytecodeMarkerOutputMember) outputMember);
                 continue;

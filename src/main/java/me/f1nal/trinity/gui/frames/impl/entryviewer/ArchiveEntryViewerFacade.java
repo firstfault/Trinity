@@ -55,8 +55,8 @@ public class ArchiveEntryViewerFacade {
     }
 
     private void historyButton(String label, int mouseButton, String tooltip, boolean disabled, Runnable runnable) {
-        if (ImGui.isMouseClicked(mouseButton)) {
-            if (!disabled) runnable.run();
+        if (!disabled && ImGui.isMouseClicked(mouseButton)) {
+            runnable.run();
         }
     }
 }

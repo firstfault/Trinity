@@ -58,6 +58,10 @@ public class NewProjectFrame extends StaticWindow implements ICaption {
         this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize;
     }
 
+    public ProjectCreationInput getInputTab() {
+        return inputTab;
+    }
+
     @Override
     protected void renderFrame() {
         this.tabs.draw(150.F, 300.F);

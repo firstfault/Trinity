@@ -1,5 +1,6 @@
 package me.f1nal.trinity.decompiler.output.component;
 
+import imgui.flag.ImGuiMouseCursor;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.ClassInput;
@@ -67,8 +68,11 @@ public abstract class AbstractMemberComponent<I extends Input> extends AbstractR
         if (super.handleItemHover()) {
             return true;
         }
-        if (this.getInput() != null && !ImGui.getIO().getKeyCtrl() && ImGui.isMouseClicked(0)) {
-            Main.getDisplayManager().openDecompilerView(this.getInput());
+        if (this.getInput() != null && !ImGui.getIO().getKeyCtrl()) {
+            if (ImGui.isMouseClicked(0)) {
+                this.openXrefs();
+            }
+            ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
             return true;
         }
         return false;
