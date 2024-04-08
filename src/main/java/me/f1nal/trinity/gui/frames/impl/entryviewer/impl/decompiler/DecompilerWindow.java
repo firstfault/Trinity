@@ -4,6 +4,7 @@ import com.google.common.eventbus.Subscribe;
 import imgui.ImColor;
 import imgui.ImGui;
 import imgui.ImVec2;
+import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
 import me.f1nal.trinity.Main;
@@ -50,6 +51,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
     public DecompilerWindow(ClassTarget classTarget, Trinity trinity) {
         super(trinity, classTarget);
+        this.searchBar.inputTextFlags |= ImGuiInputTextFlags.EnterReturnsTrue;
         trinity.getEventManager().registerListener(this);
         this.setDecompileTarget(Objects.requireNonNull(classTarget.getInput()));
         this.setMenuBar(new PopupMenuBar(PopupItemBuilder.create().

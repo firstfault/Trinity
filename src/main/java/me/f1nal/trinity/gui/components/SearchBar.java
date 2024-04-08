@@ -7,6 +7,7 @@ import imgui.type.ImString;
 public class SearchBar {
     private final ImString searchText;
     private final String id = ComponentId.getId(getClass());
+    public int inputTextFlags = ImGuiInputTextFlags.None;
 
     public SearchBar(int length) {
         this.searchText = new ImString(length);
@@ -22,7 +23,7 @@ public class SearchBar {
     }
 
     public boolean draw() {
-        return ImGui.inputText("Search###" + id, searchText, ImGuiInputTextFlags.EnterReturnsTrue);
+        return ImGui.inputText("Search###" + id, searchText, inputTextFlags);
     }
 
     public String getText() {
