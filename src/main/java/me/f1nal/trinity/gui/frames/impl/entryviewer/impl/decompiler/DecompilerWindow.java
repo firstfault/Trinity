@@ -18,6 +18,7 @@ import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
+import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.SearchBar;
 import me.f1nal.trinity.gui.components.filter.misc.ShowFilterOption;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
@@ -42,7 +43,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private DecompilerHighlight highlight;
     public ComponentGroup hoveredGroup;
     private PopupMenu popupMenu;
-    private boolean resetLines;
+    private boolean resetLines, shouldSearch;
     private Input autoscrollTo;
     private final SearchBar searchBar = new SearchBar();
     private static final ShowFilterOption showFilter = new ShowFilterOption("decompilerWindow");
@@ -130,9 +131,13 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
         if (showFilter.getShowFilter().getState()) {
             if (showFilter.isSetFocus()) ImGui.setKeyboardFocusHere();
-
-            this.searchBar.draw();
+            if(this.searchBar.draw()) {
+                shouldSearch = true;
+            }
         }
+
+        ImGui.beginChild("DecompilerWindowChild");
+        showFilter.runControls();
 
         DecompiledClass decompiledClass = this.getDecompiledClass();
         if (decompiledClass == null) {
@@ -144,6 +149,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             }
             this.drawDecompiledOutput(decompiledClass);
         }
+
+        ImGui.endChild();
     }
 
     public void requestResetLines() {
@@ -215,12 +222,14 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             });
         }
 
-        if (this.isSearching()) {
+        if (this.isSearching() && shouldSearch) {
             final String searchText = this.searchBar.getText();
 
             groupList.stream().filter(componentGroup -> componentGroup.getComponent().getText().contains(searchText)).forEach(componentGroup -> {
                 this.highlight = new DecompilerHighlight(componentGroup.getComponent());
             });
+
+            shouldSearch = false;
         }
 
         this.hoveredGroup = null;
