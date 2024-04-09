@@ -5,6 +5,7 @@ import me.f1nal.trinity.appdata.AppDataManager;
 import me.f1nal.trinity.appdata.PreferencesFile;
 import me.f1nal.trinity.database.semaphore.DatabaseSaveShutdownHook;
 import me.f1nal.trinity.gui.DisplayManager;
+import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.keybindings.KeyBindManager;
 import me.f1nal.trinity.theme.ThemeManager;
 import com.google.common.collect.Queues;
@@ -53,7 +54,7 @@ public class Main {
         keyBindManager = new KeyBindManager();
         appDataManager = new AppDataManager();
         appDataManager.load();
-        displayManager = new DisplayManager("Trinity: " + VERSION, scheduledTasks);
+        displayManager = new DisplayManager("Trinity: " + VERSION);
         appDataManager.getState().setLastLaunchedVersion(VERSION);
         Runtime.getRuntime().addShutdownHook(new DatabaseSaveShutdownHook());
         Application.launch(displayManager);
@@ -92,5 +93,22 @@ public class Main {
     }
     public static ThemeManager getThemeManager() {
         return themeManager;
+    }
+    public static WindowManager getWindowManager() {
+        return getDisplayManager().getWindowManager();
+    }
+
+    public static void executeScheduledTasks() {
+        synchronized (scheduledTasks) {
+            while (!scheduledTasks.isEmpty()) {
+                FutureTask<?> task = scheduledTasks.poll();
+                try {
+                    task.run();
+                    task.get();
+                } catch (Throwable e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
     }
 }

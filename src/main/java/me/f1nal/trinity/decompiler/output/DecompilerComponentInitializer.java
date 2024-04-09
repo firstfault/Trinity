@@ -9,17 +9,16 @@ import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
 import me.f1nal.trinity.decompiler.output.impl.*;
 import me.f1nal.trinity.execution.*;
 import me.f1nal.trinity.execution.packages.Package;
+import me.f1nal.trinity.execution.var.ImmutableVariable;
 import me.f1nal.trinity.execution.var.Variable;
-import me.f1nal.trinity.execution.xref.XrefMap;
-import me.f1nal.trinity.gui.frames.impl.constant.ConstantViewCache;
-import me.f1nal.trinity.gui.frames.impl.constant.ConstantViewFrame;
-import me.f1nal.trinity.gui.frames.impl.constant.search.ConstantSearchType;
-import me.f1nal.trinity.gui.frames.impl.constant.search.ConstantSearchTypeString;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerComponent;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.IXrefBuilderProvider;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderClassRef;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderMemberRef;
+import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewCache;
+import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewFrame;
+import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchType;
+import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeString;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.StringUtil;
 import me.f1nal.trinity.util.SystemUtil;
@@ -27,6 +26,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class DecompilerComponentInitializer implements OutputMemberVisitor {
     private final Trinity trinity;
@@ -80,6 +80,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             component.addPopupBuilder(builder -> provider.addXrefViewerMenuItem(trinity, builder));
         }
 
+        component.setIdentifier(member, member.getClassName());
         component.setColorFunction(() -> CodeColorScheme.CLASS_REF);
         component.setTooltip(() -> ColoredStringBuilder.create().text(CodeColorScheme.CLASS_REF, target != null ? target.getDisplayOrRealName() : member.getClassName()).get());
     }
@@ -121,10 +122,11 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
                 ConstantSearchType constantSearchType = settings.displayType.getConstantSearchType(trinity, number);
                 List<ConstantViewCache> constantViewList = new ArrayList<>();
                 constantSearchType.populate(constantViewList);
-                Main.getDisplayManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
+                Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
             });
         });
 
+        component.setIdentifier(constant, number);
         component.setTextFunction(() -> settings.displayType.getText(number));
         component.setColorFunction(() -> CodeColorScheme.NUMBER);
         component.setTooltip(() -> ColoredStringBuilder.create().text(component.getColor(), StringUtil.capitalizeFirstLetter(number.getClass().getSimpleName())).get());
@@ -141,21 +143,24 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
     @Override
     public void visitField(FieldOutputMember field) {
-        @Nullable FieldInput fieldInput = trinity.getExecution().getField(new MemberDetails(field));
+        MemberDetails memberDetails = new MemberDetails(field);
+        @Nullable FieldInput fieldInput = trinity.getExecution().getField(memberDetails);
 
         if (fieldInput != null) {
             component.setTextFunction(fieldInput::getDisplayName);
             component.addInputControls(fieldInput);
         } else {
-            this.addXrefMemberMenuItem(component, new MemberDetails(field));
+            this.addXrefMemberMenuItem(component, memberDetails);
         }
 
+        component.setIdentifier(field, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.FIELD_REF);
     }
 
     @Override
     public void visitMethod(MethodOutputMember method) {
-        @Nullable MethodInput methodInput = trinity.getExecution().getMethod(new MemberDetails(method));
+        MemberDetails memberDetails = new MemberDetails(method);
+        @Nullable MethodInput methodInput = trinity.getExecution().getMethod(memberDetails);
 
         if (methodInput != null) {
             // super()/this() calls aren't named
@@ -171,9 +176,10 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
             component.addInputControls(methodInput);
         } else {
-            this.addXrefMemberMenuItem(component, new MemberDetails(method));
+            this.addXrefMemberMenuItem(component, memberDetails);
         }
 
+        component.setIdentifier(method, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.METHOD_REF);
     }
 
@@ -213,10 +219,10 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
     @Override
     public void visitString(StringOutputMember string) {
-        component.addPopupBuilder(builder -> {
-            // FIXME: Not the actual original string, it is escaped!
-            final String unquotedText = this.originalText.substring(1, this.originalText.length() - 1);
+        // FIXME: Not the actual original string, it is escaped!
+        final String unquotedText = this.originalText.substring(1, this.originalText.length() - 1);
 
+        component.addPopupBuilder(builder -> {
             builder.menuItem("Copy", () -> SystemUtil.copyToClipboard(unquotedText))
 
                     .menuItem("Search All Occurrences...", () -> {
@@ -226,9 +232,10 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
                         constantSearchType.getExact().set(true);
                         List<ConstantViewCache> constantViewList = new ArrayList<>();
                         constantSearchType.populate(constantViewList);
-                        Main.getDisplayManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
+                        Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
                     });
         });
+        component.setIdentifier(string, originalText.hashCode());
         component.setColorFunction(() -> CodeColorScheme.STRING);
     }
 
@@ -242,6 +249,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             component.setTextFunction(variable::getName);
         }
 
+        component.setIdentifier(variableMember, variable instanceof ImmutableVariable ? "this" : Objects.toString(this.decompilingMethod) + varIndex);
         component.setColorFunction(() -> CodeColorScheme.VAR_REF);
         component.setTooltip(() -> ColoredStringBuilder.create()
                 .text(CodeColorScheme.DISABLED, "#" + varIndex + " ")

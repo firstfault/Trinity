@@ -1,11 +1,7 @@
 package me.f1nal.trinity.gui.viewport.dnd;
 
-import com.google.common.io.Files;
-import imgui.ImGui;
-import imgui.ImGuiViewport;
-import imgui.ImVec2;
 import me.f1nal.trinity.Main;
-import me.f1nal.trinity.gui.frames.impl.project.create.NewProjectFrame;
+import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import org.lwjgl.glfw.GLFWDropCallback;
 import org.lwjgl.glfw.GLFWDropCallbackI;
 
@@ -50,7 +46,7 @@ public class DragAndDropHandler implements GLFWDropCallbackI {
             }
         }
 
-        NewProjectFrame newProject = Main.getDisplayManager().addStaticWindow(NewProjectFrame.class);
+        NewProjectFrame newProject = Main.getWindowManager().addStaticWindow(NewProjectFrame.class);
         for (File file : this.droppedFiles) {
             newProject.getInputTab().getFileListComponent().addFile(file);
         }

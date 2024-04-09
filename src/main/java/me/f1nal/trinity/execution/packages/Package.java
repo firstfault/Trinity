@@ -8,8 +8,8 @@ import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.gui.components.filter.kind.IKindType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
-import me.f1nal.trinity.gui.frames.impl.cp.BrowserViewerNode;
-import me.f1nal.trinity.gui.frames.impl.cp.IBrowserViewerNode;
+import me.f1nal.trinity.gui.windows.impl.cp.BrowserViewerNode;
+import me.f1nal.trinity.gui.windows.impl.cp.IBrowserViewerNode;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.ArrayList;

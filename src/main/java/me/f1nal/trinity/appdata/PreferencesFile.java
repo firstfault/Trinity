@@ -3,7 +3,7 @@ package me.f1nal.trinity.appdata;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.appdata.keybindings.KeyBindingData;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
-import me.f1nal.trinity.gui.frames.impl.xref.SearchMaxDisplay;
+import me.f1nal.trinity.gui.windows.impl.xref.SearchMaxDisplay;
 import me.f1nal.trinity.gui.viewport.FontManager;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;

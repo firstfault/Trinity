@@ -5,7 +5,7 @@ import imgui.type.ImString;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.ClassTarget;
-import me.f1nal.trinity.gui.frames.impl.ClassPickerPopup;
+import me.f1nal.trinity.gui.windows.impl.ClassPickerPopup;
 import me.f1nal.trinity.util.GuiUtil;
 
 import java.util.function.Predicate;
@@ -36,7 +36,7 @@ public class ClassSelectComponent {
         }
         ImGui.sameLine();
         if (ImGui.smallButton("...")) {
-            Main.getDisplayManager().addPopup(new ClassPickerPopup(this.trinity, validClassPredicate, classInput -> {
+            Main.getWindowManager().addPopup(new ClassPickerPopup(this.trinity, validClassPredicate, classInput -> {
                 className.set(classInput.getDisplayOrRealName());
                 this.queryClassInput();
             }));

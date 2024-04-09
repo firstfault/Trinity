@@ -66,6 +66,7 @@ public final class Decompiler implements IEventListener {
 
             try {
                 Objects.requireNonNull(content);
+                Objects.requireNonNull(trinity);
                 DecompiledClass decompiledClass = new DecompiledClass(trinity, classInput, content);
                 decompileCache.put(classInput, decompiledClass);
                 if (decompileCallback != null) {

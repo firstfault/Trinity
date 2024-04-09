@@ -1,7 +1,7 @@
 package me.f1nal.trinity.decompiler;
 
 import me.f1nal.trinity.execution.MethodInput;
-import me.f1nal.trinity.gui.frames.impl.assembler.line.MethodOpcodeSource;
+import me.f1nal.trinity.gui.windows.impl.assembler.line.MethodOpcodeSource;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -7,11 +7,11 @@ import me.f1nal.trinity.database.object.DatabaseClassDisplayName;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
 import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
-import me.f1nal.trinity.gui.frames.impl.cp.FileKind;
-import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.IXrefBuilderProvider;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderClassRef;
+import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
+import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 /**

@@ -10,16 +10,17 @@ import me.f1nal.trinity.execution.loading.ProgressiveLoadTask;
 import me.f1nal.trinity.gui.DisplayManager;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.general.FileSelectorComponent;
-import me.f1nal.trinity.gui.frames.StaticWindow;
-import me.f1nal.trinity.gui.frames.impl.*;
-import me.f1nal.trinity.gui.frames.impl.classstructure.ClassStructureWindow;
-import me.f1nal.trinity.gui.frames.impl.constant.ConstantSearchFrame;
-import me.f1nal.trinity.gui.frames.impl.cp.ProjectBrowserFrame;
-import me.f1nal.trinity.gui.frames.impl.project.create.NewProjectFrame;
-import me.f1nal.trinity.gui.frames.impl.project.settings.ProjectSettingsWindow;
-import me.f1nal.trinity.gui.frames.impl.refactor.GlobalRenameWindow;
-import me.f1nal.trinity.gui.frames.impl.themes.ThemeEditorFrame;
-import me.f1nal.trinity.gui.frames.impl.xref.search.XrefSearchFrame;
+import me.f1nal.trinity.gui.windows.WindowManager;
+import me.f1nal.trinity.gui.windows.api.StaticWindow;
+import me.f1nal.trinity.gui.windows.impl.*;
+import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
+import me.f1nal.trinity.gui.windows.impl.constant.ConstantSearchFrame;
+import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
+import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
+import me.f1nal.trinity.gui.windows.impl.project.settings.ProjectSettingsWindow;
+import me.f1nal.trinity.gui.windows.impl.refactor.GlobalRenameWindow;
+import me.f1nal.trinity.gui.windows.impl.themes.ThemeEditorFrame;
+import me.f1nal.trinity.gui.windows.impl.xref.search.XrefSearchFrame;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;
@@ -53,7 +54,7 @@ public class MainMenuBar {
 
         if (ImGui.beginMenu("View")) {
             if (ImGui.menuItem(FontAwesomeIcons.Cog + " Preferences")) {
-                displayManager.addClosableWindow(new PreferencesFrame(displayManager.getTrinity()));
+                getWindowManager().addClosableWindow(new PreferencesFrame(displayManager.getTrinity()));
             }
             ImGui.separator();
             if (ImGui.beginMenu( "Themes...")) {
@@ -66,7 +67,7 @@ public class MainMenuBar {
                 ImGui.endMenu();
             }
             if (ImGui.menuItem(FontAwesomeIcons.PaintBrush + " Theme Editor")) {
-                displayManager.addStaticWindow(ThemeEditorFrame.class);
+                getWindowManager().addStaticWindow(ThemeEditorFrame.class);
             }
             ImGui.endMenu();
         }
@@ -74,18 +75,18 @@ public class MainMenuBar {
             if (ImGui.beginMenu("Inspect")) {
 
                 if (ImGui.menuItem(FontAwesomeIcons.CodeBranch + " Cross-Reference Search")) {
-                    Main.getDisplayManager().addStaticWindow(XrefSearchFrame.class);
+                    Main.getWindowManager().addStaticWindow(XrefSearchFrame.class);
                 }
                 if (ImGui.menuItem(FontAwesomeIcons.Search + " Constant Search")) {
-                    Main.getDisplayManager().addStaticWindow(ConstantSearchFrame.class);
+                    Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
                 }
                 ImGui.endMenu();
             }
 
             if (ImGui.beginMenu("Windows")) {
                 windowsToolbar.forEach((type, name) -> {
-                    if (ImGui.menuItem(name, null, displayManager.isStaticWindowOpen(type))) {
-                        displayManager.addStaticWindow(type);
+                    if (ImGui.menuItem(name, null, getWindowManager().isStaticWindowOpen(type))) {
+                        getWindowManager().addStaticWindow(type);
                     }
                 });
                 ImGui.endMenu();
@@ -93,7 +94,7 @@ public class MainMenuBar {
 
             if (ImGui.beginMenu("Refactor")) {
                 if (ImGui.menuItem("Global Rename")) {
-                    displayManager.addStaticWindow(GlobalRenameWindow.class);
+                    getWindowManager().addStaticWindow(GlobalRenameWindow.class);
                 }
                 ImGui.endMenu();
             }
@@ -101,7 +102,7 @@ public class MainMenuBar {
 
         if (ImGui.beginMenu("Help")) {
             if (ImGui.menuItem("About")) {
-                Main.getDisplayManager().addStaticWindow(AboutWindow.class);
+                Main.getWindowManager().addStaticWindow(AboutWindow.class);
             }
             ImGui.endMenu();
         }
@@ -135,7 +136,7 @@ public class MainMenuBar {
 
     private void fileMenu() {
         if (ImGui.menuItem(FontAwesomeIcons.Plus + " New Project...")) {
-            displayManager.addStaticWindow(NewProjectFrame.class);
+            getWindowManager().addStaticWindow(NewProjectFrame.class);
         }
         ImGui.separator();
         if (ImGui.menuItem(FontAwesomeIcons.FolderPlus + " Open Project...")) {
@@ -150,7 +151,7 @@ public class MainMenuBar {
         if (displayManager.getTrinity() != null) {
             ImGui.separator();
             if (ImGui.menuItem(FontAwesomeIcons.FileExport + " Export JAR...")) {
-                displayManager.addStaticWindow(ExportJarWindow.class);
+                getWindowManager().addStaticWindow(ExportJarWindow.class);
             }
             ImGui.beginDisabled();
             ImGui.menuItem("Quick Export");
@@ -159,18 +160,18 @@ public class MainMenuBar {
             ImGui.separator();
 
             if (ImGui.menuItem(FontAwesomeIcons.Cogs + " Project Settings")) {
-                displayManager.addStaticWindow(ProjectSettingsWindow.class);
+                getWindowManager().addStaticWindow(ProjectSettingsWindow.class);
             }
 
             if (ImGui.menuItem(FontAwesomeIcons.Save + " Save")) {
-                displayManager.addPopup(new SavingDatabasePopup(displayManager.getTrinity(), (status) -> {
+                getWindowManager().addPopup(new SavingDatabasePopup(displayManager.getTrinity(), (status) -> {
                     DatabaseLoader.save.clear();
                 }));
             }
 
             if (ImGui.menuItem(FontAwesomeIcons.TimesCircle + " Close")) {
                 displayManager.closeDatabase(() -> {
-                    displayManager.addStaticWindow(NewProjectFrame.class);
+                    getWindowManager().addStaticWindow(NewProjectFrame.class);
                     Main.getAppDataManager().getState().setDatabaseLoaded(false);
                 });
             }
@@ -216,5 +217,9 @@ public class MainMenuBar {
             databaseOpenFileSelector = new FileSelectorComponent("Database File Selector", path.getAbsolutePath(), CreateDatabasePopup.TDB_FILE_FILTER, FileDialog.LOAD);
         }
         return databaseOpenFileSelector;
+    }
+
+    public WindowManager getWindowManager() {
+        return displayManager.getWindowManager();
     }
 }

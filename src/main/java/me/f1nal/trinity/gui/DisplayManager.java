@@ -1,21 +1,16 @@
 package me.f1nal.trinity.gui;
 
-import com.google.common.io.Resources;
-import com.sun.jdi.PrimitiveValue;
 import imgui.*;
 import imgui.app.Application;
 import imgui.app.Configuration;
 import imgui.callback.ImStrConsumer;
 import imgui.callback.ImStrSupplier;
 import imgui.flag.*;
-import imgui.glfw.ImGuiImplGlfw;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.RecentDatabaseEntry;
 import me.f1nal.trinity.appdata.RecentDatabasesFile;
-import me.f1nal.trinity.database.Database;
 import me.f1nal.trinity.database.DatabaseLoader;
-import me.f1nal.trinity.database.semaphore.DatabaseSaveShutdownHook;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.Input;
@@ -23,23 +18,23 @@ import me.f1nal.trinity.execution.packages.ArchiveEntryViewerType;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
-import me.f1nal.trinity.gui.frames.ClosableWindow;
-import me.f1nal.trinity.gui.frames.Popup;
-import me.f1nal.trinity.gui.frames.StaticWindow;
-import me.f1nal.trinity.gui.frames.impl.AboutWindow;
-import me.f1nal.trinity.gui.frames.impl.LoadingDatabasePopup;
-import me.f1nal.trinity.gui.frames.impl.SavingDatabasePopup;
-import me.f1nal.trinity.gui.frames.impl.cp.ProjectBrowserFrame;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.ArchiveEntryViewerFacade;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.ArchiveEntryViewerWindow;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerWindow;
-import me.f1nal.trinity.gui.frames.impl.project.create.NewProjectFrame;
+import me.f1nal.trinity.gui.windows.WindowManager;
+import me.f1nal.trinity.gui.windows.api.ClosableWindow;
+import me.f1nal.trinity.gui.windows.api.PopupWindow;
+import me.f1nal.trinity.gui.windows.api.StaticWindow;
+import me.f1nal.trinity.gui.windows.impl.AboutWindow;
+import me.f1nal.trinity.gui.windows.impl.LoadingDatabasePopup;
+import me.f1nal.trinity.gui.windows.impl.SavingDatabasePopup;
+import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerFacade;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerWindow;
+import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.gui.viewport.FontManager;
 import me.f1nal.trinity.gui.viewport.MainMenuBar;
 import me.f1nal.trinity.gui.viewport.NotificationRenderer;
 import me.f1nal.trinity.gui.viewport.dnd.DragAndDropHandler;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
-import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
 import org.lwjgl.glfw.GLFW;
@@ -47,7 +42,6 @@ import org.lwjgl.glfw.GLFWDropCallback;
 import org.lwjgl.glfw.GLFWWindowCloseCallback;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.*;
 import java.util.concurrent.*;
@@ -59,38 +53,29 @@ public final class DisplayManager extends Application {
      * Initial window title to be set when first creating the display.
      */
     private final String windowTitle;
-    private final List<ClosableWindow> closableWindows = new ArrayList<>(5);
-    private final List<Popup> popups = new ArrayList<>();
-    private final Map<Class<? extends StaticWindow>, StaticWindow> staticWindowMap = new HashMap<>();
     private final MainMenuBar mainMenuBar = new MainMenuBar(this);
     private Trinity trinity;
     private final ArchiveEntryViewerFacade archiveEntryViewerFacade = new ArchiveEntryViewerFacade();
     private final NotificationRenderer notificationRenderer = new NotificationRenderer();
     private final DragAndDropHandler dragAndDropHandler = new DragAndDropHandler();
     private final PopupMenu popupMenu = new PopupMenu();
-    private final Queue<FutureTask<?>> scheduledTasks;
     private final FontManager fontManager = new FontManager();
+    private final WindowManager windowManager = new WindowManager(this);
     private boolean initialized;
 
-    public DisplayManager(String windowTitle, Queue<FutureTask<?>> scheduledTasks) {
+    public DisplayManager(String windowTitle) {
         this.windowTitle = windowTitle;
-        this.scheduledTasks = scheduledTasks;
         this.setDatabase(null);
         String mostRecentDatabasePath = Main.getAppDataManager().getRecentDatabases().getMostRecentDatabasePath();
         if (Main.getAppDataManager().getState().isDatabaseLoaded() && mostRecentDatabasePath != null) {
-            this.addPopup(new LoadingDatabasePopup(null, new File(mostRecentDatabasePath)));
+            this.windowManager.addPopup(new LoadingDatabasePopup(null, new File(mostRecentDatabasePath)));
         } else {
-            this.addStaticWindow(NewProjectFrame.class);
+            this.windowManager.addStaticWindow(NewProjectFrame.class);
         }
     }
 
     public void setDatabase(Trinity trinity) {
-        Main.runLater(() -> {
-            closableWindows.forEach(ClosableWindow::close);
-            closableWindows.clear();
-            staticWindowMap.values().forEach(StaticWindow::close);
-            staticWindowMap.clear();
-        });
+        Main.runLater(this.windowManager::resetAllWindows);
 
         if (this.trinity != null) {
             this.trinity.getEventManager().setRegistered(false);
@@ -106,17 +91,12 @@ public final class DisplayManager extends Application {
         trinity.runDeobf();
 
         Main.runLater(() -> {
-            this.addStaticWindow(ProjectBrowserFrame.class);
+            this.windowManager.addStaticWindow(ProjectBrowserFrame.class);
         });
     }
 
     @Override
-    protected void postProcess() {
-    }
-
-    @Override
     protected void startFrame() {
-//        fontManager.resetFontsIfNeeded(this.imGuiGl3);
         if (!this.initialized) {
             this.initializeWindow();
             this.initialized = true;
@@ -184,8 +164,20 @@ public final class DisplayManager extends Application {
     public void process() {
         ImGuiIO io = ImGui.getIO();
         io.setFontGlobalScale(this.fontManager.getGlobalScale());
+        this.setupDockspace();
 
-//        ImGui.showDemoWindow();
+        if (this.trinity == null && this.windowManager.getPopups().isEmpty()) this.homepage();
+
+        Main.executeScheduledTasks();
+
+        this.mainMenuBar.draw();
+        this.popupMenu.draw();
+        this.windowManager.draw();
+        this.notificationRenderer.draw();
+        this.dragAndDropHandler.draw();
+    }
+
+    private void setupDockspace() {
         ImGui.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.F);
         ImGuiViewport viewport = ImGui.getMainViewport();
         ImGui.setNextWindowPos(viewport.getWorkPosX(), viewport.getWorkPosY());
@@ -196,43 +188,13 @@ public final class DisplayManager extends Application {
         ImGui.dockSpace(123);
         ImGui.end();
         ImGui.popStyleVar(2);
-
-        if (this.trinity == null && this.popups.isEmpty()) this.homepage(viewport);
-
-        synchronized (this.scheduledTasks) {
-            while (!this.scheduledTasks.isEmpty()) {
-                FutureTask<?> task = this.scheduledTasks.poll();
-                try {
-                    task.run();
-                    task.get();
-                } catch (Throwable e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-
-        this.mainMenuBar.draw();
-        this.popupMenu.draw();
-
-        ClosableWindow[] windows = closableWindows.toArray(new ClosableWindow[0]);
-        for (ClosableWindow frame : windows) {
-            frame.render();
-        }
-
-        for (StaticWindow staticWindow : staticWindowMap.values()) {
-            staticWindow.render();
-        }
-
-        this.notificationRenderer.draw();
-        this.drawPopups();
-        this.dragAndDropHandler.draw();
     }
 
     private void initializeWindow() {
         GLFW.glfwMaximizeWindow(getHandle());
         GLFW.glfwSetWindowCloseCallback(getHandle(), GLFWWindowCloseCallback.create((hnd) -> {
             if (trinity != null) {
-                addPopup(new SavingDatabasePopup(trinity, (status) -> {
+                this.windowManager.addPopup(new SavingDatabasePopup(trinity, (status) -> {
                     Runtime.getRuntime().exit(0);
                 }));
                 GLFW.glfwSetWindowShouldClose(getHandle(), false);
@@ -241,11 +203,13 @@ public final class DisplayManager extends Application {
         GLFW.glfwSetDropCallback(getHandle(), GLFWDropCallback.create(this.dragAndDropHandler));
     }
 
-    private void homepage(ImGuiViewport viewport) {
-        ImGui.setNextWindowPos(viewport.getWorkCenterX(), viewport.getWorkPosY() + (viewport.getWorkSizeY() / 2.14F), ImGuiCond.Always, 0.5F, 0.5F);
-        ImGui.begin("Trinity Homepage", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.AlwaysAutoResize| ImGuiWindowFlags.NoCollapse);
+    private void homepage() {
+        ImGuiViewport viewport = ImGui.getMainViewport();
 
-        ColoredString.drawText(ColoredStringBuilder.create().fmt("Welcome to {}, Java SRE tool developed by {}.", "Trinity " + Main.VERSION, "final").get());
+        ImGui.setNextWindowPos(viewport.getWorkCenterX(), viewport.getWorkPosY() + (viewport.getWorkSizeY() / 2.14F), ImGuiCond.Always, 0.5F, 0.5F);
+        ImGui.begin("Quickstart", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse);
+
+        ColoredString.drawText(ColoredStringBuilder.create().fmt("Welcome to {}", "Trinity " + Main.VERSION).get());
         ImGui.separator();
 
         if (ImGui.beginListBox("###TrinityHomepageRecentProjects", 400.F, 164.F)) {
@@ -264,7 +228,7 @@ public final class DisplayManager extends Application {
 
         ImGui.separator();
         if (ImGui.button(FontAwesomeIcons.Plus + " New Project")) {
-            this.addStaticWindow(NewProjectFrame.class);
+            this.windowManager.addStaticWindow(NewProjectFrame.class);
         }
         ImGui.sameLine();
         if (ImGui.button(FontAwesomeIcons.FolderPlus + " Open Local Project")) {
@@ -272,7 +236,7 @@ public final class DisplayManager extends Application {
         }
         ImGui.sameLine();
         if (ImGui.button(FontAwesomeIcons.Question + " About")) {
-            this.addStaticWindow(AboutWindow.class);
+            this.windowManager.addStaticWindow(AboutWindow.class);
         }
         ImGui.sameLine();
         ImGui.end();
@@ -284,7 +248,7 @@ public final class DisplayManager extends Application {
     }
 
     public void openDatabase(String path) {
-        this.closeDatabase(() -> addPopup(new LoadingDatabasePopup(null, new File(path))));
+        this.closeDatabase(() -> this.windowManager.addPopup(new LoadingDatabasePopup(null, new File(path))));
     }
 
     public void closeDatabase(Runnable after) {
@@ -292,99 +256,17 @@ public final class DisplayManager extends Application {
             after.run();
             return;
         }
-        addPopup(new SavingDatabasePopup(trinity, (status) -> {
+        this.windowManager.addPopup(new SavingDatabasePopup(trinity, (status) -> {
             DatabaseLoader.save.clear();
             DatabaseLoader.load.clear();
             setDatabase(null);
-            closableWindows.clear();
             after.run();
         }));
     }
 
-    private void drawPopups() {
-        if (this.popups.isEmpty()) {
-            return;
-        }
-
-        int pops = 0;
-        Popup[] popups = this.popups.toArray(new Popup[0]);
-        for (Popup popup : popups) {
-            popup.render();
-        }
-        Popup last = popups[popups.length - 1];
-
-        for (Popup popup : popups) {
-            if (popup == last && !ImGui.isPopupOpen(popup.getPopupId())) {
-                ImGui.openPopup(popup.getPopupId());
-            }
-            if (ImGui.beginPopupModal(popup.getPopupId(), ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings)) {
-                popup.renderPopup();
-                ++pops;
-            }
-        }
-
-        while (pops-- != 0) ImGui.endPopup();
-
-        if (ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Escape))) {
-            if (last.canCloseOnEscapeNow()) {
-                last.close();
-            }
-        }
-    }
-
-    public void addClosableWindow(ClosableWindow window) {
-        if (this.closableWindows.contains(window)) {
-            window.setVisible(true);
-            return;
-        }
-        this.closableWindows.add(window);
-        window.setVisible(true);
-        window.setCloseEvent(() -> this.closableWindows.remove(window));
-    }
-
-    public void addPopup(Popup popup) {
-        this.popups.add(popup);
-        popup.setCloseEvent(() -> this.popups.remove(popup));
-    }
-
-    public <T extends StaticWindow> T addStaticWindow(Class<T> type) {
-        T wnd = getStaticWindow(type);
-        wnd.setVisible(true);
-        return wnd;
-    }
-
-    public <T extends StaticWindow> T getStaticWindow(Class<T> type) {
-        //noinspection unchecked
-        return (T) staticWindowMap.computeIfAbsent(type, c -> {
-            try {
-                Constructor<? extends StaticWindow> constructor = c.getDeclaredConstructor(Trinity.class);
-                return constructor.newInstance(trinity);
-            } catch (Throwable throwable) {
-                throw new RuntimeException("Creating static window instance", throwable);
-            }
-        });
-    }
-
-    public boolean isStaticWindowOpen(Class<? extends StaticWindow> type) {
-        StaticWindow window = staticWindowMap.get(type);
-        return window != null && window.isVisible();
-    }
-
-    public Trinity getTrinity() {
-        return trinity;
-    }
-
-    public void closeAll(Predicate<ClosableWindow> predicate) {
-        this.getWindows(predicate).forEach(ClosableWindow::close);
-    }
-
-    public List<ClosableWindow> getWindows(Predicate<ClosableWindow> predicate) {
-        return this.closableWindows.stream().filter(predicate).collect(Collectors.toList());
-    }
-
     public void openDecompilerView(Input input) {
         ArchiveEntryViewerWindow<?> viewerWindow = ArchiveEntryViewerType.DECOMPILER.getWindow(input.getOwningClass().getClassTarget());
-        this.addClosableWindow(viewerWindow);
+        this.windowManager.addClosableWindow(viewerWindow);
         ((DecompilerWindow) Objects.requireNonNull(viewerWindow)).setDecompileTarget(input);
     }
 
@@ -402,5 +284,13 @@ public final class DisplayManager extends Application {
 
     public FontManager getFontManager() {
         return fontManager;
+    }
+
+    public Trinity getTrinity() {
+        return trinity;
+    }
+
+    public WindowManager getWindowManager() {
+        return windowManager;
     }
 }

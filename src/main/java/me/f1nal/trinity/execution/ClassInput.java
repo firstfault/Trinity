@@ -1,14 +1,11 @@
 package me.f1nal.trinity.execution;
 
-import me.f1nal.trinity.Main;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.execution.xref.ClassXref;
 import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
-import me.f1nal.trinity.gui.frames.impl.classes.classhierarchy.ClassHierarchyWindow;
-import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderClassRef;
+import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.util.ModifyNotifiable;
 import me.f1nal.trinity.util.ModifyPriority;
@@ -97,7 +94,7 @@ public final class ClassInput extends Input implements ModifyNotifiable {
 
     @Override
     public void populatePopup(PopupItemBuilder builder) {
-//        builder.menuItem("View Hierarchy", () -> Main.getDisplayManager().addClosableWindow(new ClassHierarchyWindow(this.getOwningClass().getExecution().getTrinity(), this)));
+//        builder.menuItem("View Hierarchy", () -> Main.getWindowManager().addClosableWindow(new ClassHierarchyWindow(this.getOwningClass().getExecution().getTrinity(), this)));
         super.populatePopup(builder);
     }
 

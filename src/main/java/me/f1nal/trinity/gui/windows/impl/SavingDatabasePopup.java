@@ -1,0 +1,28 @@
+package me.f1nal.trinity.gui.windows.impl;
+
+import imgui.ImGui;
+import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.database.DatabaseLoader;
+import me.f1nal.trinity.gui.windows.api.PopupWindow;
+
+import java.util.function.Consumer;
+
+public class SavingDatabasePopup extends PopupWindow {
+    private final Consumer<Boolean> callback;
+
+    public SavingDatabasePopup(Trinity trinity, Consumer<Boolean> callback) {
+        super("Saving Database...", trinity);
+        this.callback = callback;
+        closeOnEscape = false;
+    }
+
+    @Override
+    protected void renderFrame() {
+        ImGui.text("Please wait while the program database is being saved.\nExiting forcefully may result in corruption.");
+
+        if (DatabaseLoader.save.get(trinity.getDatabase().getPath()).isDone()) {
+            close();
+            callback.accept(DatabaseLoader.save.getStatus());
+        }
+    }
+}

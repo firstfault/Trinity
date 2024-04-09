@@ -1,11 +1,10 @@
 package me.f1nal.trinity.execution.var;
 
 import me.f1nal.trinity.database.IDatabaseSavable;
-import me.f1nal.trinity.database.object.AbstractDatabaseObject;
 import me.f1nal.trinity.database.object.DatabaseVariable;
 import imgui.type.ImString;
-import me.f1nal.trinity.gui.frames.impl.cp.IRenameHandler;
-import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
+import me.f1nal.trinity.gui.windows.impl.cp.IRenameHandler;
+import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 
 public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHandler {
     private final VariableTable table;

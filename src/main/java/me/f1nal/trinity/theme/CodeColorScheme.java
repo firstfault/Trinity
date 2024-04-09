@@ -126,7 +126,7 @@ public final class CodeColorScheme {
     }
 
     public static int setAlpha(int color, int alpha) {
-        return getRgb(new Color(color), alpha);
+        return getRgb(toColor(color), alpha);
     }
 
     private static final List<CodeColor> codeColors = new ArrayList<>();

@@ -2,11 +2,11 @@ package me.f1nal.trinity.execution.packages;
 
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.execution.ClassTarget;
-import me.f1nal.trinity.gui.frames.ClosableWindow;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.ArchiveEntryViewerWindow;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.HexEditWindow;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.TextEditorWindow;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerWindow;
+import me.f1nal.trinity.gui.windows.api.ClosableWindow;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.HexEditWindow;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.TextEditorWindow;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerWindow;
 import me.f1nal.trinity.util.INameable;
 
 import java.util.List;
@@ -41,7 +41,7 @@ public enum ArchiveEntryViewerType implements INameable {
     }
 
     public ArchiveEntryViewerWindow<?> getWindow(ArchiveEntry archiveEntry) {
-        List<ClosableWindow> windows = Main.getDisplayManager().getWindows(w -> w.getClass() == this.viewerClass);
+        List<ClosableWindow> windows = Main.getWindowManager().getWindows(w -> w.getClass() == this.viewerClass);
 
         for (ClosableWindow window : windows) {
             ArchiveEntryViewerWindow<?> viewerWindow = (ArchiveEntryViewerWindow<?>) window;

@@ -5,11 +5,10 @@ import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
-import me.f1nal.trinity.gui.frames.impl.cp.BrowserViewerNode;
-import me.f1nal.trinity.gui.frames.impl.cp.IBrowserViewerNode;
-import me.f1nal.trinity.gui.frames.impl.cp.IRenameHandler;
-import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.ArchiveEntryViewerWindow;
+import me.f1nal.trinity.gui.windows.impl.cp.BrowserViewerNode;
+import me.f1nal.trinity.gui.windows.impl.cp.IBrowserViewerNode;
+import me.f1nal.trinity.gui.windows.impl.cp.IRenameHandler;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.util.ByteUtil;
 import me.f1nal.trinity.util.SystemUtil;
 
@@ -33,7 +32,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
                 Main.getDisplayManager().getPopupMenu().show(this.createPopup(PopupItemBuilder.create()));
             } else if (clickType == MouseClickType.LEFT_CLICK) {
                 if (this.viewerTypes.length != 0) {
-                    Main.getDisplayManager().addClosableWindow(this.viewerTypes[0].getWindow(this));
+                    Main.getWindowManager().addClosableWindow(this.viewerTypes[0].getWindow(this));
                 }
             }
         });
@@ -85,7 +84,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         return builder.
                 menu("Open", (open) -> {
                     for (ArchiveEntryViewerType viewerType : this.getViewerTypes()) {
-                        open.menuItem(viewerType.getName(), () -> Main.getDisplayManager().addClosableWindow(viewerType.getWindow(this)));
+                        open.menuItem(viewerType.getName(), () -> Main.getWindowManager().addClosableWindow(viewerType.getWindow(this)));
                     }
                 }).
                 menuItem("Copy Path", () -> SystemUtil.copyToClipboard(this.getDisplayOrRealName())).

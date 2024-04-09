@@ -1,18 +1,14 @@
 package me.f1nal.trinity.decompiler.output;
 
 import me.f1nal.trinity.Main;
-import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.decompiler.DecompiledMethod;
 import me.f1nal.trinity.decompiler.output.impl.*;
 import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.execution.ClassInput;
-import me.f1nal.trinity.execution.FieldInput;
-import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.MethodInput;
-import me.f1nal.trinity.execution.var.Variable;
-import me.f1nal.trinity.gui.frames.impl.assembler.line.MethodOpcodeSource;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerComponent;
+import me.f1nal.trinity.gui.windows.impl.assembler.line.MethodOpcodeSource;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.logging.Logging;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
@@ -199,7 +195,7 @@ public class DecompilerMemberReader {
             if (outputMember instanceof MethodStartEndOutputMember) {
                 MethodStartEndOutputMember mse = (MethodStartEndOutputMember) outputMember;
                 if (mse.isStart()) {
-                    ClassInput classInput = Main.getTrinity().getExecution().getClassInput(mse.getOwner());
+                    ClassInput classInput = decompiledClass.getTrinity().getExecution().getClassInput(mse.getOwner());
                     if (classInput == null) {
                         throw new NullPointerException(String.format("Class input is null for %s.", mse.getOwner()));
                     }
@@ -216,7 +212,7 @@ public class DecompilerMemberReader {
 //                return null;
             }
             DecompilerComponent component = new DecompilerComponent(targetString);
-            DecompilerComponentInitializer initializer = new DecompilerComponentInitializer(Main.getTrinity(), component, targetString, decompiledClass.getClassInput(), currentMethod);
+            DecompilerComponentInitializer initializer = new DecompilerComponentInitializer(decompiledClass.getTrinity(), component, targetString, decompiledClass.getClassInput(), currentMethod);
             outputMember.visit(initializer);
             this.addComponent(component);
         }

@@ -3,8 +3,8 @@ package me.f1nal.trinity.execution.packages;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.filter.kind.IKindType;
-import me.f1nal.trinity.gui.frames.impl.cp.FileKind;
-import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
+import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
+import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.NameUtil;
 

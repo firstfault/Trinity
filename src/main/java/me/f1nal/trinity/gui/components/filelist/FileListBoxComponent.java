@@ -7,7 +7,7 @@ import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.MoveButtonEnum;
 import me.f1nal.trinity.gui.components.general.FileSelectorComponent;
 import me.f1nal.trinity.gui.components.general.ListBoxComponent;
-import me.f1nal.trinity.gui.frames.Frame;
+import me.f1nal.trinity.gui.windows.api.AbstractWindow;
 import me.f1nal.trinity.gui.viewport.notifications.ICaption;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
@@ -21,14 +21,14 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 
 public class FileListBoxComponent<T extends ListedFile> implements ICaption {
-    private final Frame parentWindow;
+    private final AbstractWindow parentWindow;
     private final String label;
     private final ListBoxComponent<T> listBoxComponent = new ListBoxComponent<>(new ArrayList<>());
     private final FileSelectorComponent fileSelectorComponent;
     private final ListedFileFactory<T> listedFileFactory;
     private Consumer<T> elementAddEvent;
 
-    public FileListBoxComponent(Frame parentWindow, String label, FilenameFilter filter, ListedFileFactory<T> listedFileFactory) {
+    public FileListBoxComponent(AbstractWindow parentWindow, String label, FilenameFilter filter, ListedFileFactory<T> listedFileFactory) {
         this.parentWindow = parentWindow;
         this.label = label;
         this.listedFileFactory = listedFileFactory;

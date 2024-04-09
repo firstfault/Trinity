@@ -1,16 +1,16 @@
 package me.f1nal.trinity.decompiler;
 
-import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.output.DecompilerMemberReader;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.MethodInput;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerComponent;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerLine;
-import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerLineText;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerLine;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerLineText;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public final class DecompiledClass {
     private final Trinity trinity;
@@ -22,6 +22,10 @@ public final class DecompiledClass {
      * text components to be rendered on that specific line.
      */
     private final List<DecompilerLine> lines = new ArrayList<>();
+    /**
+     * List of components that are currently highlighted.
+     */
+    private List<DecompilerComponent> highlightedComponents;
 
     public DecompiledClass(Trinity trinity, ClassInput classInput, final String rawOutput) throws IOException {
         this.trinity = trinity;
@@ -31,7 +35,29 @@ public final class DecompiledClass {
         this.componentList = reader.getComponentList();
 
         this.resetLines();
-        System.out.println("Decompiling " + classInput.getFullName());
+        this.setComponentHighlighted(null);
+    }
+
+    public void setComponentHighlighted(DecompilerComponent component) {
+        if (component == null) {
+            this.highlightedComponents = Collections.emptyList();
+            return;
+        }
+
+        this.highlightedComponents = componentList.stream().filter(otherComponent -> otherComponent.isSameKind(component)).collect(Collectors.toList());
+    }
+
+    public boolean isComponentHighlighted(DecompilerComponent component) {
+        return highlightedComponents.contains(component);
+    }
+
+    public String getText() {
+        StringBuilder output = new StringBuilder();
+        List<DecompilerLine> lines = getLines();
+        for (DecompilerLine line : lines) {
+            output.append(line.getText()).append('\n');
+        }
+        return output.toString();
     }
 
     public void resetLines() {

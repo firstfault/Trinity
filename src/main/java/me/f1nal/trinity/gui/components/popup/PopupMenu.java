@@ -3,6 +3,7 @@ package me.f1nal.trinity.gui.components.popup;
 import imgui.ImColor;
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
+import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiStyleVar;
 import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.popup.items.PopupItem;
@@ -45,6 +46,9 @@ public class PopupMenu {
         } else {
             for (PopupItem popupItem : popupItems) {
                 popupItem.draw();
+            }
+            if (ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Escape))) {
+                ImGui.closeCurrentPopup();
             }
             ImGui.endPopup();
         }

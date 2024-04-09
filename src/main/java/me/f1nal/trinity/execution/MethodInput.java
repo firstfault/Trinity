@@ -9,11 +9,11 @@ import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.execution.xref.where.XrefWhere;
 import me.f1nal.trinity.execution.xref.where.XrefWhereMethod;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
-import me.f1nal.trinity.gui.frames.impl.assembler.AssemblerFrame;
-import me.f1nal.trinity.gui.frames.impl.assembler.line.Instruction2SourceMapping;
-import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
-import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderMemberRef;
+import me.f1nal.trinity.gui.windows.impl.assembler.AssemblerFrame;
+import me.f1nal.trinity.gui.windows.impl.assembler.line.Instruction2SourceMapping;
+import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.util.NameUtil;
 import org.objectweb.asm.tree.InsnList;
@@ -111,7 +111,7 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
         super.populatePopup(builder);
 
         builder.menuItem("Assemble", () -> {
-            Main.getDisplayManager().addClosableWindow(new AssemblerFrame(Main.getTrinity(), this, new Instruction2SourceMapping()));
+            Main.getWindowManager().addClosableWindow(new AssemblerFrame(Main.getTrinity(), this, new Instruction2SourceMapping()));
         });
     }
 

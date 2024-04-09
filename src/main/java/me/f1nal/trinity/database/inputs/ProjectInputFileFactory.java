@@ -5,7 +5,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.database.inputs.impl.ProjectInputClassFile;
 import me.f1nal.trinity.database.inputs.impl.ProjectInputJARFile;
 import me.f1nal.trinity.gui.components.filelist.ListedFileFactory;
-import me.f1nal.trinity.gui.frames.impl.project.create.misc.ClassPathViewerWindow;
+import me.f1nal.trinity.gui.windows.impl.project.create.misc.ClassPathViewerWindow;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
@@ -39,6 +39,6 @@ public class ProjectInputFileFactory implements ListedFileFactory<AbstractProjec
 
     @Override
     public void view(AbstractProjectInputFile file) {
-        Main.getDisplayManager().addClosableWindow(new ClassPathViewerWindow(file.getName(), file.getClassPath()));
+        Main.getWindowManager().addClosableWindow(new ClassPathViewerWindow(file.getName(), file.getClassPath()));
     }
 }
