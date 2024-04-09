@@ -96,7 +96,7 @@ public class DecompilerCursor {
     }
 
     public void setCharacter(int character) {
-        this.coordinates = new DecompilerCoordinates(this.coordinates.getLine(), Math.min(Math.max(character, 0), this.coordinates.getLine().getText().length()));
+        this.setCoordinates(new DecompilerCoordinates(this.coordinates.getLine(), Math.min(Math.max(character, 0), this.coordinates.getLine().getText().length())));
     }
 
     public void moveVertically(int delta) {
@@ -107,7 +107,7 @@ public class DecompilerCursor {
             return;
         }
 
-        this.coordinates = new DecompilerCoordinates(lines.get(indexOf), this.coordinates.getCharacter());
+        this.setCoordinates(new DecompilerCoordinates(lines.get(indexOf), this.coordinates.getCharacter()));
     }
 
     public void handleLineCursorDrawing(float cursorScreenPosX, float lineNumberSpacing, float mousePosX, float cursorPosY, ImVec2 textSize) {
@@ -122,7 +122,7 @@ public class DecompilerCursor {
         String lineText = coordinates.getLine().getText();
 
         if (coordinates.getCharacter() >= lineText.length()) {
-            coordinates = new DecompilerCoordinates(coordinates.getLine(), lineText.length());
+            this.setCoordinates(new DecompilerCoordinates(coordinates.getLine(), lineText.length()));
         }
 
         String substring = lineText.substring(0, coordinates.getCharacter());
