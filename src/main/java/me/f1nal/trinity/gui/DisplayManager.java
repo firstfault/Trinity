@@ -136,7 +136,6 @@ public final class DisplayManager extends Application {
         ImGuiIO io = ImGui.getIO();
         io.setIniFilename(new File(Main.getAppDataManager().getDirectory(), "gui.ini").getAbsolutePath());
         io.setConfigFlags(io.getConfigFlags() | ImGuiConfigFlags.DockingEnable);
-        io.setConfigFlags(io.getConfigFlags() | ImGuiConfigFlags.NavEnableKeyboard);
         fontManager.setupFonts();
         ImGuiStyle style = ImGui.getStyle();
         style.setColor(ImGuiCol.WindowBg, 0.12f, 0.12f, 0.12f, 1.00f);
@@ -183,7 +182,8 @@ public final class DisplayManager extends Application {
 
     @Override
     public void process() {
-        ImGui.getIO().setFontGlobalScale(this.fontManager.getGlobalScale());
+        ImGuiIO io = ImGui.getIO();
+        io.setFontGlobalScale(this.fontManager.getGlobalScale());
 
 //        ImGui.showDemoWindow();
         ImGui.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.F);

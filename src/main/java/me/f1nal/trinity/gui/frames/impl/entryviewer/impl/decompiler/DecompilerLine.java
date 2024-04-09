@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class DecompilerLine {
     /**
@@ -27,5 +28,9 @@ public class DecompilerLine {
 
     public List<DecompilerLineText> getComponents() {
         return components;
+    }
+
+    public String getText() {
+        return components.stream().map(DecompilerLineText::getText).collect(Collectors.joining());
     }
 }

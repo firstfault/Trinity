@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 
 public final class Decompiler implements IEventListener {
     private final Trinity trinity;
-    private int decompileId;
     private final Map<ClassInput, DecompiledClass> decompileCache = new HashMap<>();
     private Set<ClassInput> decompileStack = new HashSet<>();
     private Set<ClassInput> failedList = new HashSet<>();

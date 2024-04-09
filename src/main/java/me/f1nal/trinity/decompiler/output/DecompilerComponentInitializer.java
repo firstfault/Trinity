@@ -10,11 +10,16 @@ import me.f1nal.trinity.decompiler.output.impl.*;
 import me.f1nal.trinity.execution.*;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.execution.var.Variable;
+import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.frames.impl.constant.ConstantViewCache;
 import me.f1nal.trinity.gui.frames.impl.constant.ConstantViewFrame;
 import me.f1nal.trinity.gui.frames.impl.constant.search.ConstantSearchType;
 import me.f1nal.trinity.gui.frames.impl.constant.search.ConstantSearchTypeString;
 import me.f1nal.trinity.gui.frames.impl.entryviewer.impl.decompiler.DecompilerComponent;
+import me.f1nal.trinity.gui.frames.impl.xref.builder.IXrefBuilderProvider;
+import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
+import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderClassRef;
+import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.StringUtil;
 import me.f1nal.trinity.util.SystemUtil;
@@ -66,11 +71,13 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             } else {
                 component.setTextFunction(target::getDisplaySimpleName);
             }
+        }
 
-            if (target.getInput() != null) {
-                component.addInputControls(target.getInput());
-            }
-//            component.addPopupBuilder(target::createPopup);
+        if (target != null && target.getInput() != null) {
+            component.addInputControls(target.getInput());
+        } else {
+            IXrefBuilderProvider provider = xrefMap -> new XrefBuilderClassRef(xrefMap, member.getClassName());
+            component.addPopupBuilder(builder -> provider.addXrefViewerMenuItem(trinity, builder));
         }
 
         component.setColorFunction(() -> CodeColorScheme.CLASS_REF);
@@ -127,6 +134,11 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     public void visitFieldDeclaration(FieldDeclarationOutputMember fieldDeclaration) {
     }
 
+    private void addXrefMemberMenuItem(DecompilerComponent component, MemberDetails memberDetails) {
+        IXrefBuilderProvider provider = xrefMap -> new XrefBuilderMemberRef(xrefMap, memberDetails);
+        component.addPopupBuilder(builder -> provider.addXrefViewerMenuItem(trinity, builder));
+    }
+
     @Override
     public void visitField(FieldOutputMember field) {
         @Nullable FieldInput fieldInput = trinity.getExecution().getField(new MemberDetails(field));
@@ -134,6 +146,8 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         if (fieldInput != null) {
             component.setTextFunction(fieldInput::getDisplayName);
             component.addInputControls(fieldInput);
+        } else {
+            this.addXrefMemberMenuItem(component, new MemberDetails(field));
         }
 
         component.setColorFunction(() -> CodeColorScheme.FIELD_REF);
@@ -156,6 +170,8 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             }
 
             component.addInputControls(methodInput);
+        } else {
+            this.addXrefMemberMenuItem(component, new MemberDetails(method));
         }
 
         component.setColorFunction(() -> CodeColorScheme.METHOD_REF);

@@ -5,15 +5,19 @@ import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.database.object.DatabaseClassDisplayName;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
+import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.frames.impl.cp.FileKind;
 import me.f1nal.trinity.gui.frames.impl.cp.RenameHandler;
+import me.f1nal.trinity.gui.frames.impl.xref.builder.IXrefBuilderProvider;
+import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilder;
+import me.f1nal.trinity.gui.frames.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 /**
  * Class reference object, even if we don't have it as an input.
  */
-public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<DatabaseClassDisplayName> {
+public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<DatabaseClassDisplayName>, IXrefBuilderProvider {
     private ClassInput input;
     private String realName;
     private String displayName;
@@ -123,5 +127,10 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
             }
         }
         return FileKind.CLASSES;
+    }
+
+    @Override
+    public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
+        return new XrefBuilderClassRef(xrefMap, this.getRealName());
     }
 }

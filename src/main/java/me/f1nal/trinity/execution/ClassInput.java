@@ -197,7 +197,7 @@ public final class ClassInput extends Input implements ModifyNotifiable {
 
     @Override
     public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
-        return new XrefBuilderClassRef(xrefMap, this.getFullName());
+        return getClassTarget().createXrefBuilder(xrefMap);
     }
 
     public MethodInput getMethod(String name, String desc) {

@@ -19,9 +19,7 @@ public abstract class Input implements AccessFlagsMaskProvider, IRenameHandler, 
     public void populatePopup(PopupItemBuilder builder) {
         Trinity trinity = getOwningClass().getExecution().getTrinity();
 
-        builder.menuItem("View Xrefs", () -> {
-            Main.getDisplayManager().addClosableWindow(new XrefViewerFrame(this.createXrefBuilder(trinity.getExecution().getXrefMap()), trinity));
-        });
+        addXrefViewerMenuItem(trinity, builder);
         builder.menuItem("View Member", () -> {
             Main.getDisplayManager().openDecompilerView(this);
         });

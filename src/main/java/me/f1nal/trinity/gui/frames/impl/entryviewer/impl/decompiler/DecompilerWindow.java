@@ -7,6 +7,7 @@ import imgui.ImVec2;
 import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
+import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.IDatabaseSavable;
@@ -48,6 +49,10 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private boolean resetLines, shouldSearch;
     private final SearchBar searchBar = new SearchBar();
     private static final ShowFilterOption showFilter = new ShowFilterOption("decompilerWindow");
+    /**
+     * Selection cursor.
+     */
+    public final DecompilerCursor cursor = new DecompilerCursor(this);
 
     public DecompilerWindow(ClassTarget classTarget, Trinity trinity) {
         super(trinity, classTarget);
@@ -121,7 +126,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     @Subscribe
     public void onRefreshDecompilerText(EventRefreshDecompilerText event) {
         DecompiledClass decompiledClass = getDecompiledClass();
-        if (event.getPredicate().test(decompiledClass)) {
+        if (getDecompiledClass() != null && event.getPredicate().test(decompiledClass)) {
             this.resetLines = true;
         }
     }
@@ -193,8 +198,11 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     private String getText() {
-        DecompiledClass decompiled = getDecompiledClass();
         StringBuilder output = new StringBuilder();
+        List<DecompilerLine> lines = getDecompiledClass().getLines();
+        for (DecompilerLine line : lines) {
+            output.append(line.getText()).append('\n');
+        }
         return output.toString();
     }
 
@@ -202,26 +210,33 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         return showFilter.getShowFilter().getState() && !searchBar.getText().isEmpty();
     }
 
-    private DecompiledClass getDecompiledClass() {
+    public DecompiledClass getDecompiledClass() {
         return trinity.getDecompiler().getFromCache(selectedClass);
     }
 
     private void drawDecompiledOutput(DecompiledClass decompiledClass) {
         this.hoveredComponent = null;
 
+        float mousePosY = ImGui.getMousePosY() + ImGui.getScrollY() - ImGui.getWindowPosY();
+        float mousePosX = ImGui.getMousePosX() + ImGui.getScrollX();
+
         ImVec2 textSize = ImGui.calcTextSize(String.valueOf(decompiledClass.getLines().size() + 1));
         float lineNumberSpacing = 3.F + textSize.x;
         float cursorPosX = ImGui.getCursorPosX();
 
+        cursor.handleKeyboardInputs();
+
         for (DecompilerLine line : decompiledClass.getLines()) {
-            float mousePosY = ImGui.getMousePosY() + ImGui.getScrollY() - ImGui.getWindowPosY();
             float cursorPosY = ImGui.getCursorPosY();
-            boolean hovered = mousePosY >= cursorPosY && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
+            final float cursorScreenPosX = ImGui.getCursorScreenPosX();
+            final boolean hovered = ImGui.isWindowHovered() && mousePosY >= cursorPosY && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
+
+            if (hovered)
+                this.cursor.handleHoveredLineInputs(cursorScreenPosX, lineNumberSpacing, mousePosX, line);
 
             ImGui.textColored(CodeColorScheme.LINE_NUMBER, String.valueOf(line.getLineNumber()));
             ImGui.sameLine();
             ImGui.setCursorPosX(cursorPosX + lineNumberSpacing);
-
             for (DecompilerLineText text : line.getComponents()) {
                 text.render();
                 if (this.hoveredComponent == null && ImGui.isItemHovered()) {
@@ -229,6 +244,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 }
                 ImGui.sameLine(0.F, 0.F);
             }
+
+            if (this.cursor.coordinates != null && this.cursor.coordinates.getLine() == line)
+                this.cursor.handleLineCursorDrawing(cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
 
             ImGui.newLine();
         }
@@ -242,14 +260,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 ColoredString.drawText(tooltip);
 
                 ImGui.endTooltip();
-            }
-
-            if (this.hoveredComponent.getRenameHandler() != null && this.hoveredComponent.getRenameState() == null) {
-                if (ImGui.isMouseClicked(0)) {
-                    this.hoveredComponent.beginRenaming();
-                }
-
-                ImGui.setMouseCursor(ImGuiMouseCursor.TextInput);
             }
 
             if (ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
