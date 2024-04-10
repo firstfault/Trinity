@@ -143,6 +143,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         FieldInput input = trinity.getExecution().getField(new MemberDetails(fieldDeclaration));
         if (input != null) {
             component.setCustomRenderer(new DecompilerUsagesRenderer(trinity, input));
+            component.input = input;
         }
     }
 
@@ -170,7 +171,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
                 .text(CodeColorScheme.DISABLED, ".")
                 .text(CodeColorScheme.FIELD_REF, fieldInput != null ? fieldInput.getDisplayName() : field.getName())
                 .text(CodeColorScheme.DISABLED, " ")
-                .text(CodeColorScheme.FIELD_REF, fieldInput != null ? fieldInput.getDescriptor() : field.getFieldDescriptor())
+                .text(CodeColorScheme.DISABLED, fieldInput != null ? fieldInput.getDescriptor() : field.getFieldDescriptor())
                 .get());
     }
 
@@ -217,6 +218,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         MethodInput input = trinity.getExecution().getMethod(new MemberDetails(methodStartEnd));
         if (input != null) {
             component.setCustomRenderer(new DecompilerUsagesRenderer(trinity, input));
+            component.input = input;
         }
     }
 

@@ -50,6 +50,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
      * Selection cursor.
      */
     public final DecompilerCursor cursor = new DecompilerCursor(this);
+    private Input autoscrollTo;
 
     public DecompilerWindow(ClassTarget classTarget, Trinity trinity) {
         super(trinity, classTarget);
@@ -197,6 +198,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         for (DecompilerLine line : decompiledClass.getLines()) {
             final float cursorScreenPosX = ImGui.getCursorScreenPosX();
 
+            int textOffset = 0;
             ImGui.setCursorPosX(cursorPosX + lineNumberSpacing);
             for (DecompilerLineText text : line.getComponents()) {
                 if (!text.getComponent().render()) {
@@ -204,9 +206,18 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                     ImGui.sameLine(0.F, 0.F);
                 }
 
+                if (this.autoscrollTo != null && text.getComponent().input == this.autoscrollTo) {
+                    cursor.setCoordinates(new DecompilerCoordinates(line, textOffset));
+                    cursor.setScrollToCursor();
+                    this.autoscrollTo = null;
+                }
+
                 if (this.hoveredComponent == null && ImGui.isItemHovered()) {
                     this.hoveredComponent = text.getComponent();
                 }
+
+                textOffset += text.getText().length();
+
             }
 
             float cursorPosY = ImGui.getCursorPosY();
@@ -260,7 +271,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     public void setDecompileTarget(Input input) {
-//        this.autoscrollTo = input;
+        this.autoscrollTo = input;
         this.setDecompileTarget(input.getOwningClass());
     }
 

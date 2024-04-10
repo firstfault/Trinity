@@ -34,6 +34,8 @@ public class DecompilerComponent {
      * Renderer to run after text drawing finished.
      */
     private Runnable customRenderer;
+    // Temporary
+    public Input input;
 
     public DecompilerComponent(String text) {
         this.text = text;

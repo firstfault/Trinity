@@ -69,7 +69,7 @@ public class DecompilerCursor {
         }
     }
 
-    private void setCoordinates(DecompilerCoordinates coordinates) {
+    public void setCoordinates(DecompilerCoordinates coordinates) {
         this.coordinates = coordinates;
         this.window.getDecompiledClass().setComponentHighlighted(coordinates.getComponent());
     }
