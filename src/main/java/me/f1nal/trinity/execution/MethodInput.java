@@ -16,10 +16,14 @@ import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.util.NameUtil;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class MethodInput extends Input implements IDatabaseSavable<DatabaseMethodDisplayName> {
     private final ClassInput owningClass;
@@ -73,6 +77,16 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
 
     public MemberDetails getDetails() {
         return new MemberDetails(this.getOwningClass().getFullName(), this.getName(), this.getDescriptor());
+    }
+
+    // This is used for AbstractInsnNode#clone(Map)
+    public Map<LabelNode, LabelNode> createLabelMap() {
+        final Map<LabelNode, LabelNode> map = new HashMap<>();
+        for (AbstractInsnNode instruction : methodNode.instructions) {
+            if(instruction instanceof LabelNode labelNode) map.put(labelNode, labelNode);
+        }
+
+        return map;
     }
 
     public InsnList getInstructions() {
