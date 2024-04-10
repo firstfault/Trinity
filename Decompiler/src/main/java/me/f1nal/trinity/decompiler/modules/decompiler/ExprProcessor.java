@@ -818,6 +818,8 @@ public class ExprProcessor implements CodeConstants {
     String name = getCastTypeNameWithoutTags(type, typePathWriteHelper);
     if (type.getType() == CodeConstants.TYPE_OBJECT) {
       name = (OutputMemberSerializer.serializeTags(new ClassOutputMember(name.length(), type.getValue()))) + name;
+    } else {
+      name = OutputMemberSerializer.keyword(name);
     }
     return name;
   }

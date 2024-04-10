@@ -136,7 +136,7 @@ public class ConstExprent extends Exprent {
     }
 
     return switch (constType.getType()) {
-      case CodeConstants.TYPE_BOOLEAN -> new TextBuffer(Boolean.toString((Integer)value != 0));
+      case CodeConstants.TYPE_BOOLEAN -> new TextBuffer(OutputMemberSerializer.keyword(Boolean.toString((Integer)value != 0)));
       case CodeConstants.TYPE_CHAR -> {
         Integer val = (Integer)value;
         String ret = CHAR_ESCAPES.get(val);
@@ -260,10 +260,11 @@ public class ConstExprent extends Exprent {
         }
         yield new TextBuffer(NumberOutputMember.getConst(value.toString(), NumberOutputMember.ConstType.DOUBLE, doubleVal));
       }
-      case CodeConstants.TYPE_NULL -> new TextBuffer("null");
+      case CodeConstants.TYPE_NULL -> new TextBuffer(OutputMemberSerializer.keyword("null"));
       case CodeConstants.TYPE_OBJECT -> {
         if (constType.equals(VarType.VARTYPE_STRING)) {
-          yield new TextBuffer(OutputMemberSerializer.tag("\"".concat(convertStringToJava(value.toString(), ascii).concat("\"")), StringOutputMember::new));
+          yield new TextBuffer(OutputMemberSerializer.tag("\"".concat(convertStringToJava(value.toString(), ascii).concat("\"")),
+                  l -> new StringOutputMember(l, value.toString())));
         }
         else if (constType.equals(VarType.VARTYPE_CLASS)) {
           String stringVal = value.toString();

@@ -1,9 +1,6 @@
 // Copyright 2000-2022 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package me.f1nal.trinity.decompiler.main;
 
-import me.f1nal.trinity.decompiler.main.collectors.CounterContainer;
-import me.f1nal.trinity.decompiler.main.collectors.VarNamesCollector;
-import me.f1nal.trinity.decompiler.main.rels.MethodProcessorRunnable;
 import me.f1nal.trinity.decompiler.output.impl.*;
 import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.decompiler.struct.*;
@@ -316,6 +313,7 @@ public class ClassWriter {
     boolean isEnum = DecompilerContext.getOption(IFernflowerPreferences.DECOMPILE_ENUM) && (flags & CodeConstants.ACC_ENUM) != 0;
     boolean isInterface = (flags & CodeConstants.ACC_INTERFACE) != 0;
     boolean isAnnotation = (flags & CodeConstants.ACC_ANNOTATION) != 0;
+    boolean isAbstract = (flags & CodeConstants.ACC_ABSTRACT) != 0;
 
     if (isDeprecated) {
       appendDeprecation(buffer, indent);
@@ -358,19 +356,22 @@ public class ClassWriter {
     }
 
     if (isEnum) {
-      buffer.append("enum ");
+      buffer.append(OutputMemberSerializer.kind("enum", KindOutputMember.KindType.CLASS_ENUM) + " ");
     }
     else if (isInterface) {
       if (isAnnotation) {
-        buffer.append('@');
+        buffer.append(OutputMemberSerializer.kind("@interface", KindOutputMember.KindType.CLASS_ANNOTATION));
+      } else {
+        buffer.append(OutputMemberSerializer.kind("interface", KindOutputMember.KindType.CLASS_INTERFACE));
       }
-      buffer.append("interface ");
+      buffer.append(' ');
     }
     else if (components != null) {
       buffer.append("record ");
     }
     else {
-      buffer.append("class ");
+      buffer.append(OutputMemberSerializer.kind("class", isAbstract ? KindOutputMember.KindType.CLASS_ABSTRACT : KindOutputMember.KindType.CLASS_CLASSES));
+      buffer.append(' ');
     }
     buffer.append(OutputMemberSerializer.serializeTags(new ClassOutputMember(node.simpleName.length(), cl.qualifiedName)));
     buffer.append(node.simpleName);
@@ -1287,7 +1288,8 @@ public class ClassWriter {
 
   private static final int ACCESSIBILITY_FLAGS = CodeConstants.ACC_PUBLIC | CodeConstants.ACC_PROTECTED | CodeConstants.ACC_PRIVATE;
 
-  private static void appendModifiers(TextBuffer buffer, int flags, int allowed, boolean isInterface, int excluded) {
+  private static void appendModifiers(TextBuffer outputBuffer, int flags, int allowed, boolean isInterface, int excluded) {
+    TextBuffer buffer = new TextBuffer();
     flags &= allowed;
     if (!isInterface) excluded = 0;
     for (int modifier : MODIFIERS.keySet()) {
@@ -1295,6 +1297,7 @@ public class ClassWriter {
         buffer.append(MODIFIERS.get(modifier)).append(' ');
       }
     }
+    outputBuffer.append(OutputMemberSerializer.keyword(buffer.toString()));
   }
 
   public static GenericClassDescriptor getGenericClassDescriptor(StructClass cl) {

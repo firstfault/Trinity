@@ -50,6 +50,7 @@ public final class OutputMemberSerializer {
             PackageOutputMember.class,
             StringOutputMember.class,
             BytecodeMarkerOutputMember.class,
+            KindOutputMember.class,
     };
 
     public static String serialize(OutputMember outputMember) throws IOException {
@@ -74,6 +75,10 @@ public final class OutputMemberSerializer {
 
     public static String keyword(String text) {
         return tag(text, KeywordOutputMember::new);
+    }
+
+    public static String kind(String text, KindOutputMember.KindType type) {
+        return tag(text, l -> new KindOutputMember(l, type));
     }
 
     public static OutputMember deserialize(String encoded) throws IOException {

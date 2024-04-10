@@ -15,4 +15,5 @@ public interface OutputMemberVisitor {
     void visitPackage(PackageOutputMember pkg);
     void visitString(StringOutputMember string);
     void visitVariable(VariableOutputMember variable);
+    void visitKind(KindOutputMember kind);
 }

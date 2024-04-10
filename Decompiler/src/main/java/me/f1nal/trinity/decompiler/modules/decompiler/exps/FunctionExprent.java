@@ -4,6 +4,7 @@ package me.f1nal.trinity.decompiler.modules.decompiler.exps;
 import me.f1nal.trinity.decompiler.code.CodeConstants;
 import me.f1nal.trinity.decompiler.main.collectors.BytecodeMappingTracer;
 import me.f1nal.trinity.decompiler.modules.decompiler.ExprProcessor;
+import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.decompiler.struct.gen.VarType;
 import me.f1nal.trinity.decompiler.struct.match.MatchEngine;
 import me.f1nal.trinity.decompiler.struct.match.MatchNode;
@@ -447,7 +448,8 @@ public class FunctionExprent extends Exprent {
           VarType objArr = VarType.VARTYPE_OBJECT.resizeArrayDim(1); // type family does not change
           res.enclose("((" + ExprProcessor.getCastTypeName(objArr, Collections.emptyList()) + ")", ")");
         }
-        yield res.append(".length");
+        // is this a keyword though .length?
+        yield res.append("." + OutputMemberSerializer.keyword("length"));
       }
       case FUNCTION_IIF -> wrapOperandString(lstOperands.get(0), true, indent, tracer)
         .append(" ? ")

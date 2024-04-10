@@ -7,34 +7,43 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-public class StringOutputMember extends OutputMember {
-    private String data;
+public class KindOutputMember extends OutputMember {
+    private KindType type;
 
-    public StringOutputMember(int length) {
+    public KindOutputMember(int length) {
         super(length);
     }
 
-    public StringOutputMember(int length, String data) {
+    public KindOutputMember(int length, KindType type) {
         super(length);
-        this.data = data;
+        this.type = type;
     }
 
     @Override
     protected void serializeImpl(DataOutput dataOutput) throws IOException {
-        dataOutput.writeUTF(this.data);
+        dataOutput.writeByte(type.ordinal());
     }
 
     @Override
     protected void deserializeImpl(DataInput dataInput) throws IOException {
-        this.data = dataInput.readUTF();
+        this.type = KindType.values()[dataInput.readUnsignedByte()];
     }
 
-    public String getData() {
-        return data;
+    public KindType getType() {
+        return type;
     }
 
     @Override
     public void visit(OutputMemberVisitor visitor) {
-        visitor.visitString(this);
+        visitor.visitKind(this);
+    }
+
+    public enum KindType {
+        CLASS_INTERFACE,
+        CLASS_ANNOTATION,
+        CLASS_CLASSES,
+        CLASS_ABSTRACT,
+        CLASS_ENUM,
+        ;
     }
 }

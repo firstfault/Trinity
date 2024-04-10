@@ -19,6 +19,7 @@ import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewCache;
 import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewFrame;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchType;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeString;
+import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerUsagesRenderer;
 import me.f1nal.trinity.gui.windows.impl.xref.XrefViewerFrame;
@@ -30,9 +31,7 @@ import me.f1nal.trinity.util.StringUtil;
 import me.f1nal.trinity.util.SystemUtil;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class DecompilerComponentInitializer implements OutputMemberVisitor {
     private final Trinity trinity;
@@ -249,8 +248,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
     @Override
     public void visitString(StringOutputMember string) {
-        // FIXME: Not the actual original string, it is escaped!
-        final String unquotedText = this.originalText.substring(1, this.originalText.length() - 1);
+        final String unquotedText = string.getData();
 
         component.addPopupBuilder(builder -> {
             builder.menuItem("Copy", () -> SystemUtil.copyToClipboard(unquotedText))
@@ -286,6 +284,13 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
                 .text(CodeColorScheme.CLASS_REF, variableMember.getType() == null ? "unknown var type!" : variableMember.getType()).get());
     }
 
+    @Override
+    public void visitKind(KindOutputMember kind) {
+        FileKind fileKind = kindTranslations.get(kind.getType());
+
+        component.setColorFunction(() -> CodeColorScheme.KEYWORD);
+    }
+
     private static final NumberDisplayType[] INTEGER_TYPES;
 
     private static NumberDisplayType[] getNumberDisplayTypes(NumberDisplayTypeEnum... type) {
@@ -296,7 +301,20 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         return types.toArray(new NumberDisplayType[0]);
     }
 
+    private static final Map<KindOutputMember.KindType, FileKind> kindTranslations = new HashMap<>();
+
     static {
         INTEGER_TYPES = getNumberDisplayTypes(NumberDisplayTypeEnum.DECIMAL, NumberDisplayTypeEnum.HEX, NumberDisplayTypeEnum.OCTAL, NumberDisplayTypeEnum.BINARY, NumberDisplayTypeEnum.ASCII);
+
+        kindLoop: for (KindOutputMember.KindType kindType : KindOutputMember.KindType.values()) {
+            String kindName = kindType.name().substring("CLASS_".length());
+            for (FileKind fileKind : FileKind.values()) {
+                if (fileKind.getName().equalsIgnoreCase(kindName)) {
+                    kindTranslations.put(kindType, fileKind);
+                    continue kindLoop;
+                }
+            }
+            throw new RuntimeException("No translation for kind: " + kindName);
+        }
     }
 }

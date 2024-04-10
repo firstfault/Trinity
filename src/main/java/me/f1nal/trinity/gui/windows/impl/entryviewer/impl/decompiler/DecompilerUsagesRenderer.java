@@ -22,7 +22,7 @@ import java.util.List;
 public class DecompilerUsagesRenderer implements Runnable {
     private final Trinity trinity;
     private final Input input;
-    private final int xrefsCount;
+    private final String text;
     private float addX = 0.F;
 
     public DecompilerUsagesRenderer(Trinity trinity, Input input) {
@@ -31,7 +31,8 @@ public class DecompilerUsagesRenderer implements Runnable {
         if (input instanceof MethodInput) {
             addX += 10.F;
         }
-        this.xrefsCount = input.createXrefBuilder(trinity.getExecution().getXrefMap()).createXrefs().size();
+        final int xrefsCount = input.createXrefBuilder(trinity.getExecution().getXrefMap()).createXrefs().size();
+        this.text = xrefsCount == 0 ? "no usages" : (xrefsCount + " usage" + (xrefsCount == 1 ? "" : "s"));
     }
 
     @Override
@@ -42,7 +43,6 @@ public class DecompilerUsagesRenderer implements Runnable {
         float globalScale = fontSize / 14;
         ImVec2 rectMin = ImGui.getItemRectMin().plus(addX * globalScale, 0.F);
         ImFont font = ImGui.getFont();
-        String text = this.xrefsCount + " usage" + (this.xrefsCount == 1 ? "" : "s");
         ImVec2 textSize = font.calcTextSizeA(fontSize, Float.MAX_VALUE, -1.F, text);
         ImVec2 mousePos = ImGui.getMousePos();
         boolean hovered = ImGui.isWindowHovered() && mousePos.x >= rectMin.x && mousePos.y >= rectMin.y && mousePos.x <= rectMin.x + textSize.x && mousePos.y <= rectMin.y + textSize.y;
