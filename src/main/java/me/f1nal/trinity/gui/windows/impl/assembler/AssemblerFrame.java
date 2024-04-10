@@ -301,7 +301,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         });
 
         final var component = instructions.get(index);
-        final var editingInstruction = new EditingInstruction(component.getInstruction());
+        final var editingInstruction = new EditingInstruction(trinity, methodInput.createLabelMap(), component.getInstruction());
 
         popup.setOpcodeName(component.getName());
         editingInstruction.addInstructionFields(popup.getMethodInput());

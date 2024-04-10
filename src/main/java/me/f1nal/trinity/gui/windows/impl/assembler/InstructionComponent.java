@@ -7,6 +7,7 @@ import imgui.ImVec4;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
+import me.f1nal.trinity.gui.windows.impl.assembler.action.*;
 import me.f1nal.trinity.gui.windows.impl.assembler.args.AbstractInsnArgument;
 import me.f1nal.trinity.gui.windows.impl.assembler.args.LabelArgument;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.AssemblerInstructionTable;
@@ -15,6 +16,7 @@ import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionReferenceArro
 import me.f1nal.trinity.gui.windows.impl.assembler.line.SourceLineNumber;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.animation.Animation;
+import org.lwjgl.glfw.GLFW;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
@@ -25,6 +27,14 @@ import java.util.Collections;
 import java.util.List;
 
 public class InstructionComponent {
+    private static final List<InstructionAction> INSTRUCTION_ACTIONS = List.of(
+            new DeleteInstructionAction(),
+            new DuplicateInstructionAction(),
+            new EditInstructionAction(),
+            new InsertInstructionAction()
+    );
+
+
     private final String name;
     private final List<AbstractInsnArgument> arguments = new ArrayList<>();
     private final AbstractInsnNode instruction;
@@ -74,6 +84,12 @@ public class InstructionComponent {
                 table.getAssemblerFrame().getPopupMenu().show(this.createPopup(table.getAssemblerFrame()));
             }
             drawList.addRectFilled(x, y, x + 0x10000, y + this.bounds.w - 1,  ImColor.rgba(70, 70, 70, 33));
+
+            for (InstructionAction instructionAction : INSTRUCTION_ACTIONS) {
+                if(ImGui.isKeyPressed(instructionAction.getKey())) {
+                    instructionAction.execute(table.getAssemblerFrame(), this);
+                }
+            }
         }
 
         if (table.getAssemblerFrame().isDraggingInstruction(this)) {
@@ -132,13 +148,12 @@ public class InstructionComponent {
 
         popup.separator();
 
-        popup.menuItem("Edit...", () -> af.openEditDialog(af.getInstructions().indexOf(this)));
-        popup.menuItem("Insert...", () -> af.openInsertDialog(af.getInstructions().indexOf(this)));
+        for (InstructionAction instructionAction : INSTRUCTION_ACTIONS) {
+            popup.menuItem(instructionAction.getName(), GLFW.glfwGetKeyName(instructionAction.getKey(), 0), false, () -> instructionAction.execute(af, this));
+        }
 
         popup.separator();
 
-        popup.menuItem("Delete", () -> af.deleteInstruction(this));
-        popup.menuItem("Duplicate", () -> af.duplicateInstruction(this));
         popup.menuItem("Copy Text", () -> af.copyTextInstruction(this));
         return popup;
     }

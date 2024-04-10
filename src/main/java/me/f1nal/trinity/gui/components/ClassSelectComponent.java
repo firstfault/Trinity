@@ -16,9 +16,11 @@ public class ClassSelectComponent {
     private final Trinity trinity;
     private ClassTarget classInput;
     private final Predicate<ClassTarget> validClassPredicate;
+    private final String componentName;
 
-    public ClassSelectComponent(Trinity trinity, Predicate<ClassTarget> validClassPredicate) {
+    public ClassSelectComponent(Trinity trinity, String componentName, Predicate<ClassTarget> validClassPredicate) {
         this.trinity = trinity;
+        this.componentName = componentName;
         this.validClassPredicate = validClassPredicate;
     }
 
@@ -30,8 +32,10 @@ public class ClassSelectComponent {
         return className.get();
     }
 
-    public void draw() {
-        if (ImGui.inputTextWithHint("Class Name###ClassName" + id, "java/lang/Object", className)) {
+    public boolean draw() {
+        final String oldClassName = getClassName();
+
+        if (ImGui.inputTextWithHint(componentName + "###ClassName" + id, "java/lang/Object", className)) {
             this.queryClassInput();
         }
         ImGui.sameLine();
@@ -42,6 +46,11 @@ public class ClassSelectComponent {
             }));
         }
         GuiUtil.tooltip("Open Class Picker");
+        return !getClassName().equals(oldClassName);
+    }
+
+    public void setClassName(String className) {
+        this.className.set(className);
     }
 
     private void queryClassInput() {
