@@ -6,7 +6,7 @@ import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 
 public class XrefSearchTypeClass extends XrefSearchType {
-    private final ClassSelectComponent classSelectComponent = new ClassSelectComponent(trinity, (target) -> true);
+    private final ClassSelectComponent classSelectComponent = new ClassSelectComponent(trinity, "Class name", (target) -> true);
 
     protected XrefSearchTypeClass(Trinity trinity) {
         super("Class", trinity);

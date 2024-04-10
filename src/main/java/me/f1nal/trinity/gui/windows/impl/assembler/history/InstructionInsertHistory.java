@@ -35,7 +35,7 @@ public class InstructionInsertHistory extends AssemblerHistory {
 
     @Override
     public void undo() {
-        this.position.getList().set(position.getIndex(), position.getComponent());
+        this.position.getList().remove(position.getIndex());
         this.position.getList().queueIdReset();
     }
 

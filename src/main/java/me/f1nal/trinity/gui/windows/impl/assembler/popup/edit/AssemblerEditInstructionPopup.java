@@ -125,7 +125,7 @@ public class AssemblerEditInstructionPopup extends PopupWindow {
                 if (opcodeIndex != -1) {
                     OpcodeClasses.setInstructionOpcode(insnNode, opcodeIndex);
                 }
-                EditingInstruction editingInstruction = new EditingInstruction(insnNode);
+                EditingInstruction editingInstruction = new EditingInstruction(trinity, methodInput.createLabelMap(), insnNode);
                 editingInstruction.addInstructionFields(methodInput);
                 this.instruction = editingInstruction;
             }

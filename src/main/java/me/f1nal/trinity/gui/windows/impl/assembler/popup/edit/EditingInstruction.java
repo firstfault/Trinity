@@ -1,22 +1,26 @@
 package me.f1nal.trinity.gui.windows.impl.assembler.popup.edit;
 
 import imgui.flag.ImGuiDataType;
+import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.MethodInput;
 import org.objectweb.asm.tree.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class EditingInstruction {
     private final AbstractInsnNode insnNode;
     private final List<EditField<?>> editFieldList = new ArrayList<>();
+    private final Trinity trinity;
     /**
      * If this instruction data is valid and can be set.
      */
     private boolean valid;
 
-    public EditingInstruction(AbstractInsnNode insnNode) {
-        this.insnNode = insnNode;
+    public EditingInstruction(Trinity trinity, Map<LabelNode, LabelNode> labelMap, AbstractInsnNode insnNode) {
+        this.trinity = trinity;
+        this.insnNode = insnNode.clone(labelMap);
     }
 
     public AbstractInsnNode getInsnNode() {
@@ -50,6 +54,14 @@ public class EditingInstruction {
             editFieldList.add(new EditFieldInteger("Dimensions", () -> ((MultiANewArrayInsnNode) insnNode).dims, (dim) -> ((MultiANewArrayInsnNode) insnNode).dims = dim, ImGuiDataType.U8));
         } else if (insnNode instanceof JumpInsnNode) {
             editFieldList.add(new EditFieldLabel(methodInput.getLabelTable(), () -> methodInput.getLabelTable().getLabel(((JumpInsnNode) insnNode).label.getLabel()), (label) -> ((JumpInsnNode) insnNode).label = new LabelNode(label.findOriginal())));
+        } else if(insnNode instanceof MethodInsnNode min) {
+            editFieldList.add(new EditFieldClass(trinity, "Owner", () -> min.owner, owner -> min.owner = owner));
+            editFieldList.add(new EditFieldString(512, "Name", "Method name", () -> min.name, name -> min.name = name));
+            editFieldList.add(new EditFieldString(512, "Desc", "Method description", () -> min.desc, desc -> min.desc = desc));
+        } else if(insnNode instanceof FieldInsnNode fin) {
+            editFieldList.add(new EditFieldClass(trinity, "Field owner", () -> fin.owner, owner -> fin.owner = owner));
+            editFieldList.add(new EditFieldString(512, "Name", "Field name", () -> fin.name, name -> fin.name = name));
+            editFieldList.add(new EditFieldString(512, "Desc", "Field description", () -> fin.desc, desc -> fin.desc = desc));
         }
 
         for (EditField<?> editField : editFieldList) {
