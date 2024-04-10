@@ -1,6 +1,9 @@
 // Copyright 2000-2022 JetBrains s.r.o. and contributors. Use of this source code is governed by the Apache 2.0 license.
 package me.f1nal.trinity.decompiler.main;
 
+import me.f1nal.trinity.decompiler.main.collectors.CounterContainer;
+import me.f1nal.trinity.decompiler.main.collectors.VarNamesCollector;
+import me.f1nal.trinity.decompiler.main.rels.MethodProcessorRunnable;
 import me.f1nal.trinity.decompiler.output.impl.*;
 import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.decompiler.struct.*;

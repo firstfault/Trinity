@@ -44,7 +44,13 @@ public class PopupItemBuilder {
     public PopupItemBuilder predicate(BooleanSupplier predicate, Consumer<PopupItemBuilder> items) {
         PopupItemBuilder builder = PopupItemBuilder.create();
         items.accept(builder);
-        return this.add(new PopupItemPredicate(predicate, builder.get()));
+        return this.add(new PopupItemPredicate(predicate, builder.get(), false));
+    }
+
+    public PopupItemBuilder disabled(BooleanSupplier predicate, Consumer<PopupItemBuilder> items) {
+        PopupItemBuilder builder = PopupItemBuilder.create();
+        items.accept(builder);
+        return this.add(new PopupItemPredicate(predicate, builder.get(), true));
     }
 
     public PopupItemBuilder menu(String label, Consumer<PopupItemBuilder> menu) {

@@ -103,6 +103,8 @@ public class ContextUnit {
                 mapping = DecompilerContext.getBytecodeSourceMapper().getOriginalLinesMapping();
               }
               resultSaver.saveClassFile(filename, cl.qualifiedName, entryName, content, mapping);
+            } else {
+              throw new RuntimeException(String.format("getClassContent() returned null for '%s'", cl.qualifiedName));
             }
           }
         }

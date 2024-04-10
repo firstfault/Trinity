@@ -124,9 +124,11 @@ public class Fernflower implements IDecompiledData {
       return buffer.toString();
     }
     catch (CancellationManager.CanceledException e) {
+      e.printStackTrace();
       throw e;
     }
     catch (Throwable t) {
+      t.printStackTrace();
       DecompilerContext.getLogger().writeMessage("Class " + cl.qualifiedName + " couldn't be fully decompiled.", t);
       return null;
     }

@@ -10,6 +10,9 @@ import java.util.Base64;
 import java.util.function.Function;
 
 public final class OutputMemberSerializer {
+    public final static String TAG_START = "<TrinityOMObject>";
+    public final static String TAG_END = "</TrinityOMObject>";
+
     public static Class<?> getClass(int id) {
         if (id < 0 || id >= instantiable.length) {
             return null;
@@ -51,7 +54,7 @@ public final class OutputMemberSerializer {
 
     public static String serializeTags(OutputMember outputMember) {
         try {
-            return "<TrinityOMObject>" + serialize(outputMember) + "</TrinityOMObject>";
+            return TAG_START + serialize(outputMember) + TAG_END;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

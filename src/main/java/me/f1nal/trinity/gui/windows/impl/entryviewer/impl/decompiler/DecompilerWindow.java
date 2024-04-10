@@ -224,6 +224,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             ImGui.newLine();
         }
 
+        boolean rightClick = ImGui.isWindowHovered() && ImGui.isMouseClicked(ImGuiMouseButton.Right);
+
         if (this.hoveredComponent != null) {
             List<ColoredString> tooltip = this.hoveredComponent.createTooltip();
 
@@ -235,13 +237,21 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 ImGui.endTooltip();
             }
 
-            if (ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
+            if (rightClick) {
                 PopupItemBuilder popup = this.hoveredComponent.createPopup();
 
                 if (!popup.isEmpty()) {
                     Main.getDisplayManager().showPopup(popup);
+                    rightClick = false;
                 }
             }
+        }
+
+        if (rightClick) {
+            Main.getDisplayManager().showPopup(PopupItemBuilder.create().disabled(() -> cursor.selectionEnd == null, items -> {
+                items.menuItem("Copy", () -> {
+                });
+            }));
         }
     }
 

@@ -2,6 +2,7 @@
 package me.f1nal.trinity.decompiler.struct;
 
 import me.f1nal.trinity.decompiler.code.CodeConstants;
+import me.f1nal.trinity.decompiler.main.rels.ClassWrapper;
 import me.f1nal.trinity.decompiler.struct.attr.StructGeneralAttribute;
 import me.f1nal.trinity.decompiler.struct.attr.StructPermittedSubclassesAttribute;
 import me.f1nal.trinity.decompiler.struct.attr.StructRecordAttribute;
@@ -38,7 +39,9 @@ import java.util.Map;
   }
 */
 public class StructClass extends StructMember {
-  public static StructClass create(DataInputFullStream in, boolean own, LazyLoader loader) throws IOException {
+  public ClassWrapper wrapper;
+
+    public static StructClass create(DataInputFullStream in, boolean own, LazyLoader loader) throws IOException {
     in.discard(4);
     int minorVersion = in.readUnsignedShort();
     int majorVersion = in.readUnsignedShort();

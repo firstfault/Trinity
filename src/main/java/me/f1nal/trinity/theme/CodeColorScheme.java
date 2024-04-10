@@ -40,6 +40,8 @@ public final class CodeColorScheme {
     public static int LINE_NUMBER = getRgb(new Color(66, 110, 66));
     @LabeledColor(category = CODE_EDITOR, label = "Cursor")
     public static int CURSOR = getRgb(new Color(175, 175, 175));
+    @LabeledColor(category = CODE_EDITOR, label = "Cursor Selection")
+    public static int CURSOR_SELECTION = getRgb(new Color(83, 117, 189));
 
     /////////////////////////
     // Notify Colors

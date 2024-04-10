@@ -399,6 +399,8 @@ public class ClassesProcessor implements CodeConstants {
     ClassWrapper wrapper = new ClassWrapper(node.classStruct);
     wrapper.init();
 
+    node.classStruct.wrapper = wrapper;
+
     node.wrapper = wrapper;
 
     for (ClassNode nd : node.nested) {

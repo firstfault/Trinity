@@ -1,6 +1,5 @@
 package me.f1nal.trinity.decompiler.output;
 
-import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.decompiler.DecompiledMethod;
 import me.f1nal.trinity.decompiler.output.impl.*;
@@ -10,12 +9,17 @@ import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.MethodOpcodeSource;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.logging.Logging;
+import me.f1nal.trinity.util.Stopwatch;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+
+import static me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer.TAG_END;
+import static me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer.TAG_START;
 
 public class DecompilerMemberReader {
     private final DecompiledClass decompiledClass;
@@ -24,12 +28,13 @@ public class DecompilerMemberReader {
     private List<AbstractInsnNode> instructionsLinkedToComponent;
     private List<AbstractInsnNode> lastInstructionsLinkedToComponent;
 
-    private final static String tagNameStart = "<TrinityOMObject>";
-    private final static String tagNameEnd = "</TrinityOMObject>";
-
     public DecompilerMemberReader(DecompiledClass decompiledClass, String rawOutput) throws IOException {
         this.decompiledClass = decompiledClass;
+        Stopwatch stopwatch = new Stopwatch();
         this.decode(rawOutput);
+        if (stopwatch.hasPassed(100L)) {
+            Logging.warn("Decoding decompiler output took way too long! {}ms", stopwatch.getDifference());
+        }
     }/*
 
     private DecompilerComponent convertToComponent(String text, OutputMember outputMember) throws IOException {
@@ -157,67 +162,62 @@ public class DecompilerMemberReader {
      * @throws IOException If an unrecoverable error occurred while decoding (bad input).
      */
     private void decode(String rawOutput) throws IOException {
-        if (!rawOutput.contains(tagNameStart) || !rawOutput.contains(tagNameEnd)) {
-            return;
-        }
+        int index = 0;
 
-        String text = rawOutput;
         while (true) {
-            int start = text.indexOf(tagNameStart);
-            int end = text.indexOf(tagNameEnd);
-            String line = text;
-            if (start >= 0) {
-                line = line.substring(0, start);
-            } else {
-                this.addComponent(new DecompilerComponent(text));
+            final int start = rawOutput.indexOf(TAG_START, index);
+            if (start == -1) {
                 break;
             }
-            if (end == -1) {
-                throw new IOException("Bad EOF");
+
+            if (index != start) {
+                this.addComponent(new DecompilerComponent(rawOutput.substring(index, start)));
             }
-            int tagStart = start + tagNameStart.length();
-            if (tagStart > end) {
-                throw new IOException(String.format("did you insert tags after target? tagStart > end: %s > %s", tagStart, end));
-            }
-            String encodedBytes = text.substring(tagStart, end);
-            String toEnd = text.substring(end + tagNameEnd.length());
-            OutputMember outputMember = OutputMemberSerializer.deserialize(encodedBytes);
-            text = text.substring(end + tagNameEnd.length() + outputMember.getLength());
-            String targetString = toEnd.substring(0, outputMember.getLength());
-            if (!line.isEmpty()) {
-                this.addComponent(new DecompilerComponent(line));
-            }
-            while (targetString.contains(tagNameStart)) targetString = sanityCheckEncoded(outputMember, targetString);
+
+            final int end = rawOutput.indexOf(TAG_END, start);
+            index = end + TAG_END.length();
+
+            final OutputMember outputMember = OutputMemberSerializer.deserialize(rawOutput.substring(start + TAG_START.length(), end));
+            String componentText = rawOutput.substring(index, (index = index + outputMember.getLength()));
+
+            // Should fix these at some point...
+            while (componentText.contains(TAG_START)) componentText = sanityCheckEncoded(outputMember, componentText);
+
             if (outputMember instanceof BytecodeMarkerOutputMember) {
                 this.handleBytecodeMarker((BytecodeMarkerOutputMember) outputMember);
                 continue;
             }
             if (outputMember instanceof MethodStartEndOutputMember) {
-                MethodStartEndOutputMember mse = (MethodStartEndOutputMember) outputMember;
-                if (mse.isStart()) {
-                    ClassInput classInput = decompiledClass.getTrinity().getExecution().getClassInput(mse.getOwner());
-                    if (classInput == null) {
-                        throw new NullPointerException(String.format("Class input is null for %s.", mse.getOwner()));
-                    }
-                    this.currentMethod = decompiledClass.createMethod(Objects.requireNonNull(classInput).createMethod(mse.getName(), mse.getDesc()));
-//                    if (currentMethod != null) {
-//                        return new InputStartComponent(this.currentMethod.getMethodInput());
-//                    }
-                } else {
-                    if (this.currentMethod == null) {
-                        throw new RuntimeException();
-                    }
-                    this.currentMethod = null;
-                }
-//                return null;
+                this.processMethodStartEnd((MethodStartEndOutputMember) outputMember);
             }
-            DecompilerComponent component = new DecompilerComponent(targetString);
-            DecompilerComponentInitializer initializer = new DecompilerComponentInitializer(decompiledClass.getTrinity(), component, targetString, decompiledClass.getClassInput(), currentMethod);
+
+            DecompilerComponent component = new DecompilerComponent(componentText);
+            DecompilerComponentInitializer initializer = new DecompilerComponentInitializer(decompiledClass.getTrinity(), component, componentText, decompiledClass.getClassInput(), currentMethod);
             outputMember.visit(initializer);
             this.addComponent(component);
+
+        }
+
+        if (index != rawOutput.length()) {
+            this.addComponent(new DecompilerComponent(rawOutput.substring(index)));
         }
 
         this.setBytecodeMarkers();
+    }
+
+    private void processMethodStartEnd(MethodStartEndOutputMember startEnd) {
+        if (startEnd.isStart()) {
+            ClassInput classInput = decompiledClass.getTrinity().getExecution().getClassInput(startEnd.getOwner());
+            if (classInput == null) {
+                throw new NullPointerException(String.format("Class input is null for %s.", startEnd.getOwner()));
+            }
+            this.currentMethod = decompiledClass.createMethod(Objects.requireNonNull(classInput).createMethod(startEnd.getName(), startEnd.getDesc()));
+        } else {
+            if (this.currentMethod == null) {
+                throw new RuntimeException();
+            }
+            this.currentMethod = null;
+        }
     }
 
     private void addComponent(DecompilerComponent component) {
@@ -234,23 +234,23 @@ public class DecompilerMemberReader {
     }
 
     private String sanityCheckEncoded(OutputMember currentOutputMember, String targetString) {
-        int start = targetString.indexOf(tagNameStart);
+        int start = targetString.indexOf(TAG_START);
         if (start == -1) {
             return targetString;
         }
-        int end = targetString.indexOf(tagNameEnd);
+        int end = targetString.indexOf(TAG_END);
         if (end == -1) {
             return targetString;
         }
         OutputMember outputMember = null;
         try {
-            outputMember = OutputMemberSerializer.deserialize(targetString.substring(start + tagNameStart.length(), end));
+            outputMember = OutputMemberSerializer.deserialize(targetString.substring(start + TAG_START.length(), end));
         } catch (IOException e) {
             Logging.warn("Unrecognizable tag is inside of another tag {}.", currentOutputMember);
         }
         if (outputMember != null) {
 //            Logging.warn("Tag {} is inside of another tag {}.", outputMember, currentOutputMember);
         }
-        return targetString.substring(0, start) + targetString.substring(end + tagNameEnd.length());
+        return targetString.substring(0, start) + targetString.substring(end + TAG_END.length());
     }
 }
