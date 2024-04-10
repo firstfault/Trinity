@@ -23,7 +23,7 @@ public class DecompilerCursor {
     /**
      * Text selection (when dragging over text)
      */
-    public DecompilerSelection selection;
+    public DecompilerCoordinates selectionEnd;
     /**
      * Cursor blink animation
      */
@@ -32,7 +32,11 @@ public class DecompilerCursor {
      * If set to {@code true}, triggers a forced scroll to the cursor in the case it is not visible.
      */
     private boolean scroll;
-    private DecompilerSelection draggingSelection;
+    /**
+     * If we are currently dragging the mouse across the screen, causing a selection box.
+     * @see DecompilerCursor#selectionEnd
+     */
+    private boolean draggingSelection;
 
     public DecompilerCursor(DecompilerWindow window) {
         this.window = window;
@@ -45,15 +49,15 @@ public class DecompilerCursor {
             return;
         }
 
-        if (this.draggingSelection != null) {
-            this.selection = new DecompilerSelection(this.draggingSelection.getStart(), this.getCoordinates(line, mousePosX, startX));
+        if (this.draggingSelection) {
+            this.selectionEnd = this.getCoordinates(line, mousePosX, startX);
         }
 
         ImGui.setMouseCursor(ImGuiMouseCursor.TextInput);
 
         if (ImGui.isMouseClicked(0)) {
             this.setCoordinates(this.getCoordinates(line, mousePosX, startX));
-            this.draggingSelection = new DecompilerSelection(this.coordinates, this.coordinates);
+            this.draggingSelection = true;
             this.blink.reset();
         }
     }
@@ -151,7 +155,7 @@ public class DecompilerCursor {
 
     public void handleInputs(float mousePosX, float mousePosY) {
         if (!ImGui.isMouseDown(0)) {
-            this.draggingSelection = null;
+            this.draggingSelection = false;
         }
 
         if (this.coordinates == null) {

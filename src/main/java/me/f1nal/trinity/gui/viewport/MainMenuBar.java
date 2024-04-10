@@ -54,7 +54,7 @@ public class MainMenuBar {
 
         if (ImGui.beginMenu("View")) {
             if (ImGui.menuItem(FontAwesomeIcons.Cog + " Preferences")) {
-                getWindowManager().addClosableWindow(new PreferencesFrame(displayManager.getTrinity()));
+                getWindowManager().addStaticWindow(PreferencesFrame.class);
             }
             ImGui.separator();
             if (ImGui.beginMenu( "Themes...")) {

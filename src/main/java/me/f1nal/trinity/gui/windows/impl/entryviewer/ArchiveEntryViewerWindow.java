@@ -88,4 +88,9 @@ public abstract class ArchiveEntryViewerWindow<T extends ArchiveEntry> extends C
         Main.getDisplayManager().addNotification(new Notification(NotificationType.SUCCESS, caption, ColoredStringBuilder.create()
                 .fmt("Saved {} to {}", ByteUtil.getHumanReadableByteCountSI(bytes.length), getArchiveEntry().getDisplaySimpleName()).get()));
     }
+
+    @Override
+    public boolean isAlreadyOpen(ClosableWindow otherWindow) {
+        return otherWindow instanceof ArchiveEntryViewerWindow<?> && ((ArchiveEntryViewerWindow<?>) otherWindow).archiveEntry.equals(this.archiveEntry) && otherWindow.getClass().isAssignableFrom(this.getClass());
+    }
 }

@@ -75,11 +75,6 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
         return new MemberDetails(this.getOwningClass().getFullName(), this.getName(), this.getDescriptor());
     }
 
-    // TODO: :p
-    public boolean isInvokeDynamicCallsite() {
-        return getName().contains("lambda$");
-    }
-
     public InsnList getInstructions() {
         return methodNode.instructions;
     }
@@ -117,7 +112,7 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
 
     @Override
     public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
-        return new XrefBuilderMemberRef(xrefMap, this.getDetails());
+        return isClinit() ? getOwningClass().createXrefBuilder(xrefMap) : new XrefBuilderMemberRef(xrefMap, this.getDetails());
     }
 
     public String getName() {

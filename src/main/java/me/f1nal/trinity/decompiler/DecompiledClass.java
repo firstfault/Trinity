@@ -89,7 +89,7 @@ public final class DecompiledClass {
             }
 
             for (String line : split) {
-                if (line != null && !line.isEmpty()) {
+                if (textComponent.hasCustomRenderer() || line != null && !line.isEmpty()) {
                     sourceLine.addComponent(new DecompilerLineText(line, textComponent));
                 }
 

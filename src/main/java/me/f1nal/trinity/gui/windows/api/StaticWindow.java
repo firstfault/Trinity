@@ -29,6 +29,9 @@ public abstract class StaticWindow extends AbstractWindow {
 
     @Override
     public void render() {
+        if (!this.isVisible()) {
+            return;
+        }
         if (!setSize) {
             ImGui.setNextWindowSize(width, height, ImGuiCond.Always);
             setSize = true;

@@ -195,24 +195,29 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         cursor.handleInputs(mousePosX, mousePosY);
 
         for (DecompilerLine line : decompiledClass.getLines()) {
-            float cursorPosY = ImGui.getCursorPosY();
             final float cursorScreenPosX = ImGui.getCursorScreenPosX();
+
+            ImGui.setCursorPosX(cursorPosX + lineNumberSpacing);
+            for (DecompilerLineText text : line.getComponents()) {
+                if (!text.getComponent().render()) {
+                    text.render(decompiledClass.isComponentHighlighted(text.getComponent()));
+                    ImGui.sameLine(0.F, 0.F);
+                }
+
+                if (this.hoveredComponent == null && ImGui.isItemHovered()) {
+                    this.hoveredComponent = text.getComponent();
+                }
+            }
+
+            float cursorPosY = ImGui.getCursorPosY();
             final boolean hovered = ImGui.isWindowHovered() && mousePosY >= cursorPosY && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
 
             if (hovered)
                 this.cursor.handleHoveredLineInputs(cursorScreenPosX, lineNumberSpacing, mousePosX, line);
 
+            ImGui.setCursorPosX(cursorPosX);
             ImGui.textColored(CodeColorScheme.LINE_NUMBER, String.valueOf(line.getLineNumber()));
             ImGui.sameLine();
-            ImGui.setCursorPosX(cursorPosX + lineNumberSpacing);
-            for (DecompilerLineText text : line.getComponents()) {
-                text.render(decompiledClass.isComponentHighlighted(text.getComponent()));
-
-                if (this.hoveredComponent == null && ImGui.isItemHovered()) {
-                    this.hoveredComponent = text.getComponent();
-                }
-                ImGui.sameLine(0.F, 0.F);
-            }
 
             this.cursor.handleLineDrawing(line, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
 

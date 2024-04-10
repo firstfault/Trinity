@@ -83,15 +83,7 @@ public class XrefViewerFrame extends ClosableWindow {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        XrefViewerFrame that = (XrefViewerFrame) o;
-        return Objects.equals(builder, that.builder);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(builder);
+    public boolean isAlreadyOpen(ClosableWindow otherWindow) {
+        return otherWindow instanceof XrefViewerFrame && ((XrefViewerFrame) otherWindow).builder.equals(this.builder);
     }
 }

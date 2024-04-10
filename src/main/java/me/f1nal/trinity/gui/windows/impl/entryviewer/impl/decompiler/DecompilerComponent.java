@@ -30,6 +30,10 @@ public class DecompilerComponent {
      * Identifier that tells us if another {@link DecompilerComponent} is linked to this component and should get highlighted when clicked on it.
      */
     private String identifier;
+    /**
+     * Renderer to run after text drawing finished.
+     */
+    private Runnable customRenderer;
 
     public DecompilerComponent(String text) {
         this.text = text;
@@ -57,12 +61,28 @@ public class DecompilerComponent {
         this.identifier = type.getClass().getSimpleName().concat(Objects.toString(identifier));
     }
 
+    public void setCustomRenderer(Runnable customRenderer) {
+        this.customRenderer = customRenderer;
+    }
+
+    public boolean render() {
+        if (this.customRenderer != null) {
+            this.customRenderer.run();
+            return true;
+        }
+        return false;
+    }
+
     public DecompilerComponentRenameState getRenameState() {
         return renameState;
     }
 
     public RenameHandler getRenameHandler() {
         return renameHandler;
+    }
+
+    public boolean hasCustomRenderer() {
+        return this.customRenderer != null;
     }
 
     public void setRenameHandler(RenameHandler renameHandler) {

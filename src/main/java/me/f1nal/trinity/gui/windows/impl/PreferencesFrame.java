@@ -11,13 +11,14 @@ import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
 import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.general.EnumComboBox;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
+import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.xref.SearchMaxDisplay;
 import me.f1nal.trinity.keybindings.Bindable;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;
 import me.f1nal.trinity.util.GuiUtil;
 
-public class PreferencesFrame extends ClosableWindow {
+public class PreferencesFrame extends StaticWindow {
     private final String id = ComponentId.getId(this.getClass());
     private final EnumComboBox<NumberDisplayTypeEnum> numberDisplayTypeComboBox;
     private final EnumComboBox<SearchMaxDisplay> searchMaxDisplayComboBox;

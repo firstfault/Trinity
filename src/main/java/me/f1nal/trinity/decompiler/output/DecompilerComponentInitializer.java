@@ -1,5 +1,9 @@
 package me.f1nal.trinity.decompiler.output;
 
+import imgui.ImFont;
+import imgui.ImGui;
+import imgui.ImVec2;
+import imgui.flag.ImGuiMouseCursor;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.DecompiledMethod;
@@ -16,6 +20,8 @@ import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewFrame;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchType;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeString;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerUsagesRenderer;
+import me.f1nal.trinity.gui.windows.impl.xref.XrefViewerFrame;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
@@ -134,6 +140,10 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
     @Override
     public void visitFieldDeclaration(FieldDeclarationOutputMember fieldDeclaration) {
+        FieldInput input = trinity.getExecution().getField(new MemberDetails(fieldDeclaration));
+        if (input != null) {
+            component.setCustomRenderer(new DecompilerUsagesRenderer(trinity, input));
+        }
     }
 
     private void addXrefMemberMenuItem(DecompilerComponent component, MemberDetails memberDetails) {
@@ -190,6 +200,10 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
     @Override
     public void visitMethodStartEnd(MethodStartEndOutputMember methodStartEnd) {
+        MethodInput input = trinity.getExecution().getMethod(new MemberDetails(methodStartEnd));
+        if (input != null) {
+            component.setCustomRenderer(new DecompilerUsagesRenderer(trinity, input));
+        }
     }
 
     @Override
