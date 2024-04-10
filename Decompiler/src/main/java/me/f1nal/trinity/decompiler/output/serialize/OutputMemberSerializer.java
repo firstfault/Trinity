@@ -2,6 +2,7 @@ package me.f1nal.trinity.decompiler.output.serialize;
 
 import me.f1nal.trinity.decompiler.output.OutputMember;
 import me.f1nal.trinity.decompiler.output.impl.*;
+import org.apache.commons.lang3.RandomStringUtils;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
@@ -10,8 +11,15 @@ import java.util.Base64;
 import java.util.function.Function;
 
 public final class OutputMemberSerializer {
-    public final static String TAG_START = "<TrinityOMObject>";
-    public final static String TAG_END = "</TrinityOMObject>";
+    public final static String TAG_START;
+    public final static String TAG_END;
+
+    static {
+        final String tagName = RandomStringUtils.randomAlphanumeric(10);
+
+        TAG_START = String.format("<%s>", tagName);
+        TAG_END = String.format("</%s>", tagName);
+    }
 
     public static Class<?> getClass(int id) {
         if (id < 0 || id >= instantiable.length) {

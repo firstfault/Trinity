@@ -165,6 +165,13 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
         component.setIdentifier(field, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.FIELD_REF);
+        component.setTooltip(() -> ColoredStringBuilder.create()
+                .text(CodeColorScheme.CLASS_REF, fieldInput != null ? fieldInput.getOwningClass().getDisplayFullName() : field.getOwner())
+                .text(CodeColorScheme.DISABLED, ".")
+                .text(CodeColorScheme.FIELD_REF, fieldInput != null ? fieldInput.getDisplayName() : field.getName())
+                .text(CodeColorScheme.DISABLED, " ")
+                .text(CodeColorScheme.FIELD_REF, fieldInput != null ? fieldInput.getDescriptor() : field.getFieldDescriptor())
+                .get());
     }
 
     @Override
@@ -191,6 +198,13 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
         component.setIdentifier(method, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.METHOD_REF);
+        component.setTooltip(() -> ColoredStringBuilder.create()
+                .text(CodeColorScheme.CLASS_REF, methodInput != null ? methodInput.getOwningClass().getDisplayFullName() : method.getOwner())
+                .text(CodeColorScheme.DISABLED, ".")
+                .text(CodeColorScheme.METHOD_REF, methodInput != null ? methodInput.getDisplayName() : method.getName())
+                .text(CodeColorScheme.DISABLED, "")
+                .text(CodeColorScheme.DISABLED, methodInput != null ? methodInput.getDescriptor() : method.getMethodDescriptor())
+                .get());
     }
 
     @Override

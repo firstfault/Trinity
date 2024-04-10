@@ -118,8 +118,11 @@ public class NestedClassProcessor {
     }
 
     Map<VarVersionPair, String> mapNewNames = new HashMap<>();
-
-    enclosingMethod.getOrBuildGraph().iterateExprents(exprent -> {
+    DirectGraph orBuildGraph = enclosingMethod.getOrBuildGraph();
+    if (orBuildGraph == null) {
+      // FF FIX
+      System.out.println("Failed to build lambda graph!");
+    } else orBuildGraph.iterateExprents(exprent -> {
       List<Exprent> lst = exprent.getAllExprents(true);
       lst.add(exprent);
 
