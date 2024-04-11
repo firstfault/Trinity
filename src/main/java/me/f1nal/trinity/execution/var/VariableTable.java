@@ -29,7 +29,7 @@ public class VariableTable {
 
     public Variable getVariable(int index) {
         return variableMap.computeIfAbsent(index, i -> {
-            final int maxLocals = method.getMethodNode().maxLocals;
+            final int maxLocals = method.getNode().maxLocals;
 
 //            if (index > maxLocals) {
 //                throw new RuntimeException(String.format("Index %s is over maxLocals %s", index, maxLocals));

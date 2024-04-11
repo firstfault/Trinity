@@ -16,44 +16,26 @@ import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.util.NameUtil;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class MethodInput extends Input implements IDatabaseSavable<DatabaseMethodDisplayName> {
-    private final ClassInput owningClass;
-    private final MethodNode methodNode;
-    private final AccessFlags accessFlags;
+public final class MethodInput extends MemberInput<MethodNode> implements IDatabaseSavable<DatabaseMethodDisplayName> {
     private final VariableTable variableTable;
     private final LabelTable labelTable = new LabelTable();
-    private String displayName;
-    private XrefWhere xrefWhere;
 
-    public MethodInput(ClassInput owningClass, MethodNode methodNode) {
-        this.owningClass = owningClass;
-        this.methodNode = methodNode;
-        this.accessFlags = new AccessFlags(this.getOwningClass(), this);
-        this.setDisplayName(this.getName());
+    public MethodInput(MethodNode node, ClassInput owner) {
+        super(node, owner, new MemberDetails(owner.getFullName(), node.name, node.desc));
         this.variableTable = new VariableTable(this);
-    }
-
-    public XrefWhere getXrefWhere() {
-        if (xrefWhere == null) {
-            xrefWhere = new XrefWhereMethod(this);
-        }
-        return xrefWhere;
     }
 
     public RenameHandler getRenameHandler() {
         return isInit() ? getOwningClass().getRenameHandler() : new RenameHandler() {
             @Override
             public String getFullName() {
-                return getDisplayName();
+                return getDisplayName().getName();
             }
 
             @Override
@@ -61,10 +43,6 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
                 MethodInput.this.rename(Main.getTrinity().getRemapper(), newName);
             }
         };
-    }
-
-    public void setDisplayName(String displayName) {
-        this.displayName = NameUtil.cleanNewlines(displayName);
     }
 
     public VariableTable getVariableTable() {
@@ -75,14 +53,10 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
         return labelTable;
     }
 
-    public MemberDetails getDetails() {
-        return new MemberDetails(this.getOwningClass().getFullName(), this.getName(), this.getDescriptor());
-    }
-
     // This is used for AbstractInsnNode#clone(Map)
     public Map<LabelNode, LabelNode> createLabelMap() {
         final Map<LabelNode, LabelNode> map = new HashMap<>();
-        for (AbstractInsnNode instruction : methodNode.instructions) {
+        for (AbstractInsnNode instruction : getNode().instructions) {
             if(instruction instanceof LabelNode labelNode) map.put(labelNode, labelNode);
         }
 
@@ -90,19 +64,7 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
     }
 
     public InsnList getInstructions() {
-        return methodNode.instructions;
-    }
-
-    public ClassInput getOwningClass() {
-        return owningClass;
-    }
-
-    public MethodNode getMethodNode() {
-        return methodNode;
-    }
-
-    public AccessFlags getAccessFlags() {
-        return accessFlags;
+        return getNode().instructions;
     }
 
     @Override
@@ -130,24 +92,12 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
     }
 
     public String getName() {
-        return methodNode.name;
-    }
-
-    public String getDescriptor() {
-        return methodNode.desc;
-    }
-
-    public String getDisplayName() {
-        return this.displayName;
+        return getNode().name;
     }
 
     @Override
     public InputType getType() {
         return InputType.METHOD;
-    }
-
-    public String getFullDisplayName() {
-        return owningClass.getDisplayName() + "." + this.getDisplayName() + "#" + methodNode.desc;
     }
 
     public boolean isInitOrClinit() {
@@ -164,25 +114,17 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
 
     @Override
     public void setAccessFlagsMask(int accessFlagsMask) {
-        this.methodNode.access = accessFlagsMask;
+        this.getNode().access = accessFlagsMask;
     }
 
     @Override
     public int getAccessFlagsMask() {
-        return this.methodNode.access;
-    }
-
-    public List<String> getExceptions() {
-        return methodNode.exceptions;
-    }
-
-    public String getNameWithDesc() {
-        return getName() + getDescriptor();
+        return this.getNode().access;
     }
 
     @Override
     public DatabaseMethodDisplayName createDatabaseObject() {
-        return new DatabaseMethodDisplayName(this.getDetails(), this.getDisplayName());
+        return new DatabaseMethodDisplayName(this.getDetails(), this.getDisplayName().getName());
     }
 
     @Override

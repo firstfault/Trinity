@@ -96,7 +96,7 @@ public final class Decompiler implements IEventListener {
         try {
             ClassWriter classWriter = new ClassWriter(0);
             ClassNode classNodeCopy = new ClassNode();
-            classInput.getClassNode().accept(classNodeCopy);
+            classInput.getNode().accept(classNodeCopy);
             ClassPatchManager.getClassPatchList().stream().filter(cp -> cp.isEnabled(classNodeCopy)).forEach(cp -> cp.patch(classNodeCopy));
             classNodeCopy.accept(classWriter);
             return classWriter.toByteArray();

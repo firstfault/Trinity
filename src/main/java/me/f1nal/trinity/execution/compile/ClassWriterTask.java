@@ -38,7 +38,7 @@ public class ClassWriterTask {
     private ClassNode getType(String typeName) {
         ClassInput classInput = trinity.getExecution().getClassInput(typeName);
         if (classInput != null) {
-            return classInput.getClassNode();
+            return classInput.getNode();
         }
         return trinity.getJrtInput().getClass(typeName);
     }
@@ -53,7 +53,7 @@ public class ClassWriterTask {
 
         for (ClassInput classInput : classNodes) {
             executorService.submit(() -> {
-                ClassNode classNode = classInput.getClassNode();
+                ClassNode classNode = classInput.getNode();
 
                 try {
                     SafeClassWriter classWriter = new SafeClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS, this::getType, console);

@@ -1,16 +1,12 @@
 package me.f1nal.trinity.execution;
 
 import me.f1nal.trinity.execution.access.AccessFlagsMaskProvider;
-import me.f1nal.trinity.util.ModifyNotifiable;
-import me.f1nal.trinity.util.ModifyPriority;
 import org.objectweb.asm.Opcodes;
 
 public final class AccessFlags {
-    private final ModifyNotifiable modifyNotifiable;
     private final AccessFlagsMaskProvider provider;
 
-    public AccessFlags(ModifyNotifiable modifyNotifiable, AccessFlagsMaskProvider provider) {
-        this.modifyNotifiable = modifyNotifiable;
+    public AccessFlags(AccessFlagsMaskProvider provider) {
         this.provider = provider;
     }
 
@@ -27,9 +23,6 @@ public final class AccessFlags {
             this.unsetFlag(flag);
         } else {
             this.setFlag(flag);
-        }
-        if (this.modifyNotifiable != null) {
-            this.modifyNotifiable.notifyModified(ModifyPriority.LOW);
         }
     }
 

@@ -30,7 +30,7 @@ public class DatabaseClassDisplayName extends AbstractDatabaseObject {
             Logging.warn("Class {} can no longer be found", this.className);
             return false;
         }
-        target.setDisplayName(this.getDisplayName());
+        target.getDisplayName().setName(this.getDisplayName());
         target.setPackage(trinity.getExecution().getRootPackage());
         return true;
     }

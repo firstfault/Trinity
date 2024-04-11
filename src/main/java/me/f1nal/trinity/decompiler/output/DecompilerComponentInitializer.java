@@ -164,7 +164,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         @Nullable FieldInput fieldInput = trinity.getExecution().getField(memberDetails);
 
         if (fieldInput != null) {
-            component.setTextFunction(fieldInput::getDisplayName);
+            component.setTextFunction(fieldInput.getDisplayName()::getName);
             component.addInputControls(fieldInput);
         } else {
             this.addXrefMemberMenuItem(component, memberDetails);
@@ -173,9 +173,9 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         component.setIdentifier(field, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.FIELD_REF);
         component.setTooltip(() -> ColoredStringBuilder.create()
-                .text(CodeColorScheme.CLASS_REF, fieldInput != null ? fieldInput.getOwningClass().getDisplayName() : field.getOwner())
+                .text(CodeColorScheme.CLASS_REF, fieldInput != null ? fieldInput.getOwningClass().getDisplayName().getName() : field.getOwner())
                 .text(CodeColorScheme.DISABLED, ".")
-                .text(CodeColorScheme.FIELD_REF, fieldInput != null ? fieldInput.getDisplayName() : field.getName())
+                .text(CodeColorScheme.FIELD_REF, fieldInput != null ? fieldInput.getDisplayName().getName() : field.getName())
                 .text(CodeColorScheme.DISABLED, " ")
                 .text(CodeColorScheme.DISABLED, fieldInput != null ? fieldInput.getDescriptor() : field.getFieldDescriptor())
                 .get());
@@ -194,7 +194,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
                     component.setTextFunction(methodInput.getOwningClass()::getDisplaySimpleName);
                 } else if (!methodInput.isClinit()) {
                     // not <clinit>, regular method so this is ok
-                    component.setTextFunction(methodInput::getDisplayName);
+                    component.setTextFunction(methodInput.getDisplayName()::getName);
                 }
             }
 
@@ -206,9 +206,9 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         component.setIdentifier(method, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.METHOD_REF);
         component.setTooltip(() -> ColoredStringBuilder.create()
-                .text(CodeColorScheme.CLASS_REF, methodInput != null ? methodInput.getOwningClass().getDisplayName() : method.getOwner())
+                .text(CodeColorScheme.CLASS_REF, methodInput != null ? methodInput.getOwningClass().getDisplayName().getName() : method.getOwner())
                 .text(CodeColorScheme.DISABLED, ".")
-                .text(CodeColorScheme.METHOD_REF, methodInput != null ? methodInput.getDisplayName() : method.getName())
+                .text(CodeColorScheme.METHOD_REF, methodInput != null ? methodInput.getDisplayName().getName() : method.getName())
                 .text(CodeColorScheme.DISABLED, "")
                 .text(CodeColorScheme.DISABLED, methodInput != null ? methodInput.getDescriptor() : method.getMethodDescriptor())
                 .get());

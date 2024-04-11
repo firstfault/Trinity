@@ -23,7 +23,7 @@ public class DatabaseMethodDisplayName extends AbstractDatabaseObject {
             Logging.warn("Database has no method correlating to {}.", this.details);
             return false;
         }
-        methodInput.setDisplayName(displayName);
+        methodInput.getDisplayName().setName(displayName);
         return true;
     }
 

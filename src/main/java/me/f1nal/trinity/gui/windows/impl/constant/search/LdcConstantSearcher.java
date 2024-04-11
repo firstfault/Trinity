@@ -42,17 +42,17 @@ public abstract class LdcConstantSearcher<T> {
                     }
                 }
 
-                this.addAnnotationConstants(list, new XrefWhereMethod(methodInput), methodInput.getMethodNode().invisibleAnnotations);
-                this.addAnnotationConstants(list, new XrefWhereMethod(methodInput), methodInput.getMethodNode().visibleAnnotations);
+                this.addAnnotationConstants(list, new XrefWhereMethod(methodInput), methodInput.getNode().invisibleAnnotations);
+                this.addAnnotationConstants(list, new XrefWhereMethod(methodInput), methodInput.getNode().visibleAnnotations);
             }
 
             for (FieldInput fieldInput : classInput.getFieldList().values()) {
-                Object value = fieldInput.getFieldNode().value;
+                Object value = fieldInput.getNode().value;
                 if (value != null) this.addConstantView(list, value, new XrefWhereField(fieldInput), XrefKind.LITERAL);
             }
 
-            this.addAnnotationConstants(list, new XrefWhereClass(classInput), classInput.getClassNode().invisibleAnnotations);
-            this.addAnnotationConstants(list, new XrefWhereClass(classInput), classInput.getClassNode().visibleAnnotations);
+            this.addAnnotationConstants(list, new XrefWhereClass(classInput), classInput.getNode().invisibleAnnotations);
+            this.addAnnotationConstants(list, new XrefWhereClass(classInput), classInput.getNode().visibleAnnotations);
         }
     }
 

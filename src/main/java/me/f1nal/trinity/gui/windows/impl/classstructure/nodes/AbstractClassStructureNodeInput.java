@@ -73,7 +73,7 @@ public abstract class AbstractClassStructureNodeInput<I extends Input> extends C
     @Override
     protected BrowserViewerNode createBrowserViewerNode() {
         BrowserViewerNode node = super.createBrowserViewerNode();
-        AccessFlags accessFlags = new AccessFlags(null, new SimpleAccessFlagsMaskProvider(getInput().getAccessFlagsMask()));
+        AccessFlags accessFlags = new AccessFlags(new SimpleAccessFlagsMaskProvider(getInput().getAccessFlagsMask()));
         node.setPrefix(safeText(prefix -> {
             appendAccessFlags(prefix, accessFlags);
             appendType(prefix, " ");

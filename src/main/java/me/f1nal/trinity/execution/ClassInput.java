@@ -6,9 +6,9 @@ import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
+import me.f1nal.trinity.remap.DisplayName;
+import me.f1nal.trinity.remap.IDisplayNameProvider;
 import me.f1nal.trinity.remap.Remapper;
-import me.f1nal.trinity.util.ModifyNotifiable;
-import me.f1nal.trinity.util.ModifyPriority;
 import me.f1nal.trinity.util.NameUtil;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
@@ -18,30 +18,22 @@ import org.objectweb.asm.tree.MethodNode;
 
 import java.util.*;
 
-public final class ClassInput extends Input implements ModifyNotifiable {
+public final class ClassInput extends Input<ClassNode> implements IDisplayNameProvider {
     /**
      * Program execution flow.
      */
     private final Execution execution;
-    /**
-     * {@link ClassNode} object that this instance is referencing.
-     */
-    private final ClassNode classNode;
     /**
      * Map of methods that are referenced and will be compiled in the output.
      */
     private final Map<String, MethodInput> methodList = new LinkedHashMap<>();
     private final Map<String, FieldInput> fieldList = new LinkedHashMap<>();
     private final List<String> interfaces = new ArrayList<>();
-    private final List<ClassInput> superClasses = new ArrayList<>();
-    private final AccessFlags accessFlags = new AccessFlags(this, this);
-    private boolean areSuperclassesKnown;
-    private final List<ClassXref> references = new ArrayList<>();
     private final ClassTarget classTarget;
 
     public ClassInput(Execution execution, ClassNode classNode, ClassTarget classTarget) {
+        super(classNode);
         this.execution = execution;
-        this.classNode = classNode;
         this.classTarget = classTarget;
     }
 
@@ -68,9 +60,9 @@ public final class ClassInput extends Input implements ModifyNotifiable {
         if (methodInput != null) {
             return methodInput;
         }
-        for (MethodNode method : classNode.methods) {
+        for (MethodNode method : getNode().methods) {
             if (method.name.equals(name) && method.desc.equals(desc)) {
-                methodList.put(key, (methodInput = new MethodInput(this, method)));
+                methodList.put(key, (methodInput = new MethodInput(method, this)));
                 return methodInput;
             }
         }
@@ -83,9 +75,9 @@ public final class ClassInput extends Input implements ModifyNotifiable {
         if (fieldInput != null) {
             return fieldInput;
         }
-        for (FieldNode field : classNode.fields) {
+        for (FieldNode field : getNode().fields) {
             if (field.name.equals(name) && field.desc.equals(desc)) {
-                fieldList.put(key, (fieldInput = new FieldInput(this, field)));
+                fieldList.put(key, (fieldInput = new FieldInput(field, this)));
                 return fieldInput;
             }
         }
@@ -98,6 +90,11 @@ public final class ClassInput extends Input implements ModifyNotifiable {
         super.populatePopup(builder);
     }
 
+    @Override
+    public DisplayName getDisplayName() {
+        return classTarget.getDisplayName();
+    }
+
     public Map<String, MethodInput> getMethodList() {
         return methodList;
     }
@@ -106,21 +103,12 @@ public final class ClassInput extends Input implements ModifyNotifiable {
         return fieldList;
     }
 
-    public String getSimpleName() {
-        return NameUtil.getSimpleName(this.getFullName());
-    }
-
     /**
      * Gives the full class name.
      * @return Returns {@link ClassNode#name}.
      */
     public String getFullName() {
-        return classNode.name;
-    }
-
-    public String getDisplayName() {
-        String displayName = this.getClassTarget().getDisplayName();
-        return displayName == null ? this.getFullName() : displayName;
+        return getNode().name;
     }
 
     @Override
@@ -129,7 +117,7 @@ public final class ClassInput extends Input implements ModifyNotifiable {
     }
 
     public String getDisplaySimpleName() {
-        return NameUtil.getSimpleName(this.getDisplayName());
+        return NameUtil.getSimpleName(this.getDisplayName().getName());
     }
 
     /**
@@ -137,7 +125,7 @@ public final class ClassInput extends Input implements ModifyNotifiable {
      * @return Returns {@link ClassNode#superName}.
      */
     public String getSuperName() {
-        return classNode.superName;
+        return getNode().superName;
     }
 
     public List<String> getInterfaces() {
@@ -148,31 +136,18 @@ public final class ClassInput extends Input implements ModifyNotifiable {
         return execution;
     }
 
-    public ClassNode getClassNode() {
-        return classNode;
-    }
-
-    /**
-     * Checks if this class can support another method.
-     * @return If the {@link ClassInput#classNode} method list size is less than {@code 65535}.
-     */
     public boolean mayHaveAnotherMethod() {
-        return classNode.methods.size() < 65535;
+        return getNode().methods.size() < 65535;
     }
 
     @Override
     public void setAccessFlagsMask(int accessFlagsMask) {
-        this.classNode.access = accessFlagsMask;
-    }
-
-    @Override
-    public void notifyModified(ModifyPriority priority) {
-        execution.getTrinity().getEventManager().postEvent(new EventClassModified(this, priority));
+        this.getNode().access = accessFlagsMask;
     }
 
     @Override
     public int getAccessFlagsMask() {
-        return this.classNode.access;
+        return this.getNode().access;
     }
 
     public boolean isInterface() {
@@ -181,10 +156,6 @@ public final class ClassInput extends Input implements ModifyNotifiable {
 
     public boolean isFinal() {
         return (this.getAccessFlagsMask() & Opcodes.ACC_FINAL) != 0;
-    }
-
-    public AccessFlags getAccessFlags() {
-        return accessFlags;
     }
 
     @Override
@@ -209,10 +180,6 @@ public final class ClassInput extends Input implements ModifyNotifiable {
             }
         }
         return null;
-    }
-
-    public Collection<ClassXref> getReferences() {
-        return this.references;
     }
 
     @Override

@@ -3,9 +3,7 @@ package me.f1nal.trinity.execution.loading;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.ClassTarget;
-import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerWindow;
-import me.f1nal.trinity.util.ModifyPriority;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,7 +43,7 @@ public class AsynchronousLoad extends Thread {
             for (ClassTarget classTarget : classTargets) {
                 classTarget.resetKind();
             }
-            Main.getWindowManager().getWindowsOfType(DecompilerWindow.class).forEach(window -> window.forceRefresh(ModifyPriority.HIGH));
+            Main.getWindowManager().getWindowsOfType(DecompilerWindow.class).forEach(DecompilerWindow::forceRefreshLines);
         });
     }
 

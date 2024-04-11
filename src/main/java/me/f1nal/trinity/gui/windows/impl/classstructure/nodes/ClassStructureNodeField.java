@@ -12,7 +12,7 @@ public class ClassStructureNodeField extends AbstractClassStructureNodeInput<Fie
 
     @Override
     protected String getText() {
-        return getInput().getDisplayName();
+        return getInput().getDisplayName().getName();
     }
 
     @Override

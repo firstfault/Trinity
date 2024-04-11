@@ -25,6 +25,6 @@ public final class Rename {
     }
 
     public String getCurrentName() {
-        return input.getDisplayName();
+        return input.getDisplayName().getName();
     }
 }

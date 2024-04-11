@@ -14,7 +14,7 @@ public class ClassStructureNodeMethod extends AbstractClassStructureNodeInput<Me
 
     @Override
     protected String getText() {
-        return getInput().getDisplayName();
+        return getInput().getDisplayName().getName();
     }
 
     @Override

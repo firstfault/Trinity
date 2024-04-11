@@ -42,7 +42,7 @@ public class MixinGlobalRenameType extends GlobalRenameType {
     }
 
     private void renameMethod(MethodInput methodInput, List<Rename> renames) {
-        AnnotationDescriptor annotation = AnnotationUtil.getAnnotation(methodInput.getMethodNode().visibleAnnotations, "org/spongepowered/asm/mixin/injection/Inject");
+        AnnotationDescriptor annotation = AnnotationUtil.getAnnotation(methodInput.getNode().visibleAnnotations, "org/spongepowered/asm/mixin/injection/Inject");
 
         if (annotation == null) {
             return;
@@ -63,7 +63,7 @@ public class MixinGlobalRenameType extends GlobalRenameType {
     }
 
     private void renameClass(ClassInput classInput, List<Rename> renames) {
-        AnnotationDescriptor annotation = AnnotationUtil.getAnnotation(classInput.getClassNode().invisibleAnnotations, "org/spongepowered/asm/mixin/Mixin");
+        AnnotationDescriptor annotation = AnnotationUtil.getAnnotation(classInput.getNode().invisibleAnnotations, "org/spongepowered/asm/mixin/Mixin");
 
         if (annotation == null) {
             return;

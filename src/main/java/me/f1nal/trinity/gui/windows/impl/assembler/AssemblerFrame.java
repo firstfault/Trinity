@@ -30,7 +30,6 @@ import me.f1nal.trinity.gui.viewport.notifications.ICaption;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.logging.Logging;
-import me.f1nal.trinity.util.ModifyPriority;
 import me.f1nal.trinity.util.SystemUtil;
 import me.f1nal.trinity.util.animation.Animation;
 import me.f1nal.trinity.util.animation.Easing;
@@ -148,7 +147,8 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             this.saveMethod = this.methodNotFresh = false;
             Logging.info("Saved method");
             int count = this.issueSave();
-            this.methodInput.getOwningClass().notifyModified(ModifyPriority.HIGH);
+            // TODO!
+//            this.methodInput.getOwningClass().notifyModified(ModifyPriority.HIGH);
             Main.getDisplayManager().addNotification(new Notification(NotificationType.SUCCESS, this, ColoredStringBuilder.create()
                     .fmt("Saved {} instructions to {}", count, methodInput.getDisplayName()).get()));
         }

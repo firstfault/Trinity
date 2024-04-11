@@ -23,7 +23,7 @@ public class XrefWhereClass extends XrefWhere {
 
     @Override
     public String getText() {
-        return this.classInput.getDisplayName();
+        return this.classInput.getDisplayName().getName();
     }
 
     @Override

@@ -16,6 +16,9 @@ import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
+import me.f1nal.trinity.remap.DisplayName;
+import me.f1nal.trinity.remap.IDisplayNameProvider;
+import me.f1nal.trinity.remap.RenameType;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.Collection;
@@ -23,14 +26,15 @@ import java.util.Collection;
 /**
  * Class reference object, even if we don't have it as an input.
  */
-public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<DatabaseClassDisplayName>, IXrefBuilderProvider {
+public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<DatabaseClassDisplayName>, IXrefBuilderProvider, IDisplayNameProvider {
     private ClassInput input;
     private String realName;
-    private String displayName;
+    private final DisplayName displayName;
 
     public ClassTarget(String realName, int size) {
         super(size);
         this.realName = realName;
+        this.displayName = new DisplayName(this.realName);
     }
 
     @Override
@@ -60,7 +64,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     @Override
     public void setName(String newName) {
-        this.setDisplayName(newName);
+        this.getDisplayName().setName(newName);
     }
 
     @Override
@@ -78,7 +82,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
         if (this.getInput() == null) {
             return null;
         }
-        return DataPool.writeClassNode(this.getInput().getClassNode());
+        return DataPool.writeClassNode(this.getInput().getNode());
     }
 
     public void setInput(ClassInput input) {
@@ -89,16 +93,18 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
         return realName;
     }
 
+    @Override
+    public String getDisplayOrRealName() {
+        return displayName.getName();
+    }
+
     public ClassInput getInput() {
         return input;
     }
 
-    public String getDisplayName() {
+    @Override
+    public DisplayName getDisplayName() {
         return displayName;
-    }
-
-    public String getDisplayOrRealName() {
-        return displayName == null ? realName : displayName;
     }
 
     @Override
@@ -106,13 +112,9 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
         return this.getKind().getFileType();
     }
 
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
-    }
-
     @Override
     public DatabaseClassDisplayName createDatabaseObject() {
-        return new DatabaseClassDisplayName(this.getRealName(), this.getDisplayName());
+        return new DatabaseClassDisplayName(this.getRealName(), this.getDisplayName().getName());
     }
 
     private FileKind kind;

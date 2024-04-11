@@ -57,7 +57,7 @@ public final class XrefMap extends ProgressiveLoadTask {
     }
 
     private void buildClassXrefs(ClassInput classInput) {
-        ClassNode node = classInput.getClassNode();
+        ClassNode node = classInput.getNode();
         XrefWhereClass whereClass = new XrefWhereClass(classInput);
 
         this.processClassSupers(whereClass, classInput);
@@ -89,18 +89,18 @@ public final class XrefMap extends ProgressiveLoadTask {
                 Logging.warn("Failed to process argument references: {} in {}", throwable, methodInput);
             }
 
-            this.processAnnotations(whereMethod, methodInput.getMethodNode().visibleAnnotations);
-            this.processAnnotations(whereMethod, methodInput.getMethodNode().invisibleAnnotations);
+            this.processAnnotations(whereMethod, methodInput.getNode().visibleAnnotations);
+            this.processAnnotations(whereMethod, methodInput.getNode().invisibleAnnotations);
 
-            this.processThrows(whereMethod, methodInput.getMethodNode().exceptions);
-            this.processTryCatchHandlers(whereMethod, methodInput.getMethodNode().tryCatchBlocks);
+            this.processThrows(whereMethod, methodInput.getNode().exceptions);
+            this.processTryCatchHandlers(whereMethod, methodInput.getNode().tryCatchBlocks);
         }
 
         for (FieldInput fieldInput : classInput.getFieldList().values()) {
             XrefWhereField whereField = new XrefWhereField(fieldInput);
 
-            this.processAnnotations(whereField, fieldInput.getFieldNode().visibleAnnotations);
-            this.processAnnotations(whereField, fieldInput.getFieldNode().invisibleAnnotations);
+            this.processAnnotations(whereField, fieldInput.getNode().visibleAnnotations);
+            this.processAnnotations(whereField, fieldInput.getNode().invisibleAnnotations);
         }
     }
 
@@ -132,7 +132,7 @@ public final class XrefMap extends ProgressiveLoadTask {
 
     private void processClassSupers(XrefWhereClass where, ClassInput classInput) {
         if (classInput.getSuperName() != null) putClassReference(classInput.getSuperName(), ClassXref.extendsClass(where, false));
-        List<String> interfaces = classInput.getClassNode().interfaces;
+        List<String> interfaces = classInput.getNode().interfaces;
         if (interfaces != null) for (String itf : interfaces) {
             if (itf != null) putClassReference(itf, ClassXref.extendsClass(where, true));
         }

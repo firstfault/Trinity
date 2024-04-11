@@ -16,20 +16,20 @@ public final class Remapper {
     }
 
     public void renameClass(ClassTarget target, String newName) {
-        target.setDisplayName(newName);
+        target.getDisplayName().setName(newName);
         target.setPackage(execution.getRootPackage());
         target.save();
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
     }
 
     public void renameMethod(MethodInput methodInput, String newName) {
-        methodInput.setDisplayName(newName);
+        methodInput.getDisplayName().setName(newName);
         methodInput.save();
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
     }
 
     public void renameField(FieldInput fieldInput, String newName) {
-        fieldInput.setDisplayName(newName);
+        fieldInput.getDisplayName().setName(newName);
         fieldInput.save();
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
     }

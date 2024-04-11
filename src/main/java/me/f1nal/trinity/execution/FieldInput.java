@@ -8,25 +8,11 @@ import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.Remapper;
-import me.f1nal.trinity.util.ModifyNotifiable;
-import me.f1nal.trinity.util.ModifyPriority;
-import me.f1nal.trinity.util.NameUtil;
 import org.objectweb.asm.tree.FieldNode;
 
-public class FieldInput extends Input implements IDatabaseSavable<DatabaseFieldDisplayName>, ModifyNotifiable {
-    private final ClassInput classInput;
-    private final FieldNode fieldNode;
-    private String displayName;
-    private final AccessFlags accessFlags = new AccessFlags(this, this);
-
-    public FieldInput(ClassInput classInput, FieldNode fieldNode) {
-        this.classInput = classInput;
-        this.fieldNode = fieldNode;
-        this.setDisplayName(this.getName());
-    }
-
-    public String getDisplayName() {
-        return displayName;
+public class FieldInput extends MemberInput<FieldNode> implements IDatabaseSavable<DatabaseFieldDisplayName> {
+    public FieldInput(FieldNode node, ClassInput owner) {
+        super(node, owner, new MemberDetails(owner.getFullName(), node.name, node.desc));
     }
 
     @Override
@@ -38,7 +24,7 @@ public class FieldInput extends Input implements IDatabaseSavable<DatabaseFieldD
         return new RenameHandler() {
             @Override
             public String getFullName() {
-                return getDisplayName();
+                return getDisplayName().getName();
             }
 
             @Override
@@ -48,30 +34,14 @@ public class FieldInput extends Input implements IDatabaseSavable<DatabaseFieldD
         };
     }
 
-    private String getName() {
-        return fieldNode.name;
-    }
-
-    public void setDisplayName(String displayName) {
-        this.displayName = NameUtil.cleanNewlines(displayName);
-    }
-
-    public FieldNode getFieldNode() {
-        return fieldNode;
-    }
-
     @Override
     public void setAccessFlagsMask(int accessFlagsMask) {
-        this.fieldNode.access = accessFlagsMask;
+        getNode().access = accessFlagsMask;
     }
 
     @Override
     public int getAccessFlagsMask() {
-        return this.fieldNode.access;
-    }
-
-    public AccessFlags getAccessFlags() {
-        return accessFlags;
+        return getNode().access;
     }
 
     @Override
@@ -89,34 +59,8 @@ public class FieldInput extends Input implements IDatabaseSavable<DatabaseFieldD
         return new XrefBuilderMemberRef(xrefMap, this.getDetails());
     }
 
-    public String getFullDisplayName() {
-        return this.classInput.getDisplayName() + "." + this.getDisplayName() + "#" + this.fieldNode.desc;
-    }
-
-    public String getRealName() {
-        return this.fieldNode.name;
-    }
-
-    @Override
-    public ClassInput getOwningClass() {
-        return this.classInput;
-    }
-
     @Override
     public DatabaseFieldDisplayName createDatabaseObject() {
-        return new DatabaseFieldDisplayName(this.getDetails(), this.getDisplayName());
-    }
-
-    public MemberDetails getDetails() {
-        return new MemberDetails(this.getOwningClass().getFullName(), this.fieldNode.name, this.fieldNode.desc);
-    }
-
-    @Override
-    public void notifyModified(ModifyPriority priority) {
-
-    }
-
-    public String getDescriptor() {
-        return fieldNode.desc;
+        return new DatabaseFieldDisplayName(this.getDetails(), this.getDisplayName().getName());
     }
 }

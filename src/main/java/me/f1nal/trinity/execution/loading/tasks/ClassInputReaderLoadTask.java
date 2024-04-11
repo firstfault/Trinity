@@ -83,13 +83,13 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
             classTarget.setPackage(execution.getRootPackage());
             execution.getClassList().add(classInput);
         });
-        for (MethodNode method : classInput.getClassNode().methods) {
+        for (MethodNode method : classInput.getNode().methods) {
             MethodInput methodInput = classInput.createMethod(method.name, method.desc);
             if (methodInput == null) {
                 throw new RuntimeException(String.format("Cannot create method input for %s.%s#%s", classInput.getFullName(), method.name, method.desc));
             }
         }
-        for (FieldNode field : classInput.getClassNode().fields) {
+        for (FieldNode field : classInput.getNode().fields) {
             FieldInput fieldInput = classInput.createField(field.name, field.desc);
             if (fieldInput == null) {
                 throw new RuntimeException(String.format("Cannot create field input for %s.%s#%s", classInput.getFullName(), field.name, field.desc));

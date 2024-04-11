@@ -19,7 +19,7 @@ public class XrefWhereMethod extends XrefWhere {
 
     @Override
     public String getText() {
-        return methodInput.getFullDisplayName();
+        return methodInput.getDisplayName().getName();
     }
 
     @Override

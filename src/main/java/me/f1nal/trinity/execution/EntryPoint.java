@@ -48,7 +48,7 @@ public class EntryPoint {
 //                if (main == null) {
 //                    throw new MissingEntryPointException(mainClass);
 //                }
-                Logging.info("Found main class {}.{}. Project java version {} (V21)", mainClass, main.getName(), input.getClassNode().version);
+                Logging.info("Found main class {}.{}. Project java version {} (V21)", mainClass, main.getName(), input.getNode().version);
                 return main;
             }
         }

@@ -4,7 +4,6 @@ import com.google.common.eventbus.Subscribe;
 import imgui.ImColor;
 import imgui.ImGui;
 import imgui.ImVec2;
-import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Main;
@@ -20,8 +19,6 @@ import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
-import me.f1nal.trinity.gui.components.SearchBar;
-import me.f1nal.trinity.gui.components.filter.misc.ShowFilterOption;
 import me.f1nal.trinity.gui.components.popup.MenuBarProgress;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
@@ -29,7 +26,6 @@ import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructure;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.theme.CodeColorScheme;
-import me.f1nal.trinity.util.ModifyPriority;
 import me.f1nal.trinity.util.SystemUtil;
 import me.f1nal.trinity.util.TimedStopwatch;
 
@@ -118,14 +114,12 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     @Subscribe
     public void onClassModified(EventClassModified event) {
         if (event.getClassInput() == this.selectedClass) {
-            if (this.forceRefresh == null || event.getPriority().getTime() < this.forceRefresh.getPassed()) {
-                this.forceRefresh(event.getPriority());
-            }
+            this.forceRefreshLines();
         }
     }
 
-    public void forceRefresh(ModifyPriority priority) {
-        this.forceRefresh = new TimedStopwatch(priority.getTime());
+    public void forceRefreshLines() {
+        this.forceRefresh = new TimedStopwatch(0L);
     }
 
     @Subscribe

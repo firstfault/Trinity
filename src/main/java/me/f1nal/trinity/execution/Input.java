@@ -6,11 +6,28 @@ import me.f1nal.trinity.execution.access.AccessFlagsMaskProvider;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.IRenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
+import me.f1nal.trinity.remap.IDisplayNameProvider;
 import me.f1nal.trinity.remap.Remapper;
 
-public abstract class Input implements AccessFlagsMaskProvider, IRenameHandler, IXrefBuilderProvider {
+public abstract class Input<N> implements AccessFlagsMaskProvider, IRenameHandler, IXrefBuilderProvider, IDisplayNameProvider {
+    private final N node;
+    private final AccessFlags accessFlags;
+
+    protected Input(N node) {
+        this.node = node;
+        this.accessFlags = new AccessFlags(this);
+    }
+
+    public final N getNode() {
+        return node;
+    }
+
+    public final AccessFlags getAccessFlags() {
+        return accessFlags;
+    }
+
+    public abstract InputType getType();
     public abstract ClassInput getOwningClass();
-    public abstract AccessFlags getAccessFlags();
     public abstract boolean isAccessFlagValid(AccessFlags.Flag flag);
     public abstract void rename(Remapper remapper, String newName);
     public void populatePopup(PopupItemBuilder builder) {
@@ -21,7 +38,4 @@ public abstract class Input implements AccessFlagsMaskProvider, IRenameHandler, 
             Main.getDisplayManager().openDecompilerView(this);
         });
     }
-
-    public abstract String getDisplayName();
-    public abstract InputType getType();
 }
