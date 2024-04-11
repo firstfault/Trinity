@@ -39,8 +39,8 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
             }
 
             @Override
-            public void rename(String newName) {
-                MethodInput.this.rename(Main.getTrinity().getRemapper(), newName);
+            public void rename(Remapper remapper, String newName) {
+                MethodInput.this.rename(remapper, newName);
             }
         };
     }

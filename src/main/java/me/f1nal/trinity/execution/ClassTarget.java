@@ -18,8 +18,10 @@ import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.remap.DisplayName;
 import me.f1nal.trinity.remap.IDisplayNameProvider;
+import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.remap.RenameType;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import org.checkerframework.checker.units.qual.C;
 
 import java.util.Collection;
 
@@ -41,9 +43,9 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
     public RenameHandler getRenameHandler() {
         return new RenameHandler() {
             @Override
-            public void rename(String newName) {
+            public void rename(Remapper remapper, String newName) {
                 if (getInput() != null) {
-                    Main.getTrinity().getRemapper().renameClass(ClassTarget.this, newName);
+                    remapper.renameClass(ClassTarget.this, newName);
                 }
             }
 

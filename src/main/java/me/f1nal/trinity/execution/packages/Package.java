@@ -45,7 +45,7 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
         this.browserViewerNode = new BrowserViewerNode(null,
                 this.isArchive() ? () -> CodeColorScheme.ARCHIVE_REF : () -> CodeColorScheme.PACKAGE,
                 this::getDisplayName,
-                this.isArchive() ? (newName) -> packageHierarchy.getDatabase().setName(newName) : null);
+                this.isArchive() ? (r, newName) -> packageHierarchy.getDatabase().setName(newName) : null);
         this.browserViewerNode.addMouseClickHandler(clickType -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
                 PopupItemBuilder popup = PopupItemBuilder.create().

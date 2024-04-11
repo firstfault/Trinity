@@ -135,7 +135,7 @@ public class BrowserViewerNode {
                     if ((this.renamingSetFocus && GuiUtil.isFocusLostOnItem()) || ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Enter))) {
                         final String newName = this.renamingText.get();
                         this.renamingText = null;
-                        Main.runLater(() -> this.rename.rename(newName));
+                        Main.runLater(() -> this.rename.rename(Main.getTrinity().getRemapper(), newName));
                     }
                     this.renamingSetFocus = true;
                 });

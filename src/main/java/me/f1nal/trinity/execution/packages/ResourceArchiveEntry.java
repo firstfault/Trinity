@@ -27,7 +27,7 @@ public class ResourceArchiveEntry extends ArchiveEntry {
 
     @Override
     public RenameHandler getRenameHandler() {
-        return (newName) -> Main.getTrinity().getExecution().renameResource(this, newName);
+        return (r, newName) -> r.getExecution().renameResource(this, newName);
     }
 
     @Override

@@ -28,8 +28,8 @@ public class FieldInput extends MemberInput<FieldNode> implements IDatabaseSavab
             }
 
             @Override
-            public void rename(String newName) {
-                FieldInput.this.rename(Main.getTrinity().getRemapper(), newName);
+            public void rename(Remapper remapper, String newName) {
+                FieldInput.this.rename(remapper, newName);
             }
         };
     }

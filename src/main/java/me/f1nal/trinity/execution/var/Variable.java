@@ -5,6 +5,7 @@ import me.f1nal.trinity.database.object.DatabaseVariable;
 import imgui.type.ImString;
 import me.f1nal.trinity.gui.windows.impl.cp.IRenameHandler;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+import me.f1nal.trinity.remap.Remapper;
 
 public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHandler {
     private final VariableTable table;
@@ -53,7 +54,7 @@ public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHand
             }
 
             @Override
-            public void rename(String newName) {
+            public void rename(Remapper remapper, String newName) {
                 getNameProperty().set(newName);
                 save();
             }

@@ -1,5 +1,7 @@
 package me.f1nal.trinity.gui.windows.impl.cp;
 
+import me.f1nal.trinity.remap.Remapper;
+
 public interface RenameHandler {
     /**
      * Full name of this entry, to set the renaming field to when beginning rename.
@@ -9,5 +11,5 @@ public interface RenameHandler {
         return null;
     }
 
-    void rename(String newName);
+    void rename(Remapper remapper, String newName);
 }

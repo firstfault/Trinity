@@ -104,7 +104,7 @@ public class DecompilerComponent {
             return;
         }
         if (newName != null) {
-            this.renameHandler.rename(newName);
+            this.renameHandler.rename(Main.getTrinity().getRemapper(), newName);
             this.refreshWindow();
         }
         this.renameState = null;

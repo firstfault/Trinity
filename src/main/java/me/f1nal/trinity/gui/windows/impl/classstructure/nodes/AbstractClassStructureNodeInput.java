@@ -40,7 +40,7 @@ public abstract class AbstractClassStructureNodeInput<I extends Input> extends C
 
     @Override
     protected final RenameHandler getRenameFunction() {
-        return (newName) -> this.getInput().rename(Main.getTrinity().getRemapper(), newName);
+        return (r, newName) -> this.getInput().rename(r, newName);
     }
 
     protected abstract void appendType(ColoredStringBuilder text, String suffix);
