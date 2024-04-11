@@ -142,6 +142,11 @@ public class WindowManager {
     public void closeAll(Predicate<ClosableWindow> predicate) {
         this.getWindows(predicate).forEach(ClosableWindow::close);
     }
+    
+    public <T extends ClosableWindow> List<T> getWindowsOfType(Class<T> type) {
+        //noinspection unchecked
+        return (List<T>) getWindows(wnd -> type.isAssignableFrom(wnd.getClass()));
+    }
 
     public List<ClosableWindow> getWindows(Predicate<ClosableWindow> predicate) {
         return this.closableWindows.stream().filter(predicate).collect(Collectors.toList());

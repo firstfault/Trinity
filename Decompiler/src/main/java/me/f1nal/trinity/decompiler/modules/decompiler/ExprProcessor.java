@@ -671,7 +671,7 @@ public class ExprProcessor implements CodeConstants {
     StringBuilder sb = new StringBuilder();
     typeAnnWriteHelpers = writeTypeAnnotationBeforeType(type, sb, typeAnnWriteHelpers);
     if (tp <= CodeConstants.TYPE_BOOLEAN) {
-      sb.append(typeNames[tp]);
+      sb.append(OutputMemberSerializer.keyword(typeNames[tp]));
       return sb.toString();
     }
     else if (tp == CodeConstants.TYPE_UNKNOWN) {
@@ -683,7 +683,7 @@ public class ExprProcessor implements CodeConstants {
       return sb.toString(); // INFO: should not occur
     }
     else if (tp == CodeConstants.TYPE_VOID) {
-      sb.append("void");
+      sb.append(OutputMemberSerializer.keyword("void"));
       return sb.toString();
     }
     else if (tp == CodeConstants.TYPE_OBJECT) {

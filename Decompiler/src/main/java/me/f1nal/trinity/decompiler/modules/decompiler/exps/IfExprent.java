@@ -4,6 +4,7 @@
 package me.f1nal.trinity.decompiler.modules.decompiler.exps;
 
 import me.f1nal.trinity.decompiler.main.collectors.BytecodeMappingTracer;
+import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.decompiler.struct.gen.VarType;
 import me.f1nal.trinity.decompiler.util.ListStack;
 import me.f1nal.trinity.decompiler.util.TextBuffer;
@@ -104,7 +105,7 @@ public class IfExprent extends Exprent {
   @Override
   public TextBuffer toJava(int indent, BytecodeMappingTracer tracer) {
     tracer.addMapping(bytecode);
-    return condition.toJava(indent, tracer).enclose("if (", ")");
+    return condition.toJava(indent, tracer).enclose(OutputMemberSerializer.keyword("if") + " (", ")");
   }
 
   @Override

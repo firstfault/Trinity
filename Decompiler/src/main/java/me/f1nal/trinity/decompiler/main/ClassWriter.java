@@ -918,6 +918,10 @@ public class ClassWriter {
               buffer.appendIndent(indent + 1);
               buffer.append("// " + line);
             }
+          } else {
+            buffer.appendLineSeparator();
+            buffer.appendIndent(indent + 1);
+            buffer.append("// No stacktrace available!");
           }
           buffer.appendLineSeparator();
           tracer.incrementCurrentSourceLine();

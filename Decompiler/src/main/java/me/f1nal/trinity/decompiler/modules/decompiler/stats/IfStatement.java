@@ -237,7 +237,7 @@ public final class IfStatement extends Statement {
           !elsestat.isLabeled() &&
           (elsestat.getSuccessorEdges(StatEdge.EdgeType.DIRECT_ALL).isEmpty()
            || !elsestat.getSuccessorEdges(StatEdge.EdgeType.DIRECT_ALL).get(0).explicit)) { // else if
-        buf.appendIndent(indent).append("} else ");
+        buf.appendIndent(indent).append("} " + OutputMemberSerializer.keyword("else") + " ");
 
         TextBuffer content = ExprProcessor.jmpWrapper(elsestat, indent, false, tracer);
         content.setStart(TextUtil.getIndentString(indent).length());
@@ -250,7 +250,7 @@ public final class IfStatement extends Statement {
         TextBuffer content = ExprProcessor.jmpWrapper(elsestat, indent + 1, false, else_tracer);
 
         if (content.length() > 0) {
-          buf.appendIndent(indent).append("} else {").appendLineSeparator();
+          buf.appendIndent(indent).append("} " + OutputMemberSerializer.keyword("else") + " {").appendLineSeparator();
 
           tracer.setCurrentSourceLine(else_tracer.getCurrentSourceLine());
           tracer.addTracer(else_tracer);

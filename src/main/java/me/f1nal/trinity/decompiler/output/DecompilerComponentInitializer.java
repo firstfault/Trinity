@@ -68,13 +68,14 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     @Override
     public void visitClass(ClassOutputMember member) {
         ClassTarget target = trinity.getExecution().getClassTarget(member.getClassName());
+        String arrayDims = getArrayDimensions(component.getText());
 
         if (target != null) {
             if (member.isImport()) {
                 // Imports use full internal names
                 component.setTextFunction(() -> target.getDisplayOrRealName().replace('/', '.'));
             } else {
-                component.setTextFunction(target::getDisplaySimpleName);
+                component.setTextFunction(() -> target.getDisplaySimpleName() + arrayDims);
             }
         }
 
@@ -86,8 +87,19 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         }
 
         component.setIdentifier(member, member.getClassName());
-        component.setColorFunction(() -> CodeColorScheme.CLASS_REF);
+        component.setColorFunction(() -> member.isImport() || target == null ? CodeColorScheme.CLASS_REF : target.getKind().getColor());
         component.setTooltip(() -> ColoredStringBuilder.create().text(CodeColorScheme.CLASS_REF, target != null ? target.getDisplayOrRealName() : member.getClassName()).get());
+    }
+
+    private static String getArrayDimensions(String text) {
+        StringBuilder arrayDims = new StringBuilder();
+
+        while (text.endsWith("[]")) {
+            arrayDims.append("[]");
+            text = text.substring(0, text.length() - 2);
+        }
+
+        return arrayDims.toString();
     }
 
     @Override

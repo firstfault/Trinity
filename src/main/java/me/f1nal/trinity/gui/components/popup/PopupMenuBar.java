@@ -2,14 +2,21 @@ package me.f1nal.trinity.gui.components.popup;
 
 import imgui.ImGui;
 import me.f1nal.trinity.gui.components.popup.items.PopupItem;
+import me.f1nal.trinity.gui.viewport.MainMenuBar;
+import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.List;
 
 public class PopupMenuBar {
     private List<PopupItem> popupItems;
+    private MenuBarProgress progress;
 
     public PopupMenuBar(PopupItemBuilder builder) {
         this.set(builder);
+    }
+
+    public void setProgress(MenuBarProgress progress) {
+        this.progress = progress;
     }
 
     public void set(PopupItemBuilder builder) {
@@ -21,6 +28,13 @@ public class PopupMenuBar {
         ImGui.beginMenuBar();
         for (PopupItem popupItem : popupItems) {
             popupItem.draw();
+        }
+        if (progress != null) {
+            ImGui.separator();
+
+            ImGui.textColored(CodeColorScheme.TEXT, progress.getRoutineName() + ": ");
+            ImGui.sameLine(0.F, 0.F);
+            ImGui.textColored(CodeColorScheme.DISABLED, progress.getProgress() == -1 ? progress.getTaskName() : String.format("%s (%s%%)", progress.getTaskName(), progress.getProgress()));
         }
         ImGui.endMenuBar();
         PopupMenu.style(false);

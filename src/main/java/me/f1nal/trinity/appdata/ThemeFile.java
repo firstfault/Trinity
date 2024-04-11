@@ -13,10 +13,15 @@ import java.util.Map;
 public class ThemeFile {
     @XStreamOmitField
     private static final XStream stream = new XStream();
+    private final Map<String, String> settings = new HashMap<>();
     private final Map<String, Integer> colors = new HashMap<>();
 
     public Map<String, Integer> getColors() {
         return colors;
+    }
+
+    public Map<String, String> getSettings() {
+        return settings;
     }
 
     public static String serialize(ThemeFile file) {

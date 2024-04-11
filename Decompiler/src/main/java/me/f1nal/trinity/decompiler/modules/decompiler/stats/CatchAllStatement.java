@@ -118,7 +118,7 @@ public final class CatchAllStatement extends Statement {
       buf.append(content);
     }
     else {
-      buf.appendIndent(indent).append("try {").appendLineSeparator();
+      buf.appendIndent(indent).append(OutputMemberSerializer.keyword("try") + " {").appendLineSeparator();
       tracer.incrementCurrentSourceLine();
       buf.append(ExprProcessor.jmpWrapper(first, indent + 1, true, tracer));
       buf.appendIndent(indent).append("}");
@@ -129,7 +129,7 @@ public final class CatchAllStatement extends Statement {
     tracer.incrementCurrentSourceLine();
 
     if (monitor != null) {
-      buf.appendIndent(indent+1).append("if (").append(monitor.toJava(indent, tracer)).append(") {").appendLineSeparator();
+      buf.appendIndent(indent+1).append(OutputMemberSerializer.keyword("if") + " (").append(monitor.toJava(indent, tracer)).append(") {").appendLineSeparator();
       tracer.incrementCurrentSourceLine();
     }
 

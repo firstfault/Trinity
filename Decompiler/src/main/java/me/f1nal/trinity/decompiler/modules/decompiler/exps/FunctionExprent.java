@@ -460,7 +460,7 @@ public class FunctionExprent extends Exprent {
       case FUNCTION_PPI -> wrapOperandString(lstOperands.get(0), true, indent, tracer).prepend("++");
       case FUNCTION_IMM -> wrapOperandString(lstOperands.get(0), true, indent, tracer).append("--");
       case FUNCTION_MMI -> wrapOperandString(lstOperands.get(0), true, indent, tracer).prepend("--");
-      case FUNCTION_INSTANCEOF -> wrapOperandString(lstOperands.get(0), true, indent, tracer).append(" instanceof ")
+      case FUNCTION_INSTANCEOF -> wrapOperandString(lstOperands.get(0), true, indent, tracer).append(" " +OutputMemberSerializer.keyword("instanceof") +  " ")
         .append(wrapOperandString(lstOperands.get(1), true, indent, tracer));
       case FUNCTION_LCMP -> // shouldn't appear in the final code
         wrapOperandString(lstOperands.get(0), true, indent, tracer).prepend("__lcmp__(")

@@ -34,6 +34,10 @@ public abstract class ClosableWindow extends AbstractWindow {
         this.windowFlags |= ImGuiWindowFlags.MenuBar;
     }
 
+    public PopupMenuBar getMenuBar() {
+        return menuBar;
+    }
+
     public String getId(String suffix) {
         return suffix.concat(this.getClass().getName()).concat(String.valueOf(this.getId()));
     }

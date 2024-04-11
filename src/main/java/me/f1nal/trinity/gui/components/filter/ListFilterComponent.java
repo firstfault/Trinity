@@ -1,5 +1,7 @@
 package me.f1nal.trinity.gui.components.filter;
 
+import imgui.ImGui;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;

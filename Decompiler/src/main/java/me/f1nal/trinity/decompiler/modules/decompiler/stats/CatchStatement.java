@@ -143,7 +143,7 @@ public final class CatchStatement extends Statement {
       tracer.incrementCurrentSourceLine();
     }
 
-    buf.appendIndent(indent).append("try {").appendLineSeparator();
+    buf.appendIndent(indent).append(OutputMemberSerializer.keyword("try") + " {").appendLineSeparator();
     tracer.incrementCurrentSourceLine();
 
     buf.append(ExprProcessor.jmpWrapper(first, indent + 1, true, tracer));

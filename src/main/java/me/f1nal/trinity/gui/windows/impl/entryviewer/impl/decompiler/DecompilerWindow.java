@@ -22,12 +22,14 @@ import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
 import me.f1nal.trinity.gui.components.SearchBar;
 import me.f1nal.trinity.gui.components.filter.misc.ShowFilterOption;
+import me.f1nal.trinity.gui.components.popup.MenuBarProgress;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructure;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.util.ModifyPriority;
 import me.f1nal.trinity.util.SystemUtil;
 import me.f1nal.trinity.util.TimedStopwatch;
 
@@ -109,15 +111,21 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         } else {
             ImGui.text("No class selected");
         }
+        DecompiledClass decompiledClass = this.getDecompiledClass();
+        getMenuBar().setProgress(decompiledClass == null ? new MenuBarProgress("Decompiler", "Decompiling Class", -1) : null);
     }
 
     @Subscribe
     public void onClassModified(EventClassModified event) {
         if (event.getClassInput() == this.selectedClass) {
             if (this.forceRefresh == null || event.getPriority().getTime() < this.forceRefresh.getPassed()) {
-                this.forceRefresh = new TimedStopwatch(event.getPriority().getTime());
+                this.forceRefresh(event.getPriority());
             }
         }
+    }
+
+    public void forceRefresh(ModifyPriority priority) {
+        this.forceRefresh = new TimedStopwatch(priority.getTime());
     }
 
     @Subscribe

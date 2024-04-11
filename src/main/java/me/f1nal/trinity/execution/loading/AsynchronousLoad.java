@@ -1,8 +1,14 @@
 package me.f1nal.trinity.execution.loading;
 
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.execution.ClassTarget;
+import me.f1nal.trinity.gui.windows.api.ClosableWindow;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerWindow;
+import me.f1nal.trinity.util.ModifyPriority;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,6 +39,14 @@ public class AsynchronousLoad extends Thread {
 
         this.finished = true;
         this.currentTask = null;
+
+        Main.runLater(() -> {
+            Collection<ClassTarget> classTargets = trinity.getExecution().getClassTargetMap().values();
+            for (ClassTarget classTarget : classTargets) {
+                classTarget.resetKind();
+            }
+            Main.getWindowManager().getWindowsOfType(DecompilerWindow.class).forEach(window -> window.forceRefresh(ModifyPriority.HIGH));
+        });
     }
 
     public boolean isFinished() {

@@ -82,19 +82,19 @@ public final class CodeColorScheme {
     @LabeledColor(category = XREF_KIND, label = "Exception")
     public static int XREF_EXCEPTION = getRgb(new Color(192, 125, 70));
     @LabeledColor(category = XREF_KIND, label = "Annotation")
-    public static int XREF_ANNOTATION = getRgb(new Color(176, 70, 192));
+    public static int XREF_ANNOTATION = getRgb(new Color(136, 66, 145));
 
     /////////////////////////
     // File Kind
     /////////////////////////
     @LabeledColor(category = FILE_KIND, label = "Interface")
-    public static int FILE_INTERFACE = getRgb(new Color(105, 138, 73));
+    public static int FILE_INTERFACE = getRgb(new Color(99, 162, 81));
     @LabeledColor(category = FILE_KIND, label = "Abstract")
-    public static int FILE_ABSTRACT = getRgb(new Color(105, 156, 171));
+    public static int FILE_ABSTRACT = getRgb(new Color(119, 90, 176));
     @LabeledColor(category = FILE_KIND, label = "Enum")
-    public static int FILE_ENUM = getRgb(new Color(192, 137, 68, 100));
+    public static int FILE_ENUM = getRgb(new Color(192, 133, 73));
     @LabeledColor(category = FILE_KIND, label = "Resource")
-    public static int FILE_RESOURCE = getRgb(new Color(131, 50, 73));
+    public static int FILE_RESOURCE = getRgb(new Color(157, 57, 84));
 
     // Frame
     @LabeledColor(category = FRAME, label = "Highlight Background")

@@ -101,8 +101,6 @@ public class ImportCollector {
     return getNestedName(fullName, true);
   }
 
-  private final List<String> outputMemberClassNames = new ArrayList<>();
-
   public String getNestedName(String fullName, boolean imported) {
     ClassesProcessor.ClassNode node = DecompilerContext.getClassProcessor().getMapRootClasses().get(fullName.replace('.', '/')); //todo[r.sh] anonymous classes?
 
