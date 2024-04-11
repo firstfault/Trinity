@@ -118,13 +118,13 @@ public final class ClassInput extends Input implements ModifyNotifiable {
         return classNode.name;
     }
 
-    public String getDisplayFullName() {
+    public String getDisplayName() {
         String displayName = this.getClassTarget().getDisplayName();
         return displayName == null ? this.getFullName() : displayName;
     }
 
     public String getDisplaySimpleName() {
-        return NameUtil.getSimpleName(this.getDisplayFullName());
+        return NameUtil.getSimpleName(this.getDisplayName());
     }
 
     /**

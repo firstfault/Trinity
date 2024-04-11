@@ -5,8 +5,6 @@ import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.PackageSelectComponent;
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
-import me.f1nal.trinity.refactor.globalrename.api.ClassRename;
-import me.f1nal.trinity.refactor.globalrename.api.MethodRename;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
 import me.f1nal.trinity.util.AnnotationUtil;
 import me.f1nal.trinity.util.GuiUtil;
@@ -33,7 +31,7 @@ public class MixinGlobalRenameType extends GlobalRenameType {
     }
 
     @Override
-    public void runRefactor(Execution execution, List<Rename<?>> renames) {
+    public void runRefactor(Execution execution, List<Rename> renames) {
         for (ClassInput classInput : execution.getClassList()) {
             this.renameClass(classInput, renames);
 
@@ -43,7 +41,7 @@ public class MixinGlobalRenameType extends GlobalRenameType {
         }
     }
 
-    private void renameMethod(MethodInput methodInput, List<Rename<?>> renames) {
+    private void renameMethod(MethodInput methodInput, List<Rename> renames) {
         AnnotationDescriptor annotation = AnnotationUtil.getAnnotation(methodInput.getMethodNode().visibleAnnotations, "org/spongepowered/asm/mixin/injection/Inject");
 
         if (annotation == null) {
@@ -59,12 +57,12 @@ public class MixinGlobalRenameType extends GlobalRenameType {
                 if (indexOf != -1) {
                     desc = desc.substring(0, indexOf);
                 }
-                renames.add(new MethodRename(methodInput, desc));
+                renames.add(new Rename(methodInput, desc));
             }
         }
     }
 
-    private void renameClass(ClassInput classInput, List<Rename<?>> renames) {
+    private void renameClass(ClassInput classInput, List<Rename> renames) {
         AnnotationDescriptor annotation = AnnotationUtil.getAnnotation(classInput.getClassNode().invisibleAnnotations, "org/spongepowered/asm/mixin/Mixin");
 
         if (annotation == null) {
@@ -74,13 +72,11 @@ public class MixinGlobalRenameType extends GlobalRenameType {
         Object value = annotation.getValues().get("value");
         if (value instanceof List && !((List<?>) value).isEmpty()) {
             Object typeObj = ((List<?>) value).get(0);
-            if (typeObj instanceof Type) {
-                Type type = (Type) typeObj;
-
+            if (typeObj instanceof Type type) {
                 final String targetClassName = NameUtil.getSimpleName(NameUtil.internalToNormal(type.getInternalName()));
                 final String newName = this.packageSelect.getClassInPackage(targetClassName + "Mixin");
 
-                renames.add(new ClassRename(classInput.getClassTarget(), newName));
+                renames.add(new Rename(classInput, newName));
             }
         }
     }

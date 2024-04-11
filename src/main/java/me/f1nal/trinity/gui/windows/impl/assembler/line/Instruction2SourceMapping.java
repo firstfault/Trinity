@@ -38,7 +38,7 @@ public class Instruction2SourceMapping {
     }
 
     private String getClassName(ClassInput classInput) {
-        String text = classInput.getDisplayFullName() + ".java";
+        String text = classInput.getDisplayName() + ".java";
         if (text.length() > 26) {
             text = ".." + text.substring(text.length() - 24);
         }

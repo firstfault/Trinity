@@ -85,7 +85,7 @@ public class FieldInput extends Input implements IDatabaseSavable<DatabaseFieldD
     }
 
     public String getFullDisplayName() {
-        return this.classInput.getDisplayFullName() + "." + this.getDisplayName() + "#" + this.fieldNode.desc;
+        return this.classInput.getDisplayName() + "." + this.getDisplayName() + "#" + this.fieldNode.desc;
     }
 
     public String getRealName() {

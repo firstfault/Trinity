@@ -1,9 +1,5 @@
 package me.f1nal.trinity.decompiler.output;
 
-import imgui.ImFont;
-import imgui.ImGui;
-import imgui.ImVec2;
-import imgui.flag.ImGuiMouseCursor;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.DecompiledMethod;
@@ -22,7 +18,6 @@ import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeStrin
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerUsagesRenderer;
-import me.f1nal.trinity.gui.windows.impl.xref.XrefViewerFrame;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
@@ -178,7 +173,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         component.setIdentifier(field, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.FIELD_REF);
         component.setTooltip(() -> ColoredStringBuilder.create()
-                .text(CodeColorScheme.CLASS_REF, fieldInput != null ? fieldInput.getOwningClass().getDisplayFullName() : field.getOwner())
+                .text(CodeColorScheme.CLASS_REF, fieldInput != null ? fieldInput.getOwningClass().getDisplayName() : field.getOwner())
                 .text(CodeColorScheme.DISABLED, ".")
                 .text(CodeColorScheme.FIELD_REF, fieldInput != null ? fieldInput.getDisplayName() : field.getName())
                 .text(CodeColorScheme.DISABLED, " ")
@@ -211,7 +206,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         component.setIdentifier(method, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.METHOD_REF);
         component.setTooltip(() -> ColoredStringBuilder.create()
-                .text(CodeColorScheme.CLASS_REF, methodInput != null ? methodInput.getOwningClass().getDisplayFullName() : method.getOwner())
+                .text(CodeColorScheme.CLASS_REF, methodInput != null ? methodInput.getOwningClass().getDisplayName() : method.getOwner())
                 .text(CodeColorScheme.DISABLED, ".")
                 .text(CodeColorScheme.METHOD_REF, methodInput != null ? methodInput.getDisplayName() : method.getName())
                 .text(CodeColorScheme.DISABLED, "")

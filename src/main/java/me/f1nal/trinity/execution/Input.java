@@ -21,4 +21,6 @@ public abstract class Input implements AccessFlagsMaskProvider, IRenameHandler, 
             Main.getDisplayManager().openDecompilerView(this);
         });
     }
+
+    public abstract String getDisplayName();
 }

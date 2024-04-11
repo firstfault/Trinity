@@ -1,17 +1,18 @@
 package me.f1nal.trinity.refactor.globalrename.api;
 
+import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.remap.Remapper;
 
-public abstract class Rename<I> {
-    private final I input;
+public final class Rename {
+    private final Input input;
     private final String newName;
 
-    public Rename(I input, String newName) {
+    public Rename(Input input, String newName) {
         this.input = input;
         this.newName = newName;
     }
 
-    public I getInput() {
+    public Input getInput() {
         return input;
     }
 
@@ -19,6 +20,11 @@ public abstract class Rename<I> {
         return newName;
     }
 
-    public abstract void rename(Remapper remapper);
-    public abstract String getCurrentName();
+    public void rename(Remapper remapper) {
+        input.rename(remapper, this.getNewName());
+    }
+
+    public String getCurrentName() {
+        return input.getDisplayName();
+    }
 }

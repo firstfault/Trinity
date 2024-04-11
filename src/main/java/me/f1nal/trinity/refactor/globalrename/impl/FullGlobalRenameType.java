@@ -4,9 +4,6 @@ import imgui.ImGui;
 import imgui.type.ImInt;
 import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
-import me.f1nal.trinity.refactor.globalrename.api.ClassRename;
-import me.f1nal.trinity.refactor.globalrename.api.FieldRename;
-import me.f1nal.trinity.refactor.globalrename.api.MethodRename;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
 import me.f1nal.trinity.util.NameUtil;
 import org.jetbrains.annotations.NotNull;
@@ -29,21 +26,21 @@ public final class FullGlobalRenameType extends GlobalRenameType {
     }
 
     @Override
-    public void runRefactor(final Execution execution, final List<Rename<?>> renames) {
+    public void runRefactor(final Execution execution, final List<Rename> renames) {
         final var nameType = GlobalRenameNameType.values()[renameChoice.get()];
         int count = 0;
 
         for (final var classInput : execution.getClassList()) {
-            renames.add(new ClassRename(classInput.getClassTarget(), generateName(nameType, "Class", ++count)));
+            renames.add(new Rename(classInput, generateName(nameType, "Class", ++count)));
 
             int methodCount = 0;
             for (final var methodInput : classInput.getMethodList().values()) {
-                renames.add(new MethodRename(methodInput, generateName(nameType, "method", ++methodCount)));
+                renames.add(new Rename(methodInput, generateName(nameType, "method", ++methodCount)));
             }
 
             int fieldCount = 0;
             for (final var fieldInput : classInput.getFieldList().values()) {
-                renames.add(new FieldRename(fieldInput, generateName(nameType, "field", ++fieldCount)));
+                renames.add(new Rename(fieldInput, generateName(nameType, "field", ++fieldCount)));
             }
         }
     }

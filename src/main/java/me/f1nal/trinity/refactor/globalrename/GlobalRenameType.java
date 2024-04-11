@@ -30,6 +30,5 @@ public abstract class GlobalRenameType implements INameable, IDescribable {
      * Draw user inputs required for this global rename.
      */
     public abstract void drawInputs();
-
-    public abstract void runRefactor(Execution execution, List<Rename<?>> renames);
+    public abstract void runRefactor(Execution execution, List<Rename> renames);
 }

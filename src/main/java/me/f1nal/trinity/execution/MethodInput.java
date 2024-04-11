@@ -142,7 +142,7 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
     }
 
     public String getFullDisplayName() {
-        return owningClass.getDisplayFullName() + "." + this.getDisplayName() + "#" + methodNode.desc;
+        return owningClass.getDisplayName() + "." + this.getDisplayName() + "#" + methodNode.desc;
     }
 
     public boolean isInitOrClinit() {

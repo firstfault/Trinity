@@ -1,7 +1,6 @@
 package me.f1nal.trinity.refactor.globalrename.impl;
 
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
-import me.f1nal.trinity.refactor.globalrename.api.FieldRename;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
 import me.f1nal.trinity.util.InstructionUtil;
 import me.f1nal.trinity.util.NameUtil;
@@ -26,7 +25,7 @@ public class EnumFieldsGlobalRenameType extends GlobalRenameType {
     }
 
     @Override
-    public void runRefactor(Execution execution, List<Rename<?>> renames) {
+    public void runRefactor(Execution execution, List<Rename> renames) {
         for (ClassInput classInput : execution.getClassList()) {
             if (classInput.getAccessFlags().isEnum()) {
                 MethodInput clinit = classInput.getMethod("<clinit>", "()V");
@@ -57,7 +56,7 @@ public class EnumFieldsGlobalRenameType extends GlobalRenameType {
         }
     }
 
-    private void processNewSeq(ClassInput classInput, TypeInsnNode newInsn, Map<MemberDetails, FieldInput> targetFields, List<Rename<?>> renames) {
+    private void processNewSeq(ClassInput classInput, TypeInsnNode newInsn, Map<MemberDetails, FieldInput> targetFields, List<Rename> renames) {
         if (!NameUtil.internalToNormal(newInsn.desc).equals(classInput.getFullName())) {
             return;
         }
@@ -82,7 +81,7 @@ public class EnumFieldsGlobalRenameType extends GlobalRenameType {
 
                 FieldInput fieldInput = targetFields.remove(new MemberDetails(fin));
                 if (fieldInput != null) {
-                    renames.add(new FieldRename(fieldInput, cst));
+                    renames.add(new Rename(fieldInput, cst));
                 }
             }
         }

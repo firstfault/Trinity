@@ -9,11 +9,12 @@ public final class Remapper {
      * Program execution flow
      */
     private final Execution execution;
+    private final ObfuscationAnalysis obfuscationAnalysis = new ObfuscationAnalysis();
 
     public Remapper(Execution execution) {
         this.execution = execution;
     }
-    
+
     public void renameClass(ClassTarget target, String newName) {
         target.setDisplayName(newName);
         target.setPackage(execution.getRootPackage());
@@ -35,6 +36,10 @@ public final class Remapper {
 
     public <I extends Input> void rename(I input, String newName) {
         input.rename(this, newName);
+    }
+
+    public ObfuscationAnalysis getObfuscationAnalysis() {
+        return obfuscationAnalysis;
     }
 
     public Execution getExecution() {

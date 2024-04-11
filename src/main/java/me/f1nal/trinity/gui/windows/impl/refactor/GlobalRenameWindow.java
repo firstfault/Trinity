@@ -59,7 +59,7 @@ public class GlobalRenameWindow extends StaticWindow {
 
     private void runRefactor() {
         GlobalRenameType type = this.listBox.getSelection();
-        List<Rename<?>> renames = new ArrayList<>();
+        List<Rename> renames = new ArrayList<>();
         type.runRefactor(trinity.getExecution(), renames);
         renames.stream().filter(rename -> !rename.getCurrentName().equals(rename.getNewName())).forEach(rename -> rename.rename(trinity.getRemapper()));
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
