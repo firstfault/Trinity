@@ -29,6 +29,11 @@ public class FieldInput extends Input implements IDatabaseSavable<DatabaseFieldD
         return displayName;
     }
 
+    @Override
+    public InputType getType() {
+        return InputType.FIELD;
+    }
+
     public RenameHandler getRenameHandler() {
         return new RenameHandler() {
             @Override

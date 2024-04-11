@@ -123,6 +123,11 @@ public final class ClassInput extends Input implements ModifyNotifiable {
         return displayName == null ? this.getFullName() : displayName;
     }
 
+    @Override
+    public InputType getType() {
+        return InputType.CLASS;
+    }
+
     public String getDisplaySimpleName() {
         return NameUtil.getSimpleName(this.getDisplayName());
     }

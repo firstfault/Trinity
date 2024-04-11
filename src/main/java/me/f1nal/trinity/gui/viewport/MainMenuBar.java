@@ -31,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+// TODO: Refactor via PopupMenuBar
 public class MainMenuBar {
     private final DisplayManager displayManager;
     private static final Map<Class<? extends StaticWindow>, String> windowsToolbar = new LinkedHashMap<>();
@@ -93,7 +94,7 @@ public class MainMenuBar {
             }
 
             if (ImGui.beginMenu("Refactor")) {
-                if (ImGui.menuItem("Global Rename")) {
+                if (ImGui.menuItem(FontAwesomeIcons.Gavel + " Global Rename")) {
                     getWindowManager().addStaticWindow(GlobalRenameWindow.class);
                 }
                 ImGui.endMenu();

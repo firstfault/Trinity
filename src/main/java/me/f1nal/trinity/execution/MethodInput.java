@@ -141,6 +141,11 @@ public final class MethodInput extends Input implements IDatabaseSavable<Databas
         return this.displayName;
     }
 
+    @Override
+    public InputType getType() {
+        return InputType.METHOD;
+    }
+
     public String getFullDisplayName() {
         return owningClass.getDisplayName() + "." + this.getDisplayName() + "#" + methodNode.desc;
     }

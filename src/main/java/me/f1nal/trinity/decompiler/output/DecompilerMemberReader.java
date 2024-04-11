@@ -234,23 +234,26 @@ public class DecompilerMemberReader {
     }
 
     private String sanityCheckEncoded(OutputMember currentOutputMember, String targetString) {
-        int start = targetString.indexOf(TAG_START);
+        final int start = targetString.indexOf(TAG_START);
         if (start == -1) {
             return targetString;
         }
-        int end = targetString.indexOf(TAG_END);
+        final int end = targetString.indexOf(TAG_END);
         if (end == -1) {
             return targetString;
         }
         OutputMember outputMember = null;
+
         try {
             outputMember = OutputMemberSerializer.deserialize(targetString.substring(start + TAG_START.length(), end));
         } catch (IOException e) {
             Logging.warn("Unrecognizable tag is inside of another tag {}.", currentOutputMember);
         }
+
         if (outputMember != null) {
 //            Logging.warn("Tag {} is inside of another tag {}.", outputMember, currentOutputMember);
         }
+
         return targetString.substring(0, start) + targetString.substring(end + TAG_END.length());
     }
 }

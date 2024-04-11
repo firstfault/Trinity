@@ -23,4 +23,5 @@ public abstract class Input implements AccessFlagsMaskProvider, IRenameHandler, 
     }
 
     public abstract String getDisplayName();
+    public abstract InputType getType();
 }

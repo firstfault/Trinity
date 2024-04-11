@@ -10,10 +10,12 @@ import me.f1nal.trinity.gui.components.general.ListBoxComponent;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
+import me.f1nal.trinity.remap.NameHeuristics;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 public class GlobalRenameWindow extends StaticWindow {
     private final ListBoxComponent<GlobalRenameType> listBox;
@@ -59,9 +61,16 @@ public class GlobalRenameWindow extends StaticWindow {
 
     private void runRefactor() {
         GlobalRenameType type = this.listBox.getSelection();
+        NameHeuristics nameHeuristics = trinity.getRemapper().getNameHeuristics();
         List<Rename> renames = new ArrayList<>();
         type.runRefactor(trinity.getExecution(), renames);
-        renames.stream().filter(rename -> !rename.getCurrentName().equals(rename.getNewName())).forEach(rename -> rename.rename(trinity.getRemapper()));
+        renames.stream()
+                .filter(rename -> {
+                    if (rename.getCurrentName().equals(rename.getNewName())) return false;
+
+                    return nameHeuristics.isNameObfuscated(rename.getCurrentName(), rename.getInput().getType());
+                })
+                .forEach(rename -> rename.rename(trinity.getRemapper()));
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
     }
 }

@@ -1,5 +1,5 @@
 # Trinity
-Trinity is a lightning-fast software reverse engineering suite for the Java bytecode architecture with a great focus on reliability and reducing work for the reverse engineer.
+Trinity is a powerful lightning-fast software reverse engineering suite for the Java bytecode architecture.
 
 ## Features
 - Databases

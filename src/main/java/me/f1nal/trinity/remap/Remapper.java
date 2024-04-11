@@ -9,7 +9,7 @@ public final class Remapper {
      * Program execution flow
      */
     private final Execution execution;
-    private final ObfuscationAnalysis obfuscationAnalysis = new ObfuscationAnalysis();
+    private final NameHeuristics nameHeuristics = new NameHeuristics();
 
     public Remapper(Execution execution) {
         this.execution = execution;
@@ -38,8 +38,8 @@ public final class Remapper {
         input.rename(this, newName);
     }
 
-    public ObfuscationAnalysis getObfuscationAnalysis() {
-        return obfuscationAnalysis;
+    public NameHeuristics getNameHeuristics() {
+        return nameHeuristics;
     }
 
     public Execution getExecution() {
