@@ -4,16 +4,20 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.logging.Logging;
+import me.f1nal.trinity.remap.DisplayName;
+import me.f1nal.trinity.remap.RenameType;
 
 import java.util.Objects;
 
 public class DatabaseMethodDisplayName extends AbstractDatabaseObject {
     private final MemberDetails details;
     private final String displayName;
+    private final RenameType renameType;
 
-    public DatabaseMethodDisplayName(MemberDetails details, String displayName) {
+    public DatabaseMethodDisplayName(MemberDetails details, DisplayName displayName) {
         this.details = details;
-        this.displayName = displayName;
+        this.displayName = displayName.getName();
+        this.renameType = displayName.getType();
     }
 
     @Override
@@ -23,7 +27,7 @@ public class DatabaseMethodDisplayName extends AbstractDatabaseObject {
             Logging.warn("Database has no method correlating to {}.", this.details);
             return false;
         }
-        methodInput.getDisplayName().setName(displayName);
+        methodInput.getDisplayName().setName(displayName, this.renameType);
         return true;
     }
 

@@ -55,12 +55,7 @@ public class FieldInput extends MemberInput<FieldNode> implements IDatabaseSavab
     }
 
     @Override
-    public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
-        return new XrefBuilderMemberRef(xrefMap, this.getDetails());
-    }
-
-    @Override
     public DatabaseFieldDisplayName createDatabaseObject() {
-        return new DatabaseFieldDisplayName(this.getDetails(), this.getDisplayName().getName());
+        return new DatabaseFieldDisplayName(this.getDetails(), this.getDisplayName());
     }
 }

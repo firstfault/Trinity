@@ -116,7 +116,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     @Override
     public DatabaseClassDisplayName createDatabaseObject() {
-        return new DatabaseClassDisplayName(this.getRealName(), this.getDisplayName().getName());
+        return new DatabaseClassDisplayName(this.getRealName(), this.getDisplayName());
     }
 
     private FileKind kind;

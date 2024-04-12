@@ -1,5 +1,9 @@
 package me.f1nal.trinity.execution;
 
+import me.f1nal.trinity.execution.xref.XrefMap;
+import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.DisplayName;
 
 public abstract class MemberInput<N> extends Input<N> {
@@ -30,5 +34,10 @@ public abstract class MemberInput<N> extends Input<N> {
 
     public final String getDescriptor() {
         return details.getDesc();
+    }
+
+    @Override
+    public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
+        return new XrefBuilderMemberRef(xrefMap, this.getDetails());
     }
 }

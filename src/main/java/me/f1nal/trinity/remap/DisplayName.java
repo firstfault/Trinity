@@ -3,20 +3,37 @@ package me.f1nal.trinity.remap;
 import java.util.Objects;
 
 public class DisplayName {
+    private final String originalName;
     private String name;
     private RenameType type;
 
     public DisplayName(String name) {
         this.name = name;
+        this.originalName = name;
         this.type = RenameType.NONE;
+    }
+
+    public String getOriginalName() {
+        return originalName;
     }
 
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
+    public void setName(String name, RenameType renameType) {
+        if (name.equals(this.originalName)) {
+            renameType = RenameType.NONE;
+        } else if (renameType == null) {
+            renameType = RenameType.MANUAL;
+        }
+
         this.name = name;
+        this.setType(renameType);
+    }
+
+    public void setName(String name) {
+        this.setName(name, RenameType.MANUAL);
     }
 
     public RenameType getType() {
@@ -24,6 +41,6 @@ public class DisplayName {
     }
 
     public void setType(RenameType type) {
-        this.type = type;
+        this.type = Objects.requireNonNull(type, "Rename type cannot be null");
     }
 }

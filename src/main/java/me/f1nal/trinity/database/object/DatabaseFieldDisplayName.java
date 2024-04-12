@@ -4,16 +4,32 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.logging.Logging;
+import me.f1nal.trinity.remap.DisplayName;
+import me.f1nal.trinity.remap.RenameType;
 
 import java.util.Objects;
 
 public class DatabaseFieldDisplayName extends AbstractDatabaseObject {
     private final MemberDetails details;
     private final String displayName;
+    private final RenameType renameType;
 
-    public DatabaseFieldDisplayName(MemberDetails details, String displayName) {
+    public DatabaseFieldDisplayName(MemberDetails details, DisplayName displayName) {
         this.details = details;
-        this.displayName = displayName;
+        this.displayName = displayName.getName();
+        this.renameType = displayName.getType();
+    }
+
+    public MemberDetails getDetails() {
+        return details;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public RenameType getRenameType() {
+        return renameType;
     }
 
     @Override
@@ -23,7 +39,7 @@ public class DatabaseFieldDisplayName extends AbstractDatabaseObject {
             Logging.warn("Database has no field correlating to {}.", this.details);
             return false;
         }
-        methodInput.getDisplayName().setName(displayName);
+        methodInput.getDisplayName().setName(displayName, this.getRenameType());
         return true;
     }
 

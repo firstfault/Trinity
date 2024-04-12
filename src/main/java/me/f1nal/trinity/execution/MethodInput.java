@@ -88,7 +88,7 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
 
     @Override
     public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
-        return isClinit() ? getOwningClass().createXrefBuilder(xrefMap) : new XrefBuilderMemberRef(xrefMap, this.getDetails());
+        return isClinit() ? getOwningClass().createXrefBuilder(xrefMap) : super.createXrefBuilder(xrefMap);
     }
 
     public String getName() {
@@ -124,7 +124,7 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
 
     @Override
     public DatabaseMethodDisplayName createDatabaseObject() {
-        return new DatabaseMethodDisplayName(this.getDetails(), this.getDisplayName().getName());
+        return new DatabaseMethodDisplayName(this.getDetails(), this.getDisplayName());
     }
 
     @Override
