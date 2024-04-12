@@ -1,5 +1,6 @@
 package me.f1nal.trinity.gui.components.filter;
 
+import imgui.ImGui;
 import me.f1nal.trinity.gui.components.SearchBar;
 import me.f1nal.trinity.util.SearchTermMatchable;
 

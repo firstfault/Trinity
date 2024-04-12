@@ -34,7 +34,7 @@ public class ConstantViewFrame extends ClosableWindow {
     }
 
     protected void drawTable(List<ConstantViewCache> sortedList) {
-        if (!ImGui.beginTable("constant viewer table" + getId(), 3, ImGuiTableFlags.Borders | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.Sortable)) {
+        if (!ImGui.beginTable("constant viewer table" + getId(), 2, ImGuiTableFlags.Borders | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.Sortable)) {
             return;
         }
         ImGui.tableSetupColumn("Constant", ImGuiTableColumnFlags.NoResize);

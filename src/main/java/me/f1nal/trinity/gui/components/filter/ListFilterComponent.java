@@ -50,10 +50,13 @@ public class ListFilterComponent<T> {
     }
 
     public void draw() {
+        final float indentW = 3.5F;
+        ImGui.indent(indentW);
         boolean refresh = false;
         for (Filter<T> filter : filters) {
             refresh |= filter.draw();
         }
         if (refresh) this.refreshFilteredList();
+        ImGui.unindent(indentW);
     }
 }

@@ -118,6 +118,7 @@ public final class DisplayManager extends Application {
         io.setConfigFlags(io.getConfigFlags() | ImGuiConfigFlags.DockingEnable);
         fontManager.setupFonts();
         ImGuiStyle style = ImGui.getStyle();
+        style.setWindowMenuButtonPosition(ImGuiDir.Right);
         style.setColor(ImGuiCol.WindowBg, 0.12f, 0.12f, 0.12f, 1.00f);
         style.setColor(ImGuiCol.FrameBg, 0.21f, 0.21f, 0.21f, 0.54f);
         style.setColor(ImGuiCol.TitleBgActive, 0.24f, 0.24f, 0.24f, 1.00f);
@@ -129,6 +130,7 @@ public final class DisplayManager extends Application {
         style.setColor(ImGuiCol.Text, 185, 185, 185, 255);
         style.setColor(ImGuiCol.TableRowBgAlt, 0,0,0,0);
 
+        style.setTabRounding(0.F);
         style.setIndentSpacing(6.F);
         style.setScrollbarSize(10.F);
         io.setGetClipboardTextFn(new ImStrSupplier() {
@@ -209,7 +211,7 @@ public final class DisplayManager extends Application {
         ImGui.setNextWindowPos(viewport.getWorkCenterX(), viewport.getWorkPosY() + (viewport.getWorkSizeY() / 2.14F), ImGuiCond.Always, 0.5F, 0.5F);
         ImGui.begin("Quickstart", ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse);
 
-        ColoredString.drawText(ColoredStringBuilder.create().fmt("Welcome to {}", "Trinity " + Main.VERSION).get());
+        ColoredString.drawText(ColoredStringBuilder.create().fmt("Welcome to {}! You are running version {}.", "Trinity", Main.VERSION).get());
         ImGui.separator();
 
         if (ImGui.beginListBox("###TrinityHomepageRecentProjects", 400.F, 164.F)) {

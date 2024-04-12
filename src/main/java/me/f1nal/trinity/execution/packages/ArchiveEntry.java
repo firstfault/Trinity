@@ -27,7 +27,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         this.sizeInBytes = sizeInBytes;
         this.size = ByteUtil.getHumanReadableByteCountSI(sizeInBytes);
         this.viewerTypes = Arrays.stream(ArchiveEntryViewerType.values()).filter(type -> type.getValid().test(this)).toArray(ArchiveEntryViewerType[]::new);
-        this.browserViewerNode = new BrowserViewerNode(getIcon(), this.getKind() == null ? this::getIconColor : () -> this.getKind().getColor(), this::getDisplaySimpleName, this.getRenameHandler());
+        this.browserViewerNode = new BrowserViewerNode(getIcon(), () -> this.getKind() == null ? this.getIconColor() : this.getKind().getColor(), this::getDisplaySimpleName, this.getRenameHandler());
         this.browserViewerNode.addMouseClickHandler(clickType -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
                 Main.getDisplayManager().getPopupMenu().show(this.createPopup(PopupItemBuilder.create()));
