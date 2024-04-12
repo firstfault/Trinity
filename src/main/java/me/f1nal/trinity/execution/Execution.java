@@ -14,12 +14,10 @@ import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Class representing a program's execution flow
@@ -115,7 +113,7 @@ public final class Execution {
     public @Nullable MethodInput getMethod(MemberDetails details) {
         final ClassInput input = getClassInput(details.getOwner());
         if (input != null) {
-            return input.createMethod(details.getName(), details.getDesc());
+            return input.getMethod(details.getName(), details.getDesc());
         }
         return null;
     }
@@ -123,7 +121,7 @@ public final class Execution {
     public @Nullable FieldInput getField(MemberDetails details) {
         final ClassInput input = getClassInput(details.getOwner());
         if (input != null) {
-            return input.createField(details.getName(), details.getDesc());
+            return input.getField(details.getName(), details.getDesc());
         }
         return null;
     }
@@ -133,33 +131,43 @@ public final class Execution {
     }
 
     public @Nullable ClassInput getClassInput(String className) {
-        ClassTarget target = getClassTargetIfExists(className);
+        ClassTarget target = getClassTarget(className);
         return target == null ? null : target.getInput();
     }
 
     public @Nullable ClassTarget getClassTargetByDisplayName(String className) {
-        // TODO: Convert to map perhaps
+        final ClassTarget classTarget = this.getClassTarget(className);
+
+        if (classTarget != null) {
+            return classTarget;
+        }
+
         for (ClassTarget target : classTargetMap.values()) {
             if (target.getDisplayOrRealName().equals(className)) {
                 return target;
             }
         }
-        return null;
-    }
 
-    public ClassTarget getClassTargetIfExists(String className) {
-        return classTargetMap.get(className);
+        return null;
     }
 
     public ClassTarget getClassTarget(String className) {
         return classTargetMap.get(className);
     }
 
-    public void addClassTarget(String className) {
-        if (className == null) {
-            return;
+    public ClassTarget addClassTarget(@NotNull String className) {
+        final @Nullable ClassTarget classTarget = getClassTarget(className);
+
+        if (classTarget == null) {
+            return this.addClassTarget(new ClassTarget(className, 0));
         }
-        classTargetMap.computeIfAbsent(className, k -> new ClassTarget(k, 0));
+
+        return classTarget;
+    }
+
+    public ClassTarget addClassTarget(ClassTarget classTarget) {
+        this.classTargetMap.put(classTarget.getRealName(), classTarget);
+        return classTarget;
     }
 
     /**

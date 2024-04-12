@@ -37,7 +37,7 @@ public class EnumFieldsGlobalRenameType extends GlobalRenameType {
                 Map<MemberDetails, FieldInput> targetFields = new HashMap<>();
                 AbstractInsnNode[] instructions = clinit.getInstructions().toArray();
 
-                for (FieldInput fieldInput : classInput.getFieldList().values()) {
+                for (FieldInput fieldInput : classInput.getFieldMap().values()) {
                     if (fieldInput.getAccessFlags().isEnum()) {
                         targetFields.put(fieldInput.getDetails(), fieldInput);
                     }

@@ -1,7 +1,6 @@
 package me.f1nal.trinity.execution.loading.tasks;
 
 import me.f1nal.trinity.Main;
-import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.loading.ProgressiveLoadTask;
 import me.f1nal.trinity.execution.*;
@@ -43,7 +42,7 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
                 return;
             }
             ClassTarget classTarget = this.createClassTarget(classNode, bytes.length, tasks);
-            tasks.add(() -> getTrinity().getExecution().getClassTargetMap().put(classTarget.getRealName(), classTarget));
+            tasks.add(() -> getTrinity().getExecution().addClassTarget(classTarget));
             this.finishedWork();
         });
 
@@ -83,18 +82,8 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
             classTarget.setPackage(execution.getRootPackage());
             execution.getClassList().add(classInput);
         });
-        for (MethodNode method : classInput.getNode().methods) {
-            MethodInput methodInput = classInput.createMethod(method.name, method.desc);
-            if (methodInput == null) {
-                throw new RuntimeException(String.format("Cannot create method input for %s.%s#%s", classInput.getFullName(), method.name, method.desc));
-            }
-        }
-        for (FieldNode field : classInput.getNode().fields) {
-            FieldInput fieldInput = classInput.createField(field.name, field.desc);
-            if (fieldInput == null) {
-                throw new RuntimeException(String.format("Cannot create field input for %s.%s#%s", classInput.getFullName(), field.name, field.desc));
-            }
-        }
+        classInput.getNode().methods.forEach(method -> classInput.addInput(new MethodInput(method, classInput)));
+        classInput.getNode().fields.forEach(field -> classInput.addInput(new FieldInput(field, classInput)));
         return classTarget;
     }
 

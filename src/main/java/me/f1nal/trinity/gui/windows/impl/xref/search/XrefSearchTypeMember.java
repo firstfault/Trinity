@@ -7,6 +7,7 @@ import me.f1nal.trinity.gui.components.ClassSelectComponent;
 import me.f1nal.trinity.gui.components.MemberSelectComponent;
 import me.f1nal.trinity.gui.components.MemorableCheckboxComponent;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRefPattern;
 import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.util.GuiUtil;
@@ -36,7 +37,7 @@ public class XrefSearchTypeMember extends XrefSearchType {
 
     @Override
     public XrefBuilder search() {
-        return new XrefBuilderMemberRefPattern(trinity.getExecution().getXrefMap(), this.buildPattern(), this.details.getAll());
+        return new XrefBuilderMemberRefPattern(trinity.getExecution().getXrefMap(), this.buildPattern(), this.details.getKey());
     }
 
     private Pattern buildPattern() {
@@ -58,7 +59,7 @@ public class XrefSearchTypeMember extends XrefSearchType {
             pattern.append("(?s).*");
         } else {
             final String quote = Pattern.quote(field);
-            if (exact.getState()) {
+            if (true||exact.getState()) {
                 pattern.append(quote);
             } else {
                 // FIXME: This (contains) is broken

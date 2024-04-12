@@ -6,6 +6,7 @@ import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.DisplayName;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -56,12 +57,12 @@ public abstract class MemberInput<N> extends Input<N> {
 
     @Override
     public String toString() {
-        return getDetails().getAll();
+        return getDetails().getKey();
     }
 
-    private static final Map<String, Function<Input<?>, String>> COPYABLE_ELEMENTS = Map.of(
-            "Owner", input -> ((MethodInput)input).getDetails().getName(),
-            "Name", input -> ((MethodInput)input).getDetails().getOwner(),
-            "Descriptor", input -> ((MethodInput)input).getDetails().getDesc()
-    );
+    private static final Map<String, Function<Input<?>, String>> COPYABLE_ELEMENTS = new LinkedHashMap<>() {{
+            put("Owner", input -> ((MemberInput<?>)input).getDetails().getOwner());
+            put("Name", input -> ((MemberInput<?>)input).getDetails().getName());
+            put("Descriptor", input -> ((MemberInput<?>)input).getDetails().getDesc());
+    }};
 }

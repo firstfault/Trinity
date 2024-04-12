@@ -34,12 +34,12 @@ public final class FullGlobalRenameType extends GlobalRenameType {
             renames.add(new Rename(classInput, generateName(nameType, "Class", ++count)));
 
             int methodCount = 0;
-            for (final var methodInput : classInput.getMethodList().values()) {
+            for (final var methodInput : classInput.getMethodMap().values()) {
                 renames.add(new Rename(methodInput, generateName(nameType, "method", ++methodCount)));
             }
 
             int fieldCount = 0;
-            for (final var fieldInput : classInput.getFieldList().values()) {
+            for (final var fieldInput : classInput.getFieldMap().values()) {
                 renames.add(new Rename(fieldInput, generateName(nameType, "field", ++fieldCount)));
             }
         }

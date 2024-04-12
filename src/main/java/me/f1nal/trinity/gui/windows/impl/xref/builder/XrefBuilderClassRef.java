@@ -25,7 +25,7 @@ public class XrefBuilderClassRef extends XrefBuilder {
 
     @Override
     public Collection<AbstractXref> createXrefs() {
-        return new ArrayList<>(getXrefMap().getReferences(this.className));
+        return new ArrayList<>(getXrefMap().queryClassReferences(getXrefMap().getTrinity().getExecution().getClassTargetByDisplayName(this.className)));
     }
 
     @Override

@@ -23,7 +23,9 @@ import me.f1nal.trinity.remap.RenameType;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import org.checkerframework.checker.units.qual.C;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Class reference object, even if we don't have it as an input.
@@ -32,11 +34,16 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
     private ClassInput input;
     private String realName;
     private final DisplayName displayName;
+    private final List<ClassXref> references = new ArrayList<>();
 
     public ClassTarget(String realName, int size) {
         super(size);
         this.realName = realName;
         this.displayName = new DisplayName(this.realName);
+    }
+
+    public List<ClassXref> getReferences() {
+        return references;
     }
 
     @Override
@@ -144,10 +151,10 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
             if (accessFlags.isAbstract()) {
                 return FileKind.ABSTRACT;
             }
-        } else {
+        } else if (this.getReferences() != null) {
             Trinity trinity = Main.getTrinity();
             if (trinity != null) {
-                Collection<ClassXref> references = trinity.getExecution().getXrefMap().getReferences(this);
+                Collection<ClassXref> references = this.getReferences();
 
                 for (ClassXref reference : references) {
                     // Is this a good way...?

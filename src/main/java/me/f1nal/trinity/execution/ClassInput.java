@@ -11,8 +11,6 @@ import me.f1nal.trinity.util.NameUtil;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.FieldNode;
-import org.objectweb.asm.tree.MethodNode;
 
 import java.util.*;
 import java.util.function.Function;
@@ -27,6 +25,7 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
      */
     private final Map<String, MethodInput> methodList = new LinkedHashMap<>();
     private final Map<String, FieldInput> fieldList = new LinkedHashMap<>();
+    private final Map<MemberDetails, MemberInput<?>> memberList = new HashMap<>();
     private final List<String> interfaces = new ArrayList<>();
     private final ClassTarget classTarget;
 
@@ -43,44 +42,29 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     /**
      * Gives a key that can be used to query {@link ClassInput#methodList}
      */
-    private String getMethodKey(String name, String desc) {
+    private String getMemberKey(String name, String desc) {
         return name + desc;
     }
 
-    /**
-     * Creates a new {@link MethodInput} for the relevant method from this class.
-     * @param name Name of the method.
-     * @param desc Descriptor of the method.
-     * @return A newly created {@link MethodInput} to describe this method, or the existing instance of {@link MethodInput}, or {@code null} if this class contains no such method.
-     */
-    public @Nullable MethodInput createMethod(String name, String desc) {
-        final String key = getMethodKey(name, desc);
-        MethodInput methodInput = methodList.get(key);
-        if (methodInput != null) {
-            return methodInput;
-        }
-        for (MethodNode method : getNode().methods) {
-            if (method.name.equals(name) && method.desc.equals(desc)) {
-                methodList.put(key, (methodInput = new MethodInput(method, this)));
-                return methodInput;
-            }
-        }
-        return null;
+    public @Nullable MethodInput getMethod(String name, String desc) {
+        return methodList.get(this.getMemberKey(name, desc));
     }
 
-    public @Nullable FieldInput createField(String name, String desc) {
-        final String key = getMethodKey(name, desc);
-        FieldInput fieldInput = fieldList.get(key);
-        if (fieldInput != null) {
-            return fieldInput;
+    public @Nullable FieldInput getField(String name, String desc) {
+        return fieldList.get(this.getMemberKey(name, desc));
+    }
+
+    public void addInput(MemberInput<?> input) {
+        final MemberDetails details = input.getDetails();
+        final String memberKey = this.getMemberKey(details.getName(), details.getDesc());
+
+        if (input instanceof MethodInput) {
+            methodList.put(memberKey, (MethodInput) input);
+        } else {
+            fieldList.put(memberKey, (FieldInput) input);
         }
-        for (FieldNode field : getNode().fields) {
-            if (field.name.equals(name) && field.desc.equals(desc)) {
-                fieldList.put(key, (fieldInput = new FieldInput(field, this)));
-                return fieldInput;
-            }
-        }
-        return null;
+
+        memberList.put(input.getDetails(), input);
     }
 
     @Override
@@ -94,12 +78,20 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
         return classTarget.getDisplayName();
     }
 
-    public Map<String, MethodInput> getMethodList() {
+    public Map<String, MethodInput> getMethodMap() {
         return methodList;
     }
 
-    public Map<String, FieldInput> getFieldList() {
+    public Map<String, FieldInput> getFieldMap() {
         return fieldList;
+    }
+
+    public Collection<MemberInput<?>> getMemberList() {
+        return memberList.values();
+    }
+
+    public MemberInput<?> getMember(MemberDetails memberDetails) {
+        return memberList.get(memberDetails);
     }
 
     /**
@@ -177,15 +169,6 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
         return getClassTarget().createXrefBuilder(xrefMap);
     }
 
-    public MethodInput getMethod(String name, String desc) {
-        for (MethodInput method : methodList.values()) {
-            if (method.getName().equals(name) && method.getDescriptor().equals(desc)) {
-                return method;
-            }
-        }
-        return null;
-    }
-
     @Override
     public ClassInput getOwningClass() {
         return this;
@@ -201,8 +184,8 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
         return this.getFullName();
     }
 
-    private static final Map<String, Function<Input<?>, String>> COPYABLE_ELEMENTS = Map.of(
-            "Full Name", input -> ((ClassInput)input).getFullName(),
-            "Name", input -> ((ClassInput)input).getSuperName()
-    );
+    private static final Map<String, Function<Input<?>, String>> COPYABLE_ELEMENTS = new LinkedHashMap<>() {{
+        put("Full Name", input -> ((ClassInput)input).getFullName());
+        put("Name", input -> NameUtil.getSimpleName(((ClassInput)input).getFullName()));
+    }};
 }

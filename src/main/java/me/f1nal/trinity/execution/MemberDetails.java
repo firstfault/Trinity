@@ -1,6 +1,7 @@
 package me.f1nal.trinity.execution;
 
 import me.f1nal.trinity.decompiler.output.IMemberDetails;
+import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import org.objectweb.asm.tree.FieldInsnNode;
@@ -33,12 +34,16 @@ public class MemberDetails {
         return name;
     }
 
+    public MemberDetails withName(String name) {
+        return new MemberDetails(this.owner, name, this.desc);
+    }
+
     public String getDesc() {
         return desc;
     }
 
-    public String getAll() {
-        return String.format("%s%s%s", getOwner(), getName(), getDesc());
+    public String getKey() {
+        return String.format("%s.%s.%s", getOwner(), getName(), getDesc());
     }
 
     public List<ColoredString> asText(boolean method) {
@@ -58,7 +63,7 @@ public class MemberDetails {
 
     @Override
     public String toString() {
-        return getAll();
+        return getKey();
     }
 
     @Override

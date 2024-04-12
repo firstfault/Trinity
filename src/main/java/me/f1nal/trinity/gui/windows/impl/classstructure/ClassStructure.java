@@ -16,8 +16,8 @@ public class ClassStructure {
         this.rootNode = new ClassStructureNodeClass(classInput);
         this.rootNode.getBrowserViewerNode().setDefaultOpen(true);
 
-        classInput.getFieldList().values().stream().map(ClassStructureNodeField::new).forEach(this.rootNode::addChild);
-        classInput.getMethodList().values().stream().map(ClassStructureNodeMethod::new).forEach(this.rootNode::addChild);
+        classInput.getFieldMap().values().stream().map(ClassStructureNodeField::new).forEach(this.rootNode::addChild);
+        classInput.getMethodMap().values().stream().map(ClassStructureNodeMethod::new).forEach(this.rootNode::addChild);
     }
 
     public ClassInput getClassInput() {

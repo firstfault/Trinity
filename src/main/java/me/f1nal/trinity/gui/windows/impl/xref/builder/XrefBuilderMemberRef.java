@@ -21,12 +21,12 @@ public class XrefBuilderMemberRef extends XrefBuilder {
 
     @Override
     public String getTitle() {
-        return details.getAll();
+        return details.getKey();
     }
 
     @Override
     public Collection<AbstractXref> createXrefs() {
-        return new ArrayList<>(getXrefMap().getReferences(details));
+        return new ArrayList<>(getXrefMap().queryMemberReferences(details));
     }
 
     @Override

@@ -1,5 +1,6 @@
 package me.f1nal.trinity.execution.xref;
 
+import com.google.common.collect.ListMultimap;
 import me.f1nal.trinity.execution.*;
 import me.f1nal.trinity.execution.loading.ProgressiveLoadTask;
 import me.f1nal.trinity.execution.xref.where.XrefWhere;
@@ -8,11 +9,11 @@ import me.f1nal.trinity.execution.xref.where.XrefWhereField;
 import me.f1nal.trinity.execution.xref.where.XrefWhereMethod;
 import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.util.NameUtil;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -24,9 +25,7 @@ public final class XrefMap extends ProgressiveLoadTask {
     /**
      * The internal data structure that stores references.
      */
-    private final HashMap<String, List<MemberXref>> memberReferenceList = new HashMap<>();
-
-    private final Multimap<String, ClassXref> classReferenceList = Multimaps.newListMultimap(new LinkedHashMap<>(), ArrayList::new);
+    private final ListMultimap<MemberDetails, MemberXref> memberReferences = Multimaps.newListMultimap(new HashMap<>(), ArrayList::new);
     private final Execution execution;
 
     /**
@@ -43,17 +42,11 @@ public final class XrefMap extends ProgressiveLoadTask {
     @Override
     public void runImpl() {
         List<ClassInput> classList = execution.getClassList();
-        this.startWork(classList.size() + 1);
+        this.startWork(classList.size());
         for (ClassInput classInput : classList) {
             this.buildClassXrefs(classInput);
             this.finishedWork();
         }
-        this.processAllXrefs();
-        this.finishedWork();
-    }
-
-    private void processAllXrefs() {
-        this.classReferenceList.keySet().forEach(execution::addClassTarget);
     }
 
     private void buildClassXrefs(ClassInput classInput) {
@@ -65,7 +58,7 @@ public final class XrefMap extends ProgressiveLoadTask {
         this.processAnnotations(whereClass, node.visibleAnnotations);
         this.processAnnotations(whereClass, node.invisibleAnnotations);
 
-        for (MethodInput methodInput : classInput.getMethodList().values()) {
+        for (MethodInput methodInput : classInput.getMethodMap().values()) {
             XrefWhereMethod whereMethod = new XrefWhereMethod(methodInput);
 
             for (AbstractInsnNode instruction : methodInput.getInstructions()) {
@@ -96,7 +89,7 @@ public final class XrefMap extends ProgressiveLoadTask {
             this.processTryCatchHandlers(whereMethod, methodInput.getNode().tryCatchBlocks);
         }
 
-        for (FieldInput fieldInput : classInput.getFieldList().values()) {
+        for (FieldInput fieldInput : classInput.getFieldMap().values()) {
             XrefWhereField whereField = new XrefWhereField(fieldInput);
 
             this.processAnnotations(whereField, fieldInput.getNode().visibleAnnotations);
@@ -196,17 +189,18 @@ public final class XrefMap extends ProgressiveLoadTask {
      * @param desc       The referenced target descriptor.
      * @param referencer The method responsible for the reference.
      */
-    public void addReference(String owner, String name, String desc, MemberXref referencer) {
+    private void addReference(String owner, String name, String desc, MemberXref referencer) {
         owner = clearDescriptorFromOwner(owner);
 
-        final String key = String.format("%s.%s.%s", owner, name, desc);
-        List<MemberXref> list = this.memberReferenceList.computeIfAbsent(key, k -> new ArrayList<>());
-        list.add(referencer);
+        this.memberReferences.put(new MemberDetails(owner, name, desc), referencer);
         putClassReference(owner, new ClassXref(referencer.getWhere(), referencer.getAccess(), referencer.getInvocation(), referencer.getKind()));
     }
 
     private void putClassReference(String owner, ClassXref ref) {
-        classReferenceList.put(clearDescriptorFromOwner(owner), ref);
+        final String className = clearDescriptorFromOwner(owner);
+        final ClassTarget classTarget = execution.addClassTarget(className);
+
+        classTarget.getReferences().add(ref);
     }
 
     private static String clearDescriptorFromOwner(String owner) {
@@ -234,10 +228,39 @@ public final class XrefMap extends ProgressiveLoadTask {
      * @param desc  The referenced descriptor.
      * @return A non-null list of references for this target.
      */
-    public List<MemberXref> getReferences(String owner, String name, String desc) {
-        final String key = String.format("%s.%s.%s", owner, name, desc);
-        List<MemberXref> xrefs = this.memberReferenceList.get(key);
-        return xrefs == null ? Collections.emptyList() : xrefs;
+    public Collection<MemberXref> queryMemberReferences(String owner, String name, String desc) {
+        final MemberDetails memberDetails = new MemberDetails(owner, name, desc);
+        if (!this.memberReferences.containsKey(memberDetails)) {
+            return this.translateMemberReferences(memberDetails);
+        }
+        return this.memberReferences.get(memberDetails);
+    }
+
+    /**
+     * Translates this members display name into the old name which can be queried.
+     */
+    private MemberInput<?> translateMemberDetails(MemberDetails memberDetails) {
+        final @Nullable ClassTarget classTarget = execution.getClassTargetByDisplayName(memberDetails.getOwner());
+
+        if (classTarget != null && classTarget.isInputAvailable()) {
+            for (MemberInput<?> memberInput : classTarget.getInput().getMemberList()) {
+                if (memberInput.getDescriptor().equals(memberDetails.getDesc()) && memberInput.getDisplayName().getName().equals(memberDetails.getName())) {
+                    return memberInput;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private Collection<MemberXref> translateMemberReferences(MemberDetails memberDetails) {
+        final @Nullable MemberInput<?> translatedDetails = this.translateMemberDetails(memberDetails);
+
+        if (translatedDetails == null) {
+            return Collections.emptyList();
+        }
+
+        return memberReferences.get(translatedDetails.getDetails());
     }
 
     /**
@@ -246,29 +269,49 @@ public final class XrefMap extends ProgressiveLoadTask {
      * @param className Referenced class name.
      * @return List of references.
      */
-    public Collection<ClassXref> getReferences(String className) {
-        return classReferenceList.get(className);
+    public Collection<ClassXref> queryClassReferences(String className) {
+        final @Nullable ClassTarget classTarget = execution.getClassTarget(className);
+
+        if (classTarget == null) {
+            return Collections.emptyList();
+        }
+
+        return this.queryClassReferences(classTarget);
     }
 
-    public Collection<ClassXref> getReferences(ClassTarget classTarget) {
-        return classReferenceList.get(classTarget.getRealName());
+    public Collection<ClassXref> queryClassReferences(ClassTarget classTarget) {
+        return classTarget == null ? Collections.emptyList() : classTarget.getReferences();
     }
 
-    public List<MemberXref> getReferences(MemberDetails details) {
-        return getReferences(details.getOwner(), details.getName(), details.getDesc());
-    }
-
-    public HashMap<String, List<MemberXref>> getMemberReferenceList() {
-        return memberReferenceList;
+    public Collection<MemberXref> queryMemberReferences(MemberDetails details) {
+        return queryMemberReferences(details.getOwner(), details.getName(), details.getDesc());
     }
 
     public List<MemberXref> getMemberReferencesByPattern(Pattern pattern) {
         List<MemberXref> list = new ArrayList<>();
-        for (String key : this.memberReferenceList.keySet()) {
-            if (pattern.matcher(key).matches()) {
-                list.addAll(this.memberReferenceList.get(key));
+
+        this.memberReferences.asMap().forEach((memberDetails, xrefs) -> {
+            if (pattern.matcher(this.translateMemberAsDisplayNames(memberDetails).getKey()).matches()) {
+                list.addAll(this.memberReferences.get(memberDetails));
             }
-        }
+        });
+
         return list;
     }
+
+    private MemberDetails translateMemberAsDisplayNames(MemberDetails memberDetails) {
+        // Could this be done better perhaps?
+        final @Nullable ClassTarget classTarget = execution.getClassTargetByDisplayName(memberDetails.getOwner());
+
+        if (classTarget != null && classTarget.isInputAvailable()) {
+            final MemberInput<?> member = classTarget.getInput().getMember(memberDetails);
+
+            if (member != null) {
+                return new MemberDetails(member.getOwningClass().getDisplayName().getName(), member.getDisplayName().getName(), member.getDescriptor());
+            }
+        }
+
+        return memberDetails;
+    }
 }
+// com/paterva/maltego/licensing/serialize/I.<init>.(Ljava/lang/String;Ljava/lang/String;Z)V

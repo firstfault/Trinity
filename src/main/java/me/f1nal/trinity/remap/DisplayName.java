@@ -8,8 +8,8 @@ public class DisplayName {
     private RenameType type;
 
     public DisplayName(String name) {
-        this.name = name;
         this.originalName = name;
+        this.name = name;
         this.type = RenameType.NONE;
     }
 
@@ -28,8 +28,12 @@ public class DisplayName {
             renameType = RenameType.MANUAL;
         }
 
-        this.name = name;
+        this.setNameFinally(name);
         this.setType(renameType);
+    }
+
+    protected void setNameFinally(String name) {
+        this.name = name;
     }
 
     public void setName(String name) {

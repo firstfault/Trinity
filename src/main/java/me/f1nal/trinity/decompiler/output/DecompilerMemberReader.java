@@ -14,7 +14,6 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 
@@ -96,7 +95,7 @@ public class DecompilerMemberReader {
 
     private void handleBytecodeMarker(BytecodeMarkerOutputMember marker) {
         ClassInput classInput = decompiledClass.getClassInput();
-        for (MethodInput methodInput : classInput.getMethodList().values()) {
+        for (MethodInput methodInput : classInput.getMethodMap().values()) {
             if (marker.getMethod() != BytecodeMarkerOutputMember.getHashcode(classInput.getFullName(), methodInput.getDescriptor(), methodInput.getName())) {
                 continue;
             }
@@ -211,7 +210,7 @@ public class DecompilerMemberReader {
             if (classInput == null) {
                 throw new NullPointerException(String.format("Class input is null for %s.", startEnd.getOwner()));
             }
-            this.currentMethod = decompiledClass.createMethod(Objects.requireNonNull(classInput).createMethod(startEnd.getName(), startEnd.getDesc()));
+            this.currentMethod = decompiledClass.createMethod(Objects.requireNonNull(classInput).getMethod(startEnd.getName(), startEnd.getDesc()));
         } else {
             if (this.currentMethod == null) {
                 throw new RuntimeException();

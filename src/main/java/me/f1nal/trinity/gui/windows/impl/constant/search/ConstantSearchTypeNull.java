@@ -24,7 +24,7 @@ public class ConstantSearchTypeNull extends ConstantSearchType {
     @Override
     public void populate(List<ConstantViewCache> list) {
         for (ClassInput classInput : getTrinity().getExecution().getClassList()) {
-            for (MethodInput methodInput : classInput.getMethodList().values()) {
+            for (MethodInput methodInput : classInput.getMethodMap().values()) {
                 for (AbstractInsnNode insnNode : methodInput.getInstructions()) {
                     if (insnNode.getOpcode() == Opcodes.ACONST_NULL) {
                         list.add(new ConstantViewCache("Constant Null", new XrefWhereMethodInsn(methodInput, insnNode), XrefKind.LITERAL));

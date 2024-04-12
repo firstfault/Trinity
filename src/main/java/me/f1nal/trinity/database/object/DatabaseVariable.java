@@ -48,7 +48,7 @@ public class DatabaseVariable extends AbstractDatabaseObject {
     }
 
     private String getDebugInformation() {
-        return this.method.getAll() + "#" + index + "(" + name + ")";
+        return this.method.getKey() + "#" + index + "(" + name + ")";
     }
 
     @Override

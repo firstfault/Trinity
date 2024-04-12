@@ -44,7 +44,7 @@ public class EntryPoint {
                 if (input == null) {
                     return null;
                 }
-                final MethodInput main = input.createMethod("main", "([Ljava/lang/String;)V");
+                final MethodInput main = input.getMethod("main", "([Ljava/lang/String;)V");
 //                if (main == null) {
 //                    throw new MissingEntryPointException(mainClass);
 //                }

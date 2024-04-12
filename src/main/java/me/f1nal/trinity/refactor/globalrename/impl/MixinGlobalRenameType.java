@@ -35,7 +35,7 @@ public class MixinGlobalRenameType extends GlobalRenameType {
         for (ClassInput classInput : execution.getClassList()) {
             this.renameClass(classInput, renames);
 
-            for (MethodInput methodInput : classInput.getMethodList().values()) {
+            for (MethodInput methodInput : classInput.getMethodMap().values()) {
                 this.renameMethod(methodInput, renames);
             }
         }

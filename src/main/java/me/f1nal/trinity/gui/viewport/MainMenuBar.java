@@ -73,14 +73,22 @@ public class MainMenuBar {
             ImGui.endMenu();
         }
         if (displayManager.getTrinity() != null) {
-            if (ImGui.beginMenu("Inspect")) {
+            if (ImGui.beginMenu("Inspect")) {/*
+                if (ImGui.menuItem(FontAwesomeIcons.StreetView + " Visualize Universe")) {
+                    Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
+                }
 
+                ImGui.separator();
+*/
                 if (ImGui.menuItem(FontAwesomeIcons.CodeBranch + " Cross-Reference Search")) {
                     Main.getWindowManager().addStaticWindow(XrefSearchFrame.class);
                 }
                 if (ImGui.menuItem(FontAwesomeIcons.Search + " Constant Search")) {
                     Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
                 }
+/*                if (ImGui.menuItem(FontAwesomeIcons.Stream + " Member Search")) {
+                    Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
+                }*/
                 ImGui.endMenu();
             }
 

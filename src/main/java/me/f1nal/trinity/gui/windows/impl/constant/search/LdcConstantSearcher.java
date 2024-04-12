@@ -19,7 +19,7 @@ import static org.objectweb.asm.Opcodes.ICONST_M1;
 public abstract class LdcConstantSearcher<T> {
     public void populate(List<ConstantViewCache> list, Execution execution) {
         for (ClassInput classInput : execution.getClassList()) {
-            for (MethodInput methodInput : classInput.getMethodList().values()) {
+            for (MethodInput methodInput : classInput.getMethodMap().values()) {
                 for (AbstractInsnNode insnNode : methodInput.getInstructions()) {
                     if (insnNode instanceof IincInsnNode) {
                         this.addConstantView(list, ((IincInsnNode) insnNode).incr, new XrefWhereMethodInsn(methodInput, insnNode), XrefKind.LITERAL);
@@ -46,7 +46,7 @@ public abstract class LdcConstantSearcher<T> {
                 this.addAnnotationConstants(list, new XrefWhereMethod(methodInput), methodInput.getNode().visibleAnnotations);
             }
 
-            for (FieldInput fieldInput : classInput.getFieldList().values()) {
+            for (FieldInput fieldInput : classInput.getFieldMap().values()) {
                 Object value = fieldInput.getNode().value;
                 if (value != null) this.addConstantView(list, value, new XrefWhereField(fieldInput), XrefKind.LITERAL);
             }

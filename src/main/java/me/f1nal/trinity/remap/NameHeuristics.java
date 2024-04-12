@@ -7,7 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 public class NameHeuristics {
-    private static final List<String> WHITELISTED_NAMES = List.of(
+    private static final List<String> WHITELISTED_SHORT_NAMES = List.of(
             "ok"
     );
 
@@ -19,14 +19,14 @@ public class NameHeuristics {
         final int stringLength = name.length();
 
         if (stringLength <= 2) {
-            if (!WHITELISTED_NAMES.contains(name.toLowerCase())) {
+            if (!WHITELISTED_SHORT_NAMES.contains(name.toLowerCase())) {
                 return true;
             }
         }
 
         final char[] chars = name.toCharArray();
 
-        if (stringLength >= 8) {
+        if (stringLength >= 4) {
             if (isIlIName(chars)) {
                 return true;
             }
