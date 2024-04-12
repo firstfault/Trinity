@@ -44,8 +44,9 @@ public class PopupMenu {
         if (!ImGui.beginPopup(strId)) {
             status = false;
         } else {
+            PopupMenuState state = new PopupMenuState();
             for (PopupItem popupItem : popupItems) {
-                popupItem.draw();
+                popupItem.draw(state);
             }
             if (ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Escape))) {
                 ImGui.closeCurrentPopup();

@@ -1,6 +1,7 @@
 package me.f1nal.trinity.gui.components.popup.items;
 
 import imgui.ImGui;
+import me.f1nal.trinity.gui.components.popup.PopupMenuState;
 
 import java.util.List;
 
@@ -14,10 +15,12 @@ public class PopupItemMenu extends PopupItem {
     }
 
     @Override
-    public void draw() {
+    public void draw(PopupMenuState state) {
         if (ImGui.beginMenu(this.label)) {
-            popupItems.forEach(PopupItem::draw);
+            PopupMenuState newState = new PopupMenuState();
+            popupItems.forEach(popupItem -> popupItem.draw(newState));
             ImGui.endMenu();
         }
+        state.canSeparate = true;
     }
 }

@@ -11,6 +11,11 @@ import me.f1nal.trinity.remap.DisplayName;
 import me.f1nal.trinity.remap.IDisplayNameProvider;
 import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.remap.RenameType;
+import me.f1nal.trinity.util.SystemUtil;
+
+import java.util.Map;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public abstract class Input<N> implements AccessFlagsMaskProvider, IRenameHandler, IXrefBuilderProvider, IDisplayNameProvider {
     private final N node;
@@ -33,6 +38,7 @@ public abstract class Input<N> implements AccessFlagsMaskProvider, IRenameHandle
     public abstract ClassInput getOwningClass();
     public abstract boolean isAccessFlagValid(AccessFlags.Flag flag);
     public abstract void rename(Remapper remapper, String newName);
+    public abstract Map<String, Function<Input<?>, String>> getCopyableElements();
     public void populatePopup(PopupItemBuilder builder) {
         Trinity trinity = getOwningClass().getExecution().getTrinity();
 
@@ -42,6 +48,15 @@ public abstract class Input<N> implements AccessFlagsMaskProvider, IRenameHandle
         });
 
         DisplayName displayName = getDisplayName();
+        builder.menu("Copy...", copy -> {
+            copy.predicate(() -> displayName.getType() != RenameType.NONE, (items) -> {
+                items.menuItem("Display Name", () -> SystemUtil.copyToClipboard(displayName.getName()));
+            });
+            copy.separator();
+
+            getCopyableElements().forEach((key, function) -> copy.menuItem(key, () -> SystemUtil.copyToClipboard(function.apply(this))));
+        });
+
         builder.disabled(() -> displayName.getType() == RenameType.NONE, (items) -> {
             items.menuItem("Revert Name", () -> {
                 displayName.setName(displayName.getOriginalName());

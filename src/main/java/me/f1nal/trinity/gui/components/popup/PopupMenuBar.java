@@ -2,7 +2,6 @@ package me.f1nal.trinity.gui.components.popup;
 
 import imgui.ImGui;
 import me.f1nal.trinity.gui.components.popup.items.PopupItem;
-import me.f1nal.trinity.gui.viewport.MainMenuBar;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.List;
@@ -26,8 +25,9 @@ public class PopupMenuBar {
     public void draw() {
         PopupMenu.style(true);
         ImGui.beginMenuBar();
+        PopupMenuState state = new PopupMenuState();
         for (PopupItem popupItem : popupItems) {
-            popupItem.draw();
+            popupItem.draw(state);
         }
         if (progress != null) {
             ImGui.separator();

@@ -6,6 +6,9 @@ import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.DisplayName;
 
+import java.util.Map;
+import java.util.function.Function;
+
 public abstract class MemberInput<N> extends Input<N> {
     private final ClassInput owner;
     private final MemberDetails details;
@@ -21,6 +24,11 @@ public abstract class MemberInput<N> extends Input<N> {
     @Override
     public final ClassInput getOwningClass() {
         return owner;
+    }
+
+    @Override
+    public Map<String, Function<Input<?>, String>> getCopyableElements() {
+        return COPYABLE_ELEMENTS;
     }
 
     public final MemberDetails getDetails() {
@@ -42,7 +50,18 @@ public abstract class MemberInput<N> extends Input<N> {
     }
 
     @Override
+    public void populatePopup(PopupItemBuilder builder) {
+        super.populatePopup(builder);
+    }
+
+    @Override
     public String toString() {
         return getDetails().getAll();
     }
+
+    private static final Map<String, Function<Input<?>, String>> COPYABLE_ELEMENTS = Map.of(
+            "Owner", input -> ((MethodInput)input).getDetails().getName(),
+            "Name", input -> ((MethodInput)input).getDetails().getOwner(),
+            "Descriptor", input -> ((MethodInput)input).getDetails().getDesc()
+    );
 }

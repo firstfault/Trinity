@@ -1,7 +1,5 @@
 package me.f1nal.trinity.execution;
 
-import me.f1nal.trinity.events.EventClassModified;
-import me.f1nal.trinity.execution.xref.ClassXref;
 import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
@@ -17,6 +15,7 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodNode;
 
 import java.util.*;
+import java.util.function.Function;
 
 public final class ClassInput extends Input<ClassNode> implements IDisplayNameProvider {
     /**
@@ -169,6 +168,11 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     }
 
     @Override
+    public Map<String, Function<Input<?>, String>> getCopyableElements() {
+        return COPYABLE_ELEMENTS;
+    }
+
+    @Override
     public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
         return getClassTarget().createXrefBuilder(xrefMap);
     }
@@ -196,4 +200,9 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     public String toString() {
         return this.getFullName();
     }
+
+    private static final Map<String, Function<Input<?>, String>> COPYABLE_ELEMENTS = Map.of(
+            "Full Name", input -> ((ClassInput)input).getFullName(),
+            "Name", input -> ((ClassInput)input).getSuperName()
+    );
 }

@@ -1,6 +1,7 @@
 package me.f1nal.trinity.gui.components.popup.items;
 
 import imgui.ImGui;
+import me.f1nal.trinity.gui.components.popup.PopupMenuState;
 
 public class PopupItemMenuItem extends PopupItem {
     private final String label;
@@ -28,9 +29,10 @@ public class PopupItemMenuItem extends PopupItem {
     }
 
     @Override
-    public void draw() {
+    public void draw(PopupMenuState state) {
         if (ImGui.menuItem(this.label, this.shortcut, this.selected)) {
             event.run();
         }
+        state.canSeparate = true;
     }
 }
