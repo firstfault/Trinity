@@ -75,12 +75,14 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         }
 
         if (target != null && target.getInput() != null) {
+            component.input = target.getInput();
             component.addInputControls(target.getInput());
         } else {
             IXrefBuilderProvider provider = xrefMap -> new XrefBuilderClassRef(xrefMap, member.getClassName());
             component.addPopupBuilder(builder -> provider.addXrefViewerMenuItem(trinity, builder));
         }
 
+        component.memberKey = member.getClassName();
         component.setIdentifier(member, member.getClassName());
         component.setColorFunction(() -> member.isImport() || target == null ? CodeColorScheme.CLASS_REF : target.getKind().getColor());
         component.setTooltip(() -> ColoredStringBuilder.create().text(CodeColorScheme.CLASS_REF, target != null ? target.getDisplayOrRealName() : member.getClassName()).get());
@@ -170,6 +172,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             this.addXrefMemberMenuItem(component, memberDetails);
         }
 
+        component.memberKey = memberDetails.toString();
         component.setIdentifier(field, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.FIELD_REF);
         component.setTooltip(() -> ColoredStringBuilder.create()
@@ -203,6 +206,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             this.addXrefMemberMenuItem(component, memberDetails);
         }
 
+        component.memberKey = memberDetails.toString();
         component.setIdentifier(method, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.METHOD_REF);
         component.setTooltip(() -> ColoredStringBuilder.create()

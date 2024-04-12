@@ -126,9 +126,4 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
     public DatabaseMethodDisplayName createDatabaseObject() {
         return new DatabaseMethodDisplayName(this.getDetails(), this.getDisplayName());
     }
-
-    @Override
-    public String toString() {
-        return getDetails().getAll();
-    }
 }

@@ -5,6 +5,7 @@ import me.f1nal.trinity.decompiler.output.OutputMember;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.Input;
+import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.theme.CodeColorScheme;
@@ -35,7 +36,8 @@ public class DecompilerComponent {
      */
     private Runnable customRenderer;
     // Temporary
-    public Input input;
+    public Input<?> input;
+    public String memberKey;
 
     public DecompilerComponent(String text) {
         this.text = text;

@@ -191,4 +191,9 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     public RenameHandler getRenameHandler() {
         return getClassTarget().getRenameHandler();
     }
+
+    @Override
+    public String toString() {
+        return this.getFullName();
+    }
 }

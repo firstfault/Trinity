@@ -57,6 +57,11 @@ public class MemberDetails {
     }
 
     @Override
+    public String toString() {
+        return getAll();
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

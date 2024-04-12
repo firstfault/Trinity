@@ -125,6 +125,10 @@ public final class DecompiledClass {
         return lines;
     }
 
+    public List<DecompilerComponent> getComponentList() {
+        return componentList;
+    }
+
     public boolean containsComponent(DecompilerComponent component) {
         for (DecompilerLine line : lines) {
             for (DecompilerLineText lineComponent : line.getComponents()) {

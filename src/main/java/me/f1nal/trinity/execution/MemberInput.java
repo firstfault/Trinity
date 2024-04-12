@@ -40,4 +40,9 @@ public abstract class MemberInput<N> extends Input<N> {
     public XrefBuilder createXrefBuilder(XrefMap xrefMap) {
         return new XrefBuilderMemberRef(xrefMap, this.getDetails());
     }
+
+    @Override
+    public String toString() {
+        return getDetails().getAll();
+    }
 }

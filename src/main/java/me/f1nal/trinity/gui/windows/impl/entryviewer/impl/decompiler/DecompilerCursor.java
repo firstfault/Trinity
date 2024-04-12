@@ -147,6 +147,7 @@ public class DecompilerCursor {
 
     public void setScrollToCursor() {
         this.scroll = true;
+        this.blink.reset();
     }
 
     public void handleInputs(float mousePosX, float mousePosY) {
@@ -165,7 +166,6 @@ public class DecompilerCursor {
         else return;
 
         this.setScrollToCursor();
-        this.blink.reset();
     }
 
     public void handleLineDrawing(DecompilerLine line, float cursorScreenPosX, float lineNumberSpacing, float mousePosX, float cursorPosY, ImVec2 textSize) {

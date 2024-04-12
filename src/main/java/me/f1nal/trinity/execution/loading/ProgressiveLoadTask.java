@@ -26,9 +26,9 @@ public abstract class ProgressiveLoadTask {
     }
 
     protected final void finishedWork() {
-        if (this.startWorkingCount == -1) throw new IllegalStateException("Must call startWork()!");
+        if (this.startWorkingCount == -1) throw new IllegalStateException(String.format("Task '%s' must call startWork()!", this.getName()));
         if (--this.workingCount < 0) {
-            Logging.warn("Progressive load task went below zero: {}", this.workingCount);
+            Logging.warn("Progressive load task '{}' went below zero: {}", this.getName(), this.workingCount);
         }
     }
 

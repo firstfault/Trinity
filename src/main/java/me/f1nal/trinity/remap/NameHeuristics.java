@@ -4,7 +4,13 @@ import me.f1nal.trinity.execution.InputType;
 import me.f1nal.trinity.util.NameUtil;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+
 public class NameHeuristics {
+    private static final List<String> WHITELISTED_NAMES = List.of(
+            "ok"
+    );
+
     public boolean isNameObfuscated(@NotNull String name, InputType type) {
         if (type == InputType.CLASS) {
             name = NameUtil.getSimpleName(name);
@@ -12,8 +18,10 @@ public class NameHeuristics {
 
         final int stringLength = name.length();
 
-        if (stringLength <= 2 && !name.equalsIgnoreCase("do")) {
-            return true;
+        if (stringLength <= 2) {
+            if (!WHITELISTED_NAMES.contains(name.toLowerCase())) {
+                return true;
+            }
         }
 
         final char[] chars = name.toCharArray();
