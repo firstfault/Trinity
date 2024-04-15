@@ -3,6 +3,7 @@ package me.f1nal.trinity.decompiler.output;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.DecompiledMethod;
+import me.f1nal.trinity.decompiler.modules.decompiler.exps.VarExprent;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayType;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
@@ -26,6 +27,7 @@ import me.f1nal.trinity.util.StringUtil;
 import me.f1nal.trinity.util.SystemUtil;
 import org.jetbrains.annotations.Nullable;
 
+import java.text.MessageFormat;
 import java.util.*;
 
 public class DecompilerComponentInitializer implements OutputMemberVisitor {
@@ -66,11 +68,13 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         String arrayDims = getArrayDimensions(component.getText());
 
         if (target != null) {
-            if (member.isImport()) {
-                // Imports use full internal names
-                component.setTextFunction(() -> target.getDisplayOrRealName().replace('/', '.'));
-            } else {
-                component.setTextFunction(() -> target.getDisplaySimpleName() + arrayDims);
+            if (!member.isKeepText()) {
+                if (member.isImport()) {
+                    // Imports use full internal names
+                    component.setTextFunction(() -> target.getDisplayOrRealName().replace('/', '.'));
+                } else {
+                    component.setTextFunction(() -> target.getDisplaySimpleName() + arrayDims);
+                }
             }
         }
 
@@ -290,9 +294,17 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
         component.setIdentifier(variableMember, variable instanceof ImmutableVariable ? "this" : Objects.toString(this.decompilingMethod) + varIndex);
         component.setColorFunction(() -> CodeColorScheme.VAR_REF);
-        component.setTooltip(() -> ColoredStringBuilder.create()
-                .text(CodeColorScheme.DISABLED, "#" + varIndex + " ")
-                .text(CodeColorScheme.CLASS_REF, variableMember.getType() == null ? "unknown var type!" : variableMember.getType()).get());
+        component.setTooltip(() -> {
+            ColoredStringBuilder text = ColoredStringBuilder.create();
+
+            final String varType = variableMember.getType() == null ? "unknown var type!" : variableMember.getType();
+            final boolean stackVariable = varIndex >= VarExprent.STACK_BASE;
+            text.text(CodeColorScheme.DISABLED, (stackVariable ? "Stack Variable" : variable == null ? "#" + varIndex : variable.getName()));
+            text.text(CodeColorScheme.TEXT, String.format(" (%s) ", (stackVariable ? varIndex - VarExprent.STACK_BASE : varIndex)));
+            text.text(CodeColorScheme.CLASS_REF, varType);
+
+            return text.get();
+        });
     }
 
     @Override

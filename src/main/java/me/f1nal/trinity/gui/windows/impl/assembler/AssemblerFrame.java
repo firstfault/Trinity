@@ -232,30 +232,6 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         return count;
     }
 
-    private void renderHistory() {
-        Stack<AssemblerHistory> stack = history.getStack();
-        for (int i = stack.size() - 1; i >= 0; i--) {
-            AssemblerHistory history = stack.get(i);
-            ImGui.selectable("###HistoryId" + i);
-            String popupId = "HistoryPopup" + i;
-            if (ImGui.isItemHovered() && ImGui.isMouseClicked(1)) {
-                ImGui.openPopup(popupId);
-            }
-            if (ImGui.beginPopup(popupId)) {
-                boolean firstInstruction = i == stack.size() - 1;
-                if (ImGui.menuItem("Undo", (firstInstruction ? "Ctrl+Z" : ""))) {
-                    this.history.undo(history);
-                }
-//                if (ImGui.menuItem("Redo", (firstInstruction ? "Ctrl+Shift+Z" : ""))) {
-//                    this.history.redo(history);
-//                }
-                ImGui.endPopup();
-            }
-            ImGui.sameLine();
-            drawArgumentDetails(history.getText());
-        }
-    }
-
     public ChangeManager<AssemblerHistory> getHistory() {
         return history;
     }

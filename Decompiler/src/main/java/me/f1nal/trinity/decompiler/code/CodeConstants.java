@@ -72,8 +72,10 @@ public interface CodeConstants {
   int ACC_NATIVE = 0x0100;
   int ACC_ABSTRACT = 0x0400;
   int ACC_STRICT = 0x0800;
+  int ACC_TRANSITIVE = 0x0020;
   int ACC_VOLATILE = 0x0040;
   int ACC_BRIDGE = 0x0040;
+  int ACC_STATIC_PHASE = 0x0040;
   int ACC_TRANSIENT = 0x0080;
   int ACC_VARARGS = 0x0080;
   int ACC_SYNTHETIC = 0x1000;

@@ -24,7 +24,7 @@ import java.util.Map;
 
 public final class MethodInput extends MemberInput<MethodNode> implements IDatabaseSavable<DatabaseMethodDisplayName> {
     private final VariableTable variableTable;
-    private final LabelTable labelTable = new LabelTable();
+    private final LabelTable labelTable = new LabelTable(this);
 
     public MethodInput(MethodNode node, ClassInput owner) {
         super(node, owner, new MemberDetails(owner.getFullName(), node.name, node.desc));

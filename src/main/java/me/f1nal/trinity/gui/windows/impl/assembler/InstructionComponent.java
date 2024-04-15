@@ -6,6 +6,7 @@ import imgui.ImGui;
 import imgui.ImVec4;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
+import me.f1nal.trinity.execution.labels.MethodLabel;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.assembler.action.*;
 import me.f1nal.trinity.gui.windows.impl.assembler.args.AbstractInsnArgument;
@@ -17,10 +18,7 @@ import me.f1nal.trinity.gui.windows.impl.assembler.line.SourceLineNumber;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.animation.Animation;
 import org.lwjgl.glfw.GLFW;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InvokeDynamicInsnNode;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,7 +48,8 @@ public class InstructionComponent {
     }
 
     public void setBounds(AssemblerInstructionTable table, float x, float y) {
-        this.bounds = new ImVec4(x, y, 0x10000, 3.F + Main.getDisplayManager().getFontManager().getFontSize());
+        float height = 3.F + Main.getDisplayManager().getFontManager().getFontSize();
+        this.bounds = new ImVec4(x, y, 0x10000, height);
     }
 
     public ImVec4 getBounds() {
@@ -65,6 +64,7 @@ public class InstructionComponent {
             if (ImGui.isMouseHoveringRect(x, y, x + 0x10000, y + this.bounds.w)) {
                 table.setHoveredInstruction(this);
             }
+
             if (table.getHoveredInstruction() == this && ImGui.isMouseHoveringRect(bounds.x + table.sourceFileStartX, bounds.y, bounds.x + table.instructionStartX - 40, bounds.y + bounds.w)) {
                 table.setHoveredSourceLine(table.getSourceMapping().getSourceComponent(this.getInstruction()));
             } else if (table.getHoveredInstruction() == this && ImGui.isMouseClicked(0)) {
@@ -117,26 +117,37 @@ public class InstructionComponent {
         float lineY = y + this.bounds.w - 1;
         drawList.addLine(0, lineY, 0x10004, lineY, ImColor.rgba(45, 45, 49, 130));
 
-        float argStartX = x + table.instructionOperandsStartX;
-        float argX = argStartX;
+        this.drawArguments(table);
+
+        if (!table.isInstructionHighlighted(this)) {
+            drawList.addRectFilled(x, y, x + 0x10000, y + this.bounds.w - 1, CodeColorScheme.setAlpha(table.getWindowBackgroundColor(), 155));
+        }
+    }
+
+    private void drawArguments(AssemblerInstructionTable table) {
+        float y = this.bounds.y;
+        float x = this.bounds.x + table.instructionOperandsStartX;
 
         List<AbstractInsnArgument> arguments = new ArrayList<>(this.getArguments());
+        List<MethodLabel> addedLabels = new ArrayList<>();
 
         for (InstructionReferenceArrow arrow : table.getInstructions().getInstructionReferenceArrowList()) {
             if (arrow.getTo() == this) {
-                arguments.add(new LabelArgument(table.getAssemblerFrame(), arrow.getLabel()));
+                if (addedLabels.contains(arrow.getLabel())) {
+                    continue;
+                }
+                addedLabels.add(arrow.getLabel());
+                arguments.add(new LabelArgument(table.getAssemblerFrame(), arrow.getLabel().getTable().getMethodInput(), new LabelNode(arrow.getLabel().findOriginal()), null));
             }
         }
 
         for (AbstractInsnArgument argument : arguments) {
             for (ColoredString string : argument.getDetailsText()) {
-                ImGui.getWindowDrawList().addText(argX, y, string.getColor(), string.getText());
-                argX += ImGui.calcTextSize(string.getText()).x;
+                ImGui.getWindowDrawList().addText(x, y, string.getColor(), string.getText());
+                x += ImGui.calcTextSize(string.getText()).x;
             }
-        }
 
-        if (!table.isInstructionHighlighted(this)) {
-            drawList.addRectFilled(x, y, x + 0x10000, y + this.bounds.w - 1, CodeColorScheme.setAlpha(table.getWindowBackgroundColor(), 155));
+            x += 3.F;
         }
     }
 

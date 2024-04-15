@@ -1,5 +1,6 @@
 package me.f1nal.trinity.execution.var;
 
+import me.f1nal.trinity.decompiler.modules.decompiler.exps.VarExprent;
 import me.f1nal.trinity.execution.MethodInput;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -29,6 +30,10 @@ public class VariableTable {
 
     public Variable getVariable(int index) {
         return variableMap.computeIfAbsent(index, i -> {
+            if (i >= VarExprent.STACK_BASE) {
+                return new ImmutableVariable(this, "stk_" + (i - VarExprent.STACK_BASE));
+            }
+
             final int maxLocals = method.getNode().maxLocals;
 
 //            if (index > maxLocals) {

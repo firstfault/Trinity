@@ -572,7 +572,10 @@ public class ClassWriter {
     if (!requiresEntries.isEmpty()) {
       for (StructModuleAttribute.RequiresEntry requires : requiresEntries) {
         if (!isGenerated(requires.flags)) {
-          buffer.appendIndent(1).append("requires ").append(requires.moduleName.replace('/', '.')).append(';').appendLineSeparator();
+          buffer.appendIndent(1).append("requires ");
+          if ((requires.flags & CodeConstants.ACC_STATIC_PHASE) != 0) buffer.append("static ");
+          if ((requires.flags & CodeConstants.ACC_TRANSITIVE) != 0) buffer.append("transitive ");
+          buffer.append(requires.moduleName.replace('/', '.')).append(';').appendLineSeparator();
           newLineNeeded = true;
         }
       }
@@ -585,7 +588,7 @@ public class ClassWriter {
         if (!isGenerated(exports.flags)) {
           buffer.appendIndent(1).append("exports ").append(exports.packageName.replace('/', '.'));
           List<String> exportToModules = exports.exportToModules;
-          if (exportToModules.size() > 0) {
+          if (!exportToModules.isEmpty()) {
             buffer.append(" to").appendLineSeparator();
             appendFQClassNames(buffer, exportToModules);
           }
@@ -602,7 +605,7 @@ public class ClassWriter {
         if (!isGenerated(opens.flags)) {
           buffer.appendIndent(1).append("opens ").append(opens.packageName.replace('/', '.'));
           List<String> opensToModules = opens.opensToModules;
-          if (opensToModules.size() > 0) {
+          if (!opensToModules.isEmpty()) {
             buffer.append(" to").appendLineSeparator();
             appendFQClassNames(buffer, opensToModules);
           }

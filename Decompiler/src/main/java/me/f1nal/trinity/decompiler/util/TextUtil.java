@@ -6,6 +6,8 @@ import me.f1nal.trinity.decompiler.code.CodeConstants;
 import me.f1nal.trinity.decompiler.main.DecompilerContext;
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
 import me.f1nal.trinity.decompiler.modules.decompiler.ExprProcessor;
+import me.f1nal.trinity.decompiler.output.impl.ClassOutputMember;
+import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -22,7 +24,7 @@ public final class TextUtil {
     if (!qualifier.equals(classNode.classStruct.qualifiedName)) {
       buf.append(DecompilerContext.getImportCollector().getNestedName(ExprProcessor.buildJavaClassName(qualifier))).append('.');
     }
-    buf.append("super");
+    buf.append(OutputMemberSerializer.tag("super", l -> new ClassOutputMember(l, qualifier, ClassOutputMember.FLAG_KEEPTEXT)));
   }
 
   public static String getIndentString(int length) {

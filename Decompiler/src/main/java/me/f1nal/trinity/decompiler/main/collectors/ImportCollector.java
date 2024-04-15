@@ -175,7 +175,7 @@ public class ImportCollector {
     List<String> imports = packImports();
     for (String line : imports) {
       String className = line.replace('.', '/');
-      line = OutputMemberSerializer.serializeTags(new ClassOutputMember(line.length(), className, true)) + line;
+      line = OutputMemberSerializer.serializeTags(new ClassOutputMember(line.length(), className, ClassOutputMember.FLAG_IMPORT)) + line;
       buffer.append(OutputMemberSerializer.keyword("import ")).append(line).append(';').appendLineSeparator();
     }
     if (addSeparator && !imports.isEmpty()) {

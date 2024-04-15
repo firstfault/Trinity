@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class VarExprent extends Exprent {
-  public static final int STACK_BASE = 10000;
+  public static final int STACK_BASE = 20000;
   public static final String VAR_NAMELESS_ENCLOSURE = "<VAR_NAMELESS_ENCLOSURE>";
 
   private int index;

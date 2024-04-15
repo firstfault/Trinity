@@ -2,12 +2,22 @@ package me.f1nal.trinity.execution.labels;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import me.f1nal.trinity.execution.MethodInput;
 import org.objectweb.asm.Label;
 
 import java.util.Set;
 
 public class LabelTable {
+    private final MethodInput methodInput;
     private final BiMap<Label, MethodLabel> labelMap = HashBiMap.create();
+
+    public LabelTable(MethodInput methodInput) {
+        this.methodInput = methodInput;
+    }
+
+    public MethodInput getMethodInput() {
+        return methodInput;
+    }
 
     public MethodLabel getLabel(Label label) {
         int size = labelMap.size();

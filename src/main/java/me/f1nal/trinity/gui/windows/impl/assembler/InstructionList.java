@@ -1,5 +1,6 @@
 package me.f1nal.trinity.gui.windows.impl.assembler;
 
+import me.f1nal.trinity.execution.labels.MethodLabel;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionReferenceArrow;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
@@ -55,17 +56,19 @@ public class InstructionList extends ArrayList<InstructionComponent> {
         }
     }
 
+    public InstructionReferenceArrow getReferenceArrow(MethodLabel label) {
+        return instructionReferenceArrowList.stream().filter(instructionReferenceArrow -> instructionReferenceArrow.getLabel().equals(label)).findFirst().orElse(null);
+    }
+
     public List<InstructionReferenceArrow> getInstructionReferenceArrowList() {
         return instructionReferenceArrowList;
     }
 
     public int indexOfInsn(AbstractInsnNode insn) {
-        int index = 0;
-        for (InstructionComponent ic : this) {
-            if (ic.getInstruction() == insn) {
-                return index;
+        for (int i = 0; i < this.size(); i++) {
+            if (this.get(i).getInstruction() == insn) {
+                return i;
             }
-            ++index;
         }
         return -1;
     }

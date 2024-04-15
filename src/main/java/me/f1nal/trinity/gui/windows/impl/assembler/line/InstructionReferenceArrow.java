@@ -112,9 +112,13 @@ public class InstructionReferenceArrow {
                 float maxX = point.z;
                 float maxY = point.w;
 
+                if (minY > maxY) {
+                    minY = maxY;
+                    maxY = point.y;
+                }
+
                 if (mousePos.x >= minX - minCollision && mousePos.x <= maxX + minCollision &&
                         mousePos.y >= minY - minCollision && mousePos.y <= maxY + minCollision) {
-
                     table.setHoveredReferenceArrow(this);
                     break;
                 }

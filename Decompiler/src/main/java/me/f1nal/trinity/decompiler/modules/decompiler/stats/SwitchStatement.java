@@ -10,6 +10,7 @@ import me.f1nal.trinity.decompiler.modules.decompiler.DecHelper;
 import me.f1nal.trinity.decompiler.modules.decompiler.ExprProcessor;
 import me.f1nal.trinity.decompiler.modules.decompiler.StatEdge;
 import me.f1nal.trinity.decompiler.modules.decompiler.SwitchHelper;
+import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.decompiler.struct.gen.VarType;
 import me.f1nal.trinity.decompiler.util.TextBuffer;
 import org.jetbrains.annotations.NotNull;
@@ -88,10 +89,10 @@ public final class SwitchStatement extends Statement {
       List<Exprent> values = caseValues.get(i);
       for (int j = 0; j < edges.size(); j++) {
         if (edges.get(j) == defaultEdge) {
-          buf.appendIndent(indent + 1).append("default:").appendLineSeparator();
+          buf.appendIndent(indent + 1).append(OutputMemberSerializer.keyword("default")).append(':').appendLineSeparator();
         }
         else {
-          buf.appendIndent(indent + 1).append("case ");
+          buf.appendIndent(indent + 1).append(OutputMemberSerializer.keyword("case")).append(' ');
           Exprent value = values.get(j);
           if (value instanceof ConstExprent) {
             value = value.copy();

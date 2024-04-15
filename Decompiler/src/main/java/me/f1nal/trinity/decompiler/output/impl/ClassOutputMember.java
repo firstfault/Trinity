@@ -9,32 +9,32 @@ import java.io.IOException;
 
 public class ClassOutputMember extends OutputMember {
     private String className;
-    private boolean isImport;
+    private int flags;
 
     public ClassOutputMember(int length) {
         super(length);
     }
 
-    public ClassOutputMember(int length, String className, boolean isImport) {
+    public ClassOutputMember(int length, String className, int flags) {
         super(length);
         this.className = className;
-        this.isImport = isImport;
+        this.flags = flags;
     }
 
     public ClassOutputMember(int length, String className) {
-        this(length, className, false);
+        this(length, className, 0);
     }
 
     @Override
     protected void serializeImpl(DataOutput dataOutput) throws IOException {
         dataOutput.writeUTF(this.className);
-        dataOutput.writeBoolean(isImport);
+        dataOutput.writeByte(flags);
     }
 
     @Override
     protected void deserializeImpl(DataInput dataInput) throws IOException {
         this.className = dataInput.readUTF();
-        isImport = dataInput.readBoolean();
+        this.flags = dataInput.readByte();
     }
 
     @Override
@@ -47,6 +47,23 @@ public class ClassOutputMember extends OutputMember {
     }
 
     public boolean isImport() {
-        return isImport;
+        return (flags & FLAG_IMPORT) != 0;
     }
+
+    public boolean isKeepText() {
+        return (flags & FLAG_KEEPTEXT) != 0;
+    }
+
+    public int getFlags() {
+        return flags;
+    }
+
+    /**
+     * This member is an import declaration.
+     */
+    public static final int FLAG_IMPORT = 1 << 1;
+    /**
+     * Keep original text regardless of class name.
+     */
+    public static final int FLAG_KEEPTEXT = 1 << 2;
 }
