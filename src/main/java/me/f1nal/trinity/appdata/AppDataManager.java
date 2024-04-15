@@ -2,6 +2,7 @@ package me.f1nal.trinity.appdata;
 
 import com.google.common.io.Files;
 import me.f1nal.trinity.Main;
+import me.f1nal.trinity.appdata.shutdown.ShutdownHook;
 import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.theme.Theme;
@@ -38,7 +39,7 @@ public class AppDataManager {
             this.loadFromFile(file);
         }
         Main.getScheduler().scheduleAtFixedRate(this::scheduledSave, 30L, 30L, TimeUnit.SECONDS);
-        Runtime.getRuntime().addShutdownHook(new Thread(this::scheduledSave, "AppData Save"));
+        Main.addShutdownHook(new ShutdownHook("AppData Save", this::scheduledSave));
     }
 
     public File getThemeFile(Theme theme) {

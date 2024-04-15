@@ -11,11 +11,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class DatabaseSaveShutdownHook extends Thread {
-    public DatabaseSaveShutdownHook() {
-        super("Database Save");
-    }
-
+public class DatabaseSaveShutdownHook implements Runnable {
     @Override
     public void run() {
         final Trinity trinity = Main.getTrinity();

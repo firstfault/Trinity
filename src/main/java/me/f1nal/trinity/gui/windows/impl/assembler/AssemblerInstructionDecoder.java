@@ -12,6 +12,7 @@ import org.objectweb.asm.tree.*;
 import org.objectweb.asm.util.Printer;
 
 import java.awt.*;
+import java.awt.geom.Line2D;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,12 +53,14 @@ public class AssemblerInstructionDecoder {
                 hue.updateAndGet(v -> v + 0.21F);
             }
         });
+
         int maxDepth = 0;
         for (InstructionReferenceArrow arrow : arrowList) {
             int from = instructions.indexOf(arrow.getFrom()), to = instructions.indexOf(arrow.getTo());
-            arrow.setDepth(this.getArrowsInside(instructions, arrow, from, to));
+            arrow.setDepth(this.getArrowsInside(instructions, arrow, from, to, arrow.getDepth()));
             maxDepth = Math.max(maxDepth, arrow.getDepth());
         }
+
         instructions.setMaximumReferenceArrowDepth(maxDepth);
         instructions.removeIf(insn -> insn.getInstruction().getOpcode() == -1);
         return instructions;
@@ -78,18 +81,18 @@ public class AssemblerInstructionDecoder {
         return null;
     }
 
-    private int getArrowsInside(InstructionList instructions, InstructionReferenceArrow exclude, int start, int end) {
-        int count = 0;
-
+    private int getArrowsInside(InstructionList instructions, InstructionReferenceArrow exclude, int start, int end, int depth) {
         for (InstructionReferenceArrow arrow : instructions.getInstructionReferenceArrowList()) {
             if (arrow == exclude) continue;
-            int from = instructions.indexOf(arrow.getFrom()), to = instructions.indexOf(arrow.getTo());
-            if ((from >= start && from <= end) || (to >= start && to <= end) || to == end) {
-                ++count;
+            final int from = instructions.indexOf(arrow.getFrom()), to = instructions.indexOf(arrow.getTo());
+            final Line2D line = new Line2D.Double(start, depth, end, depth);
+            final Line2D otherLine = new Line2D.Double(from, arrow.getDepth(), to, arrow.getDepth());
+            if (line.intersectsLine(otherLine)) {
+                ++depth;
             }
         }
 
-        return count;
+        return depth;
     }
 
     public InstructionComponent translateInstruction(AbstractInsnNode insnNode) {

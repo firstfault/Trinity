@@ -194,15 +194,11 @@ public final class DisplayManager extends Application {
 
     private void initializeWindow() {
         GLFW.glfwMaximizeWindow(getHandle());
-        GLFW.glfwSetWindowCloseCallback(getHandle(), GLFWWindowCloseCallback.create((hnd) -> {
-            if (trinity != null) {
-                this.windowManager.addPopup(new SavingDatabasePopup(trinity, (status) -> {
-                    Runtime.getRuntime().exit(0);
-                }));
-                GLFW.glfwSetWindowShouldClose(getHandle(), false);
-            }
-        }));
         GLFW.glfwSetDropCallback(getHandle(), GLFWDropCallback.create(this.dragAndDropHandler));
+        GLFW.glfwSetWindowCloseCallback(getHandle(), GLFWWindowCloseCallback.create((hnd) -> {
+            GLFW.glfwSetWindowShouldClose(getHandle(), false);
+            Main.runLater(() -> this.closeDatabase(Main::exit));
+        }));
     }
 
     private void homepage() {

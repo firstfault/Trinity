@@ -3,6 +3,7 @@ package me.f1nal.trinity;
 import imgui.app.Application;
 import me.f1nal.trinity.appdata.AppDataManager;
 import me.f1nal.trinity.appdata.PreferencesFile;
+import me.f1nal.trinity.appdata.shutdown.ShutdownHook;
 import me.f1nal.trinity.database.semaphore.DatabaseSaveShutdownHook;
 import me.f1nal.trinity.gui.DisplayManager;
 import me.f1nal.trinity.gui.windows.WindowManager;
@@ -14,6 +15,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
@@ -32,6 +35,7 @@ public class Main {
     private static ScheduledThreadPoolExecutor scheduler;
     private static KeyBindManager keyBindManager;
     private static ThemeManager themeManager;
+    private static final List<ShutdownHook> shutdownHooks = new ArrayList<>();
     private static final Queue<FutureTask<?>> scheduledTasks = Queues.newArrayDeque();
 
     public static void main(String[] args) throws IOException {
@@ -56,10 +60,10 @@ public class Main {
         appDataManager.load();
         displayManager = new DisplayManager("Trinity: " + VERSION);
         appDataManager.getState().setLastLaunchedVersion(VERSION);
-        Runtime.getRuntime().addShutdownHook(new DatabaseSaveShutdownHook());
+        addShutdownHook(new ShutdownHook("Database Save", new DatabaseSaveShutdownHook()));
         Application.launch(displayManager);
         System.out.println("see you later!");
-        Runtime.getRuntime().exit(0);
+        Main.exit();
     }
 
     public static ListenableFuture<Object> runLater(Runnable task) {
@@ -68,6 +72,12 @@ public class Main {
             scheduledTasks.add(future);
         }
         return future;
+    }
+
+    public static void addShutdownHook(ShutdownHook hook) {
+        shutdownHooks.add(hook);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(hook, hook.getName()));
     }
 
     public static KeyBindManager getKeyBindManager() {
@@ -110,5 +120,16 @@ public class Main {
                 }
             }
         }
+    }
+
+    private static void executeShutdownHooks() {
+        for (ShutdownHook shutdownHook : shutdownHooks) {
+            shutdownHook.run();
+        }
+    }
+
+    public static void exit() {
+        executeShutdownHooks();
+        Runtime.getRuntime().exit(0);
     }
 }
