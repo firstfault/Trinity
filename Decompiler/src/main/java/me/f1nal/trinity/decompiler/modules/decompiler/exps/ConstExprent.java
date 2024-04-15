@@ -269,7 +269,7 @@ public class ConstExprent extends Exprent {
         else if (constType.equals(VarType.VARTYPE_CLASS)) {
           String stringVal = value.toString();
           VarType type = new VarType(stringVal, !stringVal.startsWith("["));
-          yield new TextBuffer(ExprProcessor.getCastTypeName(type, Collections.emptyList())).append(".class");
+          yield new TextBuffer(ExprProcessor.getCastTypeName(type, Collections.emptyList())).append("." + OutputMemberSerializer.keyword("class"));
         }
         throw new RuntimeException("invalid constant type: " + constType);
       }

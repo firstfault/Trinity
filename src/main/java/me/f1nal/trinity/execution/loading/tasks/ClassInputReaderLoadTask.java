@@ -4,6 +4,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.loading.ProgressiveLoadTask;
 import me.f1nal.trinity.execution.*;
+import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
 import me.f1nal.trinity.gui.viewport.notifications.ICaption;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
@@ -54,7 +55,7 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
 
         tasks.add(() -> {
             resourceMap.forEach((name, bytes) -> getTrinity().getExecution().getResourceMap().put(name, bytes));
-            getTrinity().getExecution().setClassesLoaded();
+            getTrinity().getExecution().getResourceMap().forEach((name, bytes) -> new ResourceArchiveEntry(name, bytes).setPackage(getTrinity().getExecution().getRootPackage()));
         });
 
         Main.runLater(() -> {

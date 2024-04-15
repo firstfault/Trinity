@@ -1,5 +1,6 @@
 package me.f1nal.trinity.execution;
 
+import me.f1nal.trinity.execution.hierarchy.ClassHierarchy;
 import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
@@ -28,11 +29,16 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     private final Map<MemberDetails, MemberInput<?>> memberList = new HashMap<>();
     private final List<String> interfaces = new ArrayList<>();
     private final ClassTarget classTarget;
+    private final ClassHierarchy classHierarchy = new ClassHierarchy(this);
 
     public ClassInput(Execution execution, ClassNode classNode, ClassTarget classTarget) {
         super(classNode);
         this.execution = execution;
         this.classTarget = classTarget;
+    }
+
+    public ClassHierarchy getClassHierarchy() {
+        return classHierarchy;
     }
 
     public ClassTarget getClassTarget() {

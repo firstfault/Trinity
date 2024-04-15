@@ -6,6 +6,7 @@ import me.f1nal.trinity.database.ClassPath;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
+import me.f1nal.trinity.execution.hierarchy.ObjectHierarchyLoadTask;
 import me.f1nal.trinity.execution.loading.AsynchronousLoad;
 import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
 import me.f1nal.trinity.execution.packages.Package;
@@ -60,6 +61,7 @@ public final class Execution {
             this.asynchronousLoad.add(new ClassInputReaderLoadTask(classPath.createClassByteList(), classPath.resources));
         }
 
+        this.asynchronousLoad.add(new ObjectHierarchyLoadTask(this));
         this.asynchronousLoad.add(this.xrefMap);
     }
 
@@ -67,9 +69,6 @@ public final class Execution {
         if (this.classesLoaded) {
             return;
         }
-        this.getResourceMap().forEach((name, bytes) -> {
-            new ResourceArchiveEntry(name, bytes).setPackage(this.rootPackage);
-        });
         trinity.getEventManager().postEvent(new EventClassesLoaded());
         this.classesLoaded = true;
     }

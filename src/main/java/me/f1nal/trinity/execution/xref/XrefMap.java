@@ -10,6 +10,7 @@ import me.f1nal.trinity.execution.xref.where.XrefWhereMethod;
 import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.util.NameUtil;
 import com.google.common.collect.Multimaps;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
@@ -61,20 +62,7 @@ public final class XrefMap extends ProgressiveLoadTask {
         for (MethodInput methodInput : classInput.getMethodMap().values()) {
             XrefWhereMethod whereMethod = new XrefWhereMethod(methodInput);
 
-            for (AbstractInsnNode instruction : methodInput.getInstructions()) {
-                if (instruction instanceof MethodInsnNode min) {
-                    this.addReference(min.owner, min.name, min.desc, new MemberXref(methodInput, instruction));
-                } else if (instruction instanceof FieldInsnNode fin) {
-                    this.addReference(fin.owner, fin.name, fin.desc, new MemberXref(methodInput, instruction));
-                } else if (instruction instanceof TypeInsnNode) {
-                    this.processTypeInstruction(whereMethod, (TypeInsnNode) instruction);
-                } else if (instruction instanceof LdcInsnNode) {
-                    Object cst = ((LdcInsnNode) instruction).cst;
-                    if (cst instanceof Type) {
-                        this.processClassLiteralLdc(whereMethod, (Type)cst);
-                    }
-                }
-            }
+            this.processMethodInstructions(whereMethod, methodInput);
 
             try {
                 this.processArgumentXrefs(methodInput, methodInput.getDescriptor());
@@ -94,6 +82,28 @@ public final class XrefMap extends ProgressiveLoadTask {
 
             this.processAnnotations(whereField, fieldInput.getNode().visibleAnnotations);
             this.processAnnotations(whereField, fieldInput.getNode().invisibleAnnotations);
+        }
+    }
+
+    private void processMethodInstructions(XrefWhereMethod whereMethod, MethodInput methodInput) {
+        for (AbstractInsnNode instruction : methodInput.getInstructions()) {
+            if (instruction.getOpcode() <= Opcodes.NOP) {
+                continue;
+            }
+
+            if (instruction instanceof MethodInsnNode min) {
+                this.addReference(min.owner, min.name, min.desc, new MemberXref(methodInput, instruction));
+            } else if (instruction instanceof FieldInsnNode fin) {
+                this.addReference(fin.owner, fin.name, fin.desc, new MemberXref(methodInput, instruction));
+            } else if (instruction instanceof TypeInsnNode) {
+                this.processTypeInstruction(whereMethod, (TypeInsnNode) instruction);
+            } else if (instruction instanceof LdcInsnNode) {
+                Object cst = ((LdcInsnNode) instruction).cst;
+
+                if (cst instanceof Type) {
+                    this.processClassLiteralLdc(whereMethod, (Type)cst);
+                }
+            }
         }
     }
 

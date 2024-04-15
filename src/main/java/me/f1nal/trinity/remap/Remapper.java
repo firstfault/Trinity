@@ -4,6 +4,9 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class Remapper {
     /**
      * Program execution flow
@@ -23,8 +26,19 @@ public final class Remapper {
     }
 
     public void renameMethod(MethodInput methodInput, String newName) {
-        methodInput.getDisplayName().setName(newName);
-        methodInput.save();
+        List<MethodInput> affectedMethods;
+
+        if (methodInput.getMethodHierarchy() != null) {
+            affectedMethods = methodInput.getMethodHierarchy().getLinkedMethods();
+        } else {
+            affectedMethods = List.of(methodInput);
+        }
+
+        for (MethodInput affectedMethod : affectedMethods) {
+            affectedMethod.getDisplayName().setName(newName);
+            affectedMethod.save();
+        }
+
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
     }
 
@@ -34,7 +48,7 @@ public final class Remapper {
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
     }
 
-    public <I extends Input> void rename(I input, String newName) {
+    public <I extends Input<?>> void rename(I input, String newName) {
         input.rename(this, newName);
     }
 

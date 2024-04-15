@@ -31,7 +31,7 @@ public class DecompilerMemberReader {
         this.decompiledClass = decompiledClass;
         Stopwatch stopwatch = new Stopwatch();
         this.decode(rawOutput);
-        if (stopwatch.hasPassed(100L)) {
+        if (stopwatch.hasPassed(150L)) {
             Logging.warn("Decoding decompiler output took way too long! {}ms", stopwatch.getDifference());
         }
     }/*

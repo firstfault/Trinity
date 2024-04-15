@@ -92,7 +92,8 @@ public class ClassWriter {
         }
 
         buffer.append("::")
-          .append(CodeConstants.INIT_NAME.equals(node.lambdaInformation.content_method_name) ? "new" : node.lambdaInformation.content_method_name);
+          .append(OutputMemberSerializer.tag(CodeConstants.INIT_NAME.equals(node.lambdaInformation.content_method_name) ? "new" : node.lambdaInformation.content_method_name, l ->
+                  new MethodOutputMember(l, node.lambdaInformation.content_class_name, node.lambdaInformation.content_method_name, node.lambdaInformation.content_method_descriptor)));
       }
       else {
         // lambda method
@@ -125,7 +126,7 @@ public class ClassWriter {
               }
 
               String parameterName = methodWrapper.varproc.getVarName(new VarVersionPair(index, 0));
-              buffer.append(parameterName == null ? "param" + index : parameterName); // null iff decompiled with errors
+              buffer.append(parameterName == null ? "param" + index : parameterName); // null if decompiled with errors
 
               firstParameter = false;
             }

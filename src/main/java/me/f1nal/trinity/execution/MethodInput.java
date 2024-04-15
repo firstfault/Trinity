@@ -3,6 +3,7 @@ package me.f1nal.trinity.execution;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.object.DatabaseMethodDisplayName;
+import me.f1nal.trinity.execution.hierarchy.MethodHierarchy;
 import me.f1nal.trinity.execution.labels.LabelTable;
 import me.f1nal.trinity.execution.var.VariableTable;
 import me.f1nal.trinity.execution.xref.XrefMap;
@@ -18,6 +19,7 @@ import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.util.NameUtil;
 import org.objectweb.asm.tree.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,10 +27,19 @@ import java.util.Map;
 public final class MethodInput extends MemberInput<MethodNode> implements IDatabaseSavable<DatabaseMethodDisplayName> {
     private final VariableTable variableTable;
     private final LabelTable labelTable = new LabelTable(this);
+    private MethodHierarchy methodHierarchy;
 
     public MethodInput(MethodNode node, ClassInput owner) {
         super(node, owner, new MemberDetails(owner.getFullName(), node.name, node.desc));
         this.variableTable = new VariableTable(this);
+    }
+
+    public void setMethodHierarchy(MethodHierarchy methodHierarchy) {
+        this.methodHierarchy = methodHierarchy;
+    }
+
+    public MethodHierarchy getMethodHierarchy() {
+        return methodHierarchy;
     }
 
     public RenameHandler getRenameHandler() {
