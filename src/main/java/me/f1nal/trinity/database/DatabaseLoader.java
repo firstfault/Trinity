@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.Objects;
 
 public class DatabaseLoader {
+    private static final int DATABASE_VERSION = 2;
+
     public static final DatabaseSemaphore save = new DatabaseSemaphore((path) -> {
         Trinity trinity = Main.getTrinity();
         Database database = trinity.getDatabase();
@@ -27,7 +29,7 @@ public class DatabaseLoader {
         DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
 
         dataOutputStream.writeChar('T'); // magic
-        dataOutputStream.writeInt(1); // version
+        dataOutputStream.writeInt(DATABASE_VERSION); // version
         dataOutputStream.writeByte(DatabaseCompressionTypeManager.getIndex(compressionType)); // compression type
 
         ByteArrayOutputStream dataByteStream = new ByteArrayOutputStream();

@@ -717,6 +717,7 @@ public class ClassWriter {
       }
       appendAnnotations(buffer, indent, mt);
 
+
       buffer.appendIndent(indent);
 
       appendModifiers(buffer, flags, METHOD_ALLOWED, isInterface, METHOD_EXCLUDED);

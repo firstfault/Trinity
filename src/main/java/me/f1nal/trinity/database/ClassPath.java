@@ -65,8 +65,18 @@ public class ClassPath {
         this.warnings += classPath.warnings;
     }
 
+    public void addWarning() {
+        ++this.warnings;
+    }
+
     public int getWarnings() {
         return warnings;
+    }
+
+    public void clear() {
+        this.getClasses().clear();
+        this.getResources().clear();
+        this.warnings = 0;
     }
 
     public void putResource(String entryName, byte[] entryBytes) {
@@ -74,7 +84,7 @@ public class ClassPath {
 
         if (currentResource != null) {
             Logging.warn("Double resource add: {} ({}) collides with existing resource ({})", entryName, ByteUtil.getHumanReadableByteCountSI(entryBytes.length), ByteUtil.getHumanReadableByteCountSI(currentResource.length));
-            ++this.warnings;
+            this.addWarning();
         }
 
         this.getResources().put(entryName, entryBytes);

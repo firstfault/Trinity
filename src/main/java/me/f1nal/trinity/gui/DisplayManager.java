@@ -19,9 +19,6 @@ import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
 import me.f1nal.trinity.gui.windows.WindowManager;
-import me.f1nal.trinity.gui.windows.api.ClosableWindow;
-import me.f1nal.trinity.gui.windows.api.PopupWindow;
-import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.AboutWindow;
 import me.f1nal.trinity.gui.windows.impl.LoadingDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.SavingDatabasePopup;
@@ -35,6 +32,7 @@ import me.f1nal.trinity.gui.viewport.MainMenuBar;
 import me.f1nal.trinity.gui.viewport.NotificationRenderer;
 import me.f1nal.trinity.gui.viewport.dnd.DragAndDropHandler;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
+import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
 import org.lwjgl.glfw.GLFW;
@@ -42,11 +40,7 @@ import org.lwjgl.glfw.GLFWDropCallback;
 import org.lwjgl.glfw.GLFWWindowCloseCallback;
 
 import java.io.File;
-import java.lang.reflect.Constructor;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public final class DisplayManager extends Application {
     /**
@@ -129,6 +123,7 @@ public final class DisplayManager extends Application {
         style.setColor(ImGuiCol.Border, 89, 89, 89, 140);
         style.setColor(ImGuiCol.Text, 185, 185, 185, 255);
         style.setColor(ImGuiCol.TableRowBgAlt, 0,0,0,0);
+        CodeColorScheme.enableColorListeners();
 
         style.setTabRounding(0.F);
         style.setIndentSpacing(6.F);
@@ -164,6 +159,7 @@ public final class DisplayManager extends Application {
 
     @Override
     public void process() {
+        ImGui.showDemoWindow();
         ImGuiIO io = ImGui.getIO();
         io.setFontGlobalScale(this.fontManager.getGlobalScale());
         this.setupDockspace();

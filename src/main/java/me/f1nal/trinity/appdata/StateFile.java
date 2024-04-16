@@ -2,6 +2,9 @@ package me.f1nal.trinity.appdata;
 
 public class StateFile extends AppDataFile {
     private String lastLaunchedVersion;
+    /**
+     * If we had a database loaded the last time Trinity was open.
+     */
     private boolean databaseLoaded;
 //    private GuiStateMemory guiStateMemory;
 

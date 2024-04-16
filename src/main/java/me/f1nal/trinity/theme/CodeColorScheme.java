@@ -1,17 +1,57 @@
 package me.f1nal.trinity.theme;
 
 import imgui.ImColor;
+import imgui.ImGui;
+import imgui.flag.ImGuiCol;
+import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
-import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import static me.f1nal.trinity.theme.ThemeColorCategory.*;
 
 public final class CodeColorScheme {
-    // Decompiler Window
+    /////////////////////////
+    // General Colors
+    /////////////////////////
+    @LabeledColor(category = GENERAL, label = "Error")
+    public static int NOTIFY_ERROR = getRgb(new Color(164, 60, 60));
+    @LabeledColor(category = GENERAL, label = "Warning")
+    public static int NOTIFY_WARN = getRgb(new Color(189, 141, 55));
+    @LabeledColor(category = GENERAL, label = "Information")
+    public static int NOTIFY_INFORMATION = getRgb(new Color(58, 113, 152));
+    @LabeledColor(category = GENERAL, label = "Success")
+    public static int NOTIFY_SUCCESS = getRgb(new Color(96, 152, 58));
+
+    /////////////////////////
+    // Frame Colors
+    /////////////////////////
+    @LabeledColor(category = FRAME, label = "Highlight Background")
+    public static int HIGHLIGHT_BACKGROUND = getRgb(new Color(16, 16, 16));
+    @LabeledColor(category = FRAME, label = "Background")
+    @ImGuiColor(targets = {
+            ImGuiCol.WindowBg
+    })
+    public static int BACKGROUND = getRgb(new Color(31, 31, 31));
+    @LabeledColor(category = FRAME, label = "Popup Background")
+    @ImGuiColor(targets = {
+            ImGuiCol.PopupBg
+    })
+    public static int POPUP_BACKGROUND = getRgb(new Color(30, 30, 30));
+    @LabeledColor(category = FRAME, label = "Widget Background")
+    @ImGuiColor(targets = {
+            ImGuiCol.FrameBg
+    })
+    public static int WIDGET_BACKGROUND = getRgb(new Color(54, 54, 54, 138));
+
+    /////////////////////////
+    // Decompiler Colors
+    /////////////////////////
     @LabeledColor(category = CODE_EDITOR, label = "Method Reference")
     public static int METHOD_REF = getRgb(new Color(103, 165, 204));
     @LabeledColor(category = CODE_EDITOR, label = "Field Reference")
@@ -29,9 +69,15 @@ public final class CodeColorScheme {
     @LabeledColor(category = CODE_EDITOR, label = "Number")
     public static int NUMBER = getRgb(new Color(117, 77, 196));
     @LabeledColor(category = CODE_EDITOR, label = "Disabled")
+    @ImGuiColor(targets = {
+            ImGuiCol.TextDisabled
+    })
     public static int DISABLED = getRgb(new Color(125, 125, 125));
     @LabeledColor(category = CODE_EDITOR, label = "Text")
-    public static int TEXT = getRgb(new Color(211, 211, 211));
+    @ImGuiColor(targets = {
+            ImGuiCol.Text
+    })
+    public static int TEXT = getRgb(new Color(185, 185, 185));
     @LabeledColor(category = CODE_EDITOR, label = "Package")
     public static int PACKAGE = getRgb(new Color(157, 101, 71));
     @LabeledColor(category = CODE_EDITOR, label = "String")
@@ -42,18 +88,6 @@ public final class CodeColorScheme {
     public static int CURSOR = getRgb(new Color(175, 175, 175));
     @LabeledColor(category = CODE_EDITOR, label = "Cursor Selection")
     public static int CURSOR_SELECTION = getRgb(new Color(83, 117, 189));
-
-    /////////////////////////
-    // Notify Colors
-    /////////////////////////
-    @LabeledColor(category = CODE_EDITOR, label = "Error")
-    public static int NOTIFY_ERROR = getRgb(new Color(164, 60, 60));
-    @LabeledColor(category = CODE_EDITOR, label = "Warning")
-    public static int NOTIFY_WARN = getRgb(new Color(189, 141, 55));
-    @LabeledColor(category = CODE_EDITOR, label = "Information")
-    public static int NOTIFY_INFORMATION = getRgb(new Color(58, 113, 152));
-    @LabeledColor(category = CODE_EDITOR, label = "Success")
-    public static int NOTIFY_SUCCESS = getRgb(new Color(96, 152, 58));
 
     /////////////////////////
     // Assembler Instruction Types
@@ -96,10 +130,6 @@ public final class CodeColorScheme {
     @LabeledColor(category = FILE_KIND, label = "Resource")
     public static int FILE_RESOURCE = getRgb(new Color(157, 57, 84));
 
-    // Frame
-    @LabeledColor(category = FRAME, label = "Highlight Background")
-    public static int HIGHLIGHT_BACKGROUND = getRgb(new Color(16, 16, 16));
-
     public static float[] toRgba(int in) {
         Color clr = toColor(in);
         return new float[] {
@@ -132,23 +162,69 @@ public final class CodeColorScheme {
     }
 
     private static final List<CodeColor> codeColors = new ArrayList<>();
+    private static boolean colorListenersEnabled;
 
     static {
-        Field[] fields = CodeColorScheme.class.getDeclaredFields();
-        for (Field field : fields) {
-            if (!Modifier.isStatic(field.getModifiers()) || field.getType() != Integer.TYPE) {
-                continue;
-            }
-
-            final LabeledColor labeledColor = field.getDeclaredAnnotation(LabeledColor.class);
-
+        Arrays.stream(CodeColorScheme.class.getDeclaredFields()).filter(field -> Modifier.isStatic(field.getModifiers()) && field.getType() == Integer.TYPE).forEach(field -> {
+            final @Nullable LabeledColor labeledColor = field.getDeclaredAnnotation(LabeledColor.class);
             if (labeledColor == null) {
-                continue;
+                return;
             }
-
             field.setAccessible(true);
-            codeColors.add(new CodeColor(labeledColor.label(), labeledColor.category(), field));
+            CodeColor codeColor = new CodeColor(labeledColor.label(), labeledColor.category(), field);
+            codeColors.add(codeColor);
+
+            final @Nullable ImGuiColor imGuiColor = field.getDeclaredAnnotation(ImGuiColor.class);
+            if (imGuiColor != null) {
+                codeColor.getListeners().add(() -> {
+                    if (!colorListenersEnabled) {
+                        return;
+                    }
+                    final int color = codeColor.getColor();
+
+                    for (int target : imGuiColor.targets()) {
+                        ImGui.getStyle().setColor(target, color);
+                    }
+                });
+            }
+        });
+
+        Arrays.stream(CodeColorScheme.class.getDeclaredMethods()).forEach(method -> {
+            final @Nullable ColorChangeListener colorChangeListener = method.getDeclaredAnnotation(ColorChangeListener.class);
+            if (colorChangeListener == null) {
+                return;
+            }
+            method.setAccessible(true);
+            final CodeColor codeColor = Objects.requireNonNull(getCodeColor(colorChangeListener.category(), colorChangeListener.label()), "Color change listener for unregistered color");
+            codeColor.getListeners().add(() -> {
+                if (!colorListenersEnabled) {
+                    return;
+                }
+                try {
+                    method.invoke(null);
+                } catch (IllegalAccessException | InvocationTargetException e) {
+                    throw new RuntimeException("Invoking color change listener", e);
+                }
+            });
+        });
+    }
+
+    public static void enableColorListeners() {
+        colorListenersEnabled = true;
+        for (CodeColor codeColor : codeColors) {
+            for (Runnable listener : codeColor.getListeners()) {
+                listener.run();
+            }
         }
+    }
+
+    public static CodeColor getCodeColor(ThemeColorCategory category, String label) {
+        for (CodeColor codeColor : codeColors) {
+            if (codeColor.getCategory() == category && codeColor.getLabel().equals(label)) {
+                return codeColor;
+            }
+        }
+        return null;
     }
 
     public static List<CodeColor> getCodeColors() {

@@ -30,7 +30,8 @@ public class ProjectInputFileFactory implements ListedFileFactory<AbstractProjec
 
         try {
             return new ProjectInputJARFile(file, bytes);
-        } catch (IOException e) {
+        } catch (Throwable e) {
+            e.printStackTrace();
             // Not a JAR file
         }
 
