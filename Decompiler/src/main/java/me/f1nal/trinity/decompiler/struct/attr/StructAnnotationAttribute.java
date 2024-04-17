@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class StructAnnotationAttribute extends StructGeneralAttribute {
   private List<AnnotationExprent> annotations;
@@ -58,7 +59,11 @@ public class StructAnnotationAttribute extends StructGeneralAttribute {
       values = Collections.emptyList();
     }
 
-    return new AnnotationExprent(new VarType(className).getValue(), names, values);
+    final String value = new VarType(className).getValue();
+
+    Objects.requireNonNull(value, "Annotation descriptor is null: '" + className + "'");
+
+    return new AnnotationExprent(value, names, values);
   }
 
   public static Exprent parseAnnotationElement(DataInputStream data, ConstantPool pool) throws IOException {

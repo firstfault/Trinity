@@ -10,6 +10,7 @@ import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.events.MouseClickEventHandler;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.util.GuiUtil;
+import me.f1nal.trinity.util.StringUtil;
 import me.f1nal.trinity.util.animation.Animation;
 import me.f1nal.trinity.util.animation.Easing;
 
@@ -142,7 +143,7 @@ public class BrowserViewerNode {
                 return;
             }
         }
-        ImGui.text(getLabel().get());
+        ImGui.text(StringUtil.limitStringLength(getLabel().get(), 128));
 
         if (this.suffix != null && !this.suffix.isEmpty()) {
             ImGui.sameLine(0.F, 0.F);

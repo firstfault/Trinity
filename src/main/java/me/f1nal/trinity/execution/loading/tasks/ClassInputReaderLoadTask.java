@@ -50,7 +50,7 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
         if (classLoadFails.get() != 0) {
             Main.getDisplayManager().addNotification(new Notification(NotificationType.WARNING, this,
                     ColoredStringBuilder.create()
-                            .fmt("Failed to load {} classes").get()));
+                            .fmt("Failed to load {} classes", classLoadFails.get()).get()));
         }
 
         tasks.add(() -> {
@@ -89,7 +89,11 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
     }
 
     private ClassNode readClassNode(byte[] bytes) {
-        return Objects.requireNonNullElseGet(this.readClassNode(bytes, 0), () -> this.readClassNode(bytes, ClassReader.SKIP_DEBUG));
+        ClassNode classNode = this.readClassNode(bytes, 0);
+        if (classNode == null) {
+            return this.readClassNode(bytes, ClassReader.SKIP_DEBUG);
+        }
+        return classNode;
     }
 
     private ClassNode readClassNode(byte[] bytes, int flags) {

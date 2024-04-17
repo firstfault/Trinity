@@ -66,9 +66,13 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         }
 
         String realName = this.getDisplayOrRealName();
+        while (realName.contains("//")) realName = realName.replace("//", "/");
         Package targetPackage = root;
-        int index;
+        int index, count = 0;
         while ((index = realName.indexOf('/')) != -1) {
+            if (++count >= 32) {
+                index = realName.lastIndexOf('/');
+            }
             targetPackage = targetPackage.createPackage(realName.substring(0, index));
             realName = realName.substring(index + 1);
         }

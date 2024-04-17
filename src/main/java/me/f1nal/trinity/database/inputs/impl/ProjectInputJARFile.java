@@ -31,15 +31,14 @@ public class ProjectInputJARFile extends AbstractProjectInputFile {
                 long crc = jarEntry.getCrc();
                 String entryName = cleanEntryName(jarEntry.getName());
 
-                if (crcPatched) {
-                    jarEntry.setCrc(0L);
-                }
+                if (crcPatched) jarEntry.setCrc(0L);
                 byte[] entryBytes = zipInputStream.readAllBytes();
-                try {
-                    jarEntry.setCrc(crc);
-                } catch (IllegalArgumentException illegalArgumentException) {
-                    // welp?
-                }
+                if (crcPatched)
+                    try {
+                        jarEntry.setCrc(crc);
+                    } catch (IllegalArgumentException illegalArgumentException) {
+                        // welp?
+                    }
 
                 hasEntry = true;
 
@@ -64,14 +63,17 @@ public class ProjectInputJARFile extends AbstractProjectInputFile {
         return name;
     }
 
-    private static Field CRC_FIELD;
+    private static long CRC_FIELD_OFFSET = -1L;
     private static final ZeroCRC32 zeroCrc32 = new ZeroCRC32();
 
     private static boolean patchZipStreamCrc(ZipInputStream zipInputStream) {
+        if (CRC_FIELD_OFFSET == -1L) {
+            return false;
+        }
+
         try {
             Unsafe unsafe = UnsafeUtil.getUnsafe();
-            final long offset = unsafe.objectFieldOffset(CRC_FIELD);
-            unsafe.putObject(zipInputStream, offset, zeroCrc32);
+            unsafe.putObject(zipInputStream, CRC_FIELD_OFFSET, zeroCrc32);
             return true;
         } catch (Throwable throwable) {
             Logging.warn("Failed to set CRC field!");
@@ -88,10 +90,9 @@ public class ProjectInputJARFile extends AbstractProjectInputFile {
 
     static {
         try {
-            CRC_FIELD = ZipInputStream.class.getDeclaredField("crc");
+            CRC_FIELD_OFFSET = UnsafeUtil.getUnsafe().objectFieldOffset(ZipInputStream.class.getDeclaredField("crc"));
         } catch (Throwable e) {
             Logging.warn("Failed to retrieve CRC field, may not be able to read certain ZIP files!");
-            CRC_FIELD = null;
         }
     }
 }

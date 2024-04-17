@@ -27,6 +27,10 @@ public class StringUtil {
         }
     }
 
+    public static String limitStringLength(String text, int length) {
+        return text.length() <= length ? text : text.substring(0, length);
+    }
+
     public static String capitalizeFirstLetter(String text) {
         if (text.length() <= 1) return text.toUpperCase();
         String lowerCase = text.toLowerCase();

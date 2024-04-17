@@ -34,6 +34,7 @@ public final class XrefMap extends ProgressiveLoadTask {
      */
     public XrefMap(Execution execution) {
         super("Building Cross-References");
+        this.setTrinity(execution.getTrinity());
         this.execution = execution;
     }
 
