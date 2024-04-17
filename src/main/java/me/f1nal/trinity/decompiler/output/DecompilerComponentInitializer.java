@@ -8,6 +8,7 @@ import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayType;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
 import me.f1nal.trinity.decompiler.output.impl.*;
+import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.*;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.execution.var.ImmutableVariable;
@@ -108,7 +109,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         component.addPopupBuilder(builder -> {
             builder.menuItem("Hide comments", () -> {
                 Main.getPreferences().setDecompilerHideComments(true);
-                Main.getDisplayManager().getArchiveEntryViewerFacade().resetDecompilerComponents();
+                Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
             });
         });
 

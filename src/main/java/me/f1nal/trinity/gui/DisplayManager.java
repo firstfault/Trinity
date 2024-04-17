@@ -23,7 +23,6 @@ import me.f1nal.trinity.gui.windows.impl.AboutWindow;
 import me.f1nal.trinity.gui.windows.impl.LoadingDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.SavingDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
-import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerFacade;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerWindow;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
@@ -41,6 +40,7 @@ import org.lwjgl.glfw.GLFWWindowCloseCallback;
 
 import java.io.File;
 import java.util.*;
+import java.util.zip.ZipFile;
 
 public final class DisplayManager extends Application {
     /**
@@ -49,7 +49,6 @@ public final class DisplayManager extends Application {
     private final String windowTitle;
     private final MainMenuBar mainMenuBar = new MainMenuBar(this);
     private Trinity trinity;
-    private final ArchiveEntryViewerFacade archiveEntryViewerFacade = new ArchiveEntryViewerFacade();
     private final NotificationRenderer notificationRenderer = new NotificationRenderer();
     private final DragAndDropHandler dragAndDropHandler = new DragAndDropHandler();
     private final PopupMenu popupMenu = new PopupMenu();
@@ -258,14 +257,10 @@ public final class DisplayManager extends Application {
         }));
     }
 
-    public void openDecompilerView(Input input) {
+    public void openDecompilerView(Input<?> input) {
         ArchiveEntryViewerWindow<?> viewerWindow = ArchiveEntryViewerType.DECOMPILER.getWindow(input.getOwningClass().getClassTarget());
         this.windowManager.addClosableWindow(viewerWindow);
         ((DecompilerWindow) Objects.requireNonNull(viewerWindow)).setDecompileTarget(input);
-    }
-
-    public ArchiveEntryViewerFacade getArchiveEntryViewerFacade() {
-        return archiveEntryViewerFacade;
     }
 
     public PopupMenu getPopupMenu() {

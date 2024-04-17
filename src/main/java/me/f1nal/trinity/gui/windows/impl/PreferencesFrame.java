@@ -8,6 +8,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.PreferencesFile;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
+import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.general.EnumComboBox;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
@@ -73,12 +74,10 @@ public class PreferencesFrame extends StaticWindow {
 
                 if (ImGui.checkbox("Hide comments", preferencesFile.isDecompilerHideComments())) {
                     preferencesFile.setDecompilerHideComments(!preferencesFile.isDecompilerHideComments());
-                    Main.getDisplayManager().getArchiveEntryViewerFacade().resetDecompilerComponents();
                 }
 
                 if (ImGui.checkbox("Normalize text", preferencesFile.isDecompilerNormalizeText())) {
                     preferencesFile.setDecompilerNormalizeText(!preferencesFile.isDecompilerNormalizeText());
-                    Main.getDisplayManager().getArchiveEntryViewerFacade().resetDecompilerComponents();
                 }
 
                 if (ImGui.checkbox("Treat enum as class", preferencesFile.isDecompilerEnumClass())) {

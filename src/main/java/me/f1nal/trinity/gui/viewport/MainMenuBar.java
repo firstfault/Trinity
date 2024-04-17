@@ -223,7 +223,7 @@ public class MainMenuBar {
         if (databaseOpenFileSelector == null) {
             File path = displayManager.getTrinity() == null ? new File("") : displayManager.getTrinity().getDatabase().getPath();
             if (!path.isDirectory() && path.getParentFile() != null) path = path.getParentFile();
-            databaseOpenFileSelector = new FileSelectorComponent("Database File Selector", path.getAbsolutePath(), CreateDatabasePopup.TDB_FILE_FILTER, FileDialog.LOAD);
+            databaseOpenFileSelector = new FileSelectorComponent("Database File Selector", path.getAbsolutePath(), FileSelectorComponent.TDB_FILE_FILTER, FileDialog.LOAD);
         }
         return databaseOpenFileSelector;
     }

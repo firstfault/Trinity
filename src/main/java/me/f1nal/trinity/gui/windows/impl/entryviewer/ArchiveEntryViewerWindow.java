@@ -39,7 +39,6 @@ public abstract class ArchiveEntryViewerWindow<T extends ArchiveEntry> extends C
 
     @Override
     protected void onFocusGain() {
-        Main.getDisplayManager().getArchiveEntryViewerFacade().addBackwardHistory(this.getArchiveEntry());
     }
 
     @Override

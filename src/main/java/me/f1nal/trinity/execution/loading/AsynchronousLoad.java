@@ -43,7 +43,7 @@ public class AsynchronousLoad extends Thread {
             for (ClassTarget classTarget : classTargets) {
                 classTarget.resetKind();
             }
-            Main.getWindowManager().getWindowsOfType(DecompilerWindow.class).forEach(DecompilerWindow::forceRefreshLines);
+            Main.getWindowManager().getWindowsOfType(DecompilerWindow.class).forEach(DecompilerWindow::forceRefreshDecompiler);
         });
     }
 

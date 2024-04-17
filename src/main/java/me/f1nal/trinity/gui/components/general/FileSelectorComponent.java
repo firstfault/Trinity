@@ -10,6 +10,8 @@ import java.io.File;
 import java.io.FilenameFilter;
 
 public class FileSelectorComponent {
+    public static final FilenameFilter TDB_FILE_FILTER = (f, n) -> n.toLowerCase().endsWith(".tdb");
+
     private final String label;
     private final ImString path = new ImString(256);
     private String lastDirectory;

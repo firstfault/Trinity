@@ -27,7 +27,6 @@ import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.SystemUtil;
-import me.f1nal.trinity.util.TimedStopwatch;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,7 +37,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     /**
      * Notifies the selected class must be refreshed.
      */
-    private TimedStopwatch forceRefresh;
+    private boolean forceRefresh = true;
     /**
      * Text component that is currently hovered.
      */
@@ -57,7 +56,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.setMenuBar(new PopupMenuBar(PopupItemBuilder.create().
                 menu("File", file -> {
                     file
-                            .menuItem("Refresh", () -> this.forceRefresh = new TimedStopwatch(0L))
+                            .menuItem("Refresh", () -> this.forceRefresh = true)
                             .predicate(() -> getDecompiledClass() != null, b -> b.separator()
                                     .menuItem("Copy", () -> SystemUtil.copyToClipboard(getDecompiledClass().getText()))
                                     .menuItem("Save", () -> new ExtractArchiveEntryRunnable(classTarget.getDisplaySimpleName() + ".java", getDecompiledClass().getText().getBytes()).run()))
@@ -114,12 +113,12 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     @Subscribe
     public void onClassModified(EventClassModified event) {
         if (event.getClassInput() == this.selectedClass) {
-            this.forceRefreshLines();
+            this.forceRefreshDecompiler();
         }
     }
 
-    public void forceRefreshLines() {
-        this.forceRefresh = new TimedStopwatch(0L);
+    public void forceRefreshDecompiler() {
+        this.forceRefresh = true;
     }
 
     @Subscribe
@@ -152,9 +151,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     private void runControls() {
-        boolean refreshDecompiler = (this.forceRefresh != null && this.forceRefresh.hasPassed());
-        if (refreshDecompiler) {
-            this.forceRefresh = null;
+        if (this.forceRefresh) {
+            this.forceRefresh = false;
+
             try {
                 trinity.getDecompiler().decompile(selectedClass, null);
             } catch (IOException e) {
@@ -162,22 +161,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             }
         }
 
-        Main.getDisplayManager().getArchiveEntryViewerFacade().drawHistoryButtons(this.selectedClass.getClassTarget());
-
         if (trinity.getDecompiler().isDecompileFailed(selectedClass)) {
             ImGui.textColored(ImColor.rgb(245, 80, 80), "Decompilation failed");
-        }
-
-        if (decompilingInput != selectedClass) {
-            if (trinity.getDecompiler().getFromCache(selectedClass) == null) {
-                try {
-                    trinity.getDecompiler().decompile(selectedClass, decompiledClass -> {
-                    });
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            decompilingInput = selectedClass;
         }
     }
 

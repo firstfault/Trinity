@@ -9,6 +9,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
+import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
@@ -147,8 +148,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             this.saveMethod = this.methodNotFresh = false;
             Logging.info("Saved method");
             int count = this.issueSave();
-            // TODO!
-//            this.methodInput.getOwningClass().notifyModified(ModifyPriority.HIGH);
+            trinity.getEventManager().postEvent(new EventClassModified(this.methodInput.getOwningClass()));
             Main.getDisplayManager().addNotification(new Notification(NotificationType.SUCCESS, this, ColoredStringBuilder.create()
                     .fmt("Saved {} instructions to {}", count, methodInput.getDisplayName()).get()));
         }

@@ -6,7 +6,6 @@ import me.f1nal.trinity.database.compression.DatabaseCompressionTypeManager;
 import me.f1nal.trinity.gui.components.DescribableEnumComboBox;
 import me.f1nal.trinity.gui.components.general.FileSelectorComponent;
 import me.f1nal.trinity.gui.components.general.TextFieldComponent;
-import me.f1nal.trinity.gui.windows.impl.CreateDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.project.create.AbstractProjectCreationTab;
 import me.f1nal.trinity.util.PatternUtil;
 import me.f1nal.trinity.util.TextFieldPatternMatchCallback;
@@ -22,7 +21,7 @@ public class ProjectCreationGeneral extends AbstractProjectCreationTab {
     public ProjectCreationGeneral() {
         this.projectName = new TextFieldComponent("Project Name", new ImString("", 0x50));
         this.compressionTypeCombo = new DescribableEnumComboBox<>("Database Compression", DatabaseCompressionTypeManager.getTypes().toArray(new DatabaseCompressionType[0]));
-        this.databasePath = new FileSelectorComponent("Database Path", new File("").getAbsolutePath(), CreateDatabasePopup.TDB_FILE_FILTER, FileDialog.SAVE);
+        this.databasePath = new FileSelectorComponent("Database Path", new File("").getAbsolutePath(), FileSelectorComponent.TDB_FILE_FILTER, FileDialog.SAVE);
 
         this.projectName.setCallback(new TextFieldPatternMatchCallback(PatternUtil.DATABASE_NAME));
     }
