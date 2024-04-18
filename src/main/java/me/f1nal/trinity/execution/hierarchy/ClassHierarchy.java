@@ -46,7 +46,7 @@ public final class ClassHierarchy {
 
         final @Nullable ClassInput superClass = execution.getClassInput(this.currentClass.getSuperName());
 
-        if (superClass != null) {
+        if (superClass != null && superClass != this.currentClass) {
             this.superClass = superClass;
 
             this.addSuperElements(execution, superClass);
@@ -75,6 +75,8 @@ public final class ClassHierarchy {
     }
 
     private void addSuperElements(Execution execution, ClassInput superClass) {
+        final List<ClassInput> processedSupers = new ArrayList<>(1);
+
         while (superClass != null) {
             ClassHierarchy classHierarchy = superClass.getClassHierarchy();
             classHierarchy.buildHierarchy(execution);
@@ -82,6 +84,13 @@ public final class ClassHierarchy {
             extending.add(superClass);
             superClasses.add(superClass);
             interfaces.addAll(classHierarchy.getInterfaces());
+
+            processedSupers.add(superClass);
+
+            if (processedSupers.contains(classHierarchy.getSuperClass())) {
+                break;
+            }
+            processedSupers.add(superClass);
 
             superClass = classHierarchy.getSuperClass();
         }

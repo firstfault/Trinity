@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.windows.impl.cp;
 
 import imgui.ImColor;
 import imgui.ImGui;
+import imgui.ImVec2;
 import imgui.flag.ImGuiKey;
 import imgui.type.ImString;
 import me.f1nal.trinity.Main;
@@ -96,6 +97,10 @@ public class BrowserViewerNode {
     }
 
     public void draw() {
+        ImVec2 cursorPos = ImGui.getCursorPos().minus(ImGui.getScrollX(), ImGui.getScrollY()).plus(ImGui.getWindowPos());
+        if (!ImGui.isRectVisible(cursorPos.x, cursorPos.y, cursorPos.x + 1.F, cursorPos.y + 1.F)) {
+            return;
+        }
         final boolean hovered = ImGui.isItemHovered();
 
         if (hovered) {

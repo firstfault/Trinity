@@ -67,7 +67,7 @@ public final class DoStatement extends Statement {
     }
     switch (loopType) {
       case DO -> {
-        buf.appendIndent(indent).append(OutputMemberSerializer.keyword("while") + "(true) {").appendLineSeparator();
+        buf.appendIndent(indent).append(OutputMemberSerializer.keyword("while") + " (" + OutputMemberSerializer.keyword("true") + ") {").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
         buf.append(ExprProcessor.jmpWrapper(first, indent + 1, false, tracer));
         buf.appendIndent(indent).append("}").appendLineSeparator();
@@ -77,12 +77,12 @@ public final class DoStatement extends Statement {
         buf.appendIndent(indent).append(OutputMemberSerializer.keyword("do") + " {").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
         buf.append(ExprProcessor.jmpWrapper(first, indent + 1, false, tracer));
-        buf.appendIndent(indent).append("} " + OutputMemberSerializer.keyword("while") + "(").append(
+        buf.appendIndent(indent).append("} " + OutputMemberSerializer.keyword("while") + " (").append(
           Objects.requireNonNull(conditionExprent.get(0)).toJava(indent, tracer)).append(");").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
       }
       case WHILE -> {
-        buf.appendIndent(indent).append(OutputMemberSerializer.keyword("while") + "(").append(
+        buf.appendIndent(indent).append(OutputMemberSerializer.keyword("while") + " (").append(
           Objects.requireNonNull(conditionExprent.get(0)).toJava(indent, tracer)).append(") {").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
         buf.append(ExprProcessor.jmpWrapper(first, indent + 1, false, tracer));

@@ -30,6 +30,7 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
     private final KindFilter<IBrowserViewerNode> kindFilter = new KindFilter<>(FileKind.values());
     private ListFilterComponent<IBrowserViewerNode> filterComponent;
     private String search;
+    private ProjectBrowserTreeNodePackage rootNode;
 
     public ProjectBrowserFrame(Trinity trinity) {
         super("Project Browser", 600, 460, trinity);
@@ -70,6 +71,7 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
     protected void renderFrame() {
         if (this.filterComponent == null) {
             this.filterComponent = new ListFilterComponent<>(createViewerList(), this.searchBarFilter, this.kindFilter);
+            this.filterComponent.addFilterChangeListener(this::setNodeRoot);
         }
 
         this.filterComponent.draw();
@@ -88,7 +90,7 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
             ImGui.tableSetupColumn(" Size");
             ImGui.tableSetupColumn(" Type");
             ImGui.tableHeadersRow();
-            renderTree(trinity.getExecution().getRootPackage(), 0);
+            this.rootNode.draw(this);
             ImGui.endTable();
         }
         ImGui.popStyleColor(2);
@@ -96,65 +98,41 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
         ImGui.popStyleVar();
     }
 
-    public void renderTree(Package node, int imguiId) {
-        ImGui.tableNextRow();
-        ImGui.tableNextColumn();
-        boolean searching = !this.search.isEmpty();
-        ImGui.setNextItemOpen((node.isOpen() && (node.getParent() == null || node.getParent().isOpen())) || searching);
-        boolean open = ImGui.treeNodeEx("###" + node.getPath(), ImGuiTreeNodeFlags.SpanFullWidth);
-        ImGui.sameLine();
-
-        node.getBrowserViewerNode().draw();
-
-        ImGui.tableNextColumn();
-        if (node.isArchive() && trinity.getDatabase().getDatabaseSize() != 0L) {
-            this.drawSize(ByteUtil.getHumanReadableByteCountSI(trinity.getDatabase().getDatabaseSize()), trinity.getDatabase().getDatabaseSize());
-        } else {
-            ImGui.textDisabled("--");
-        }
-        ImGui.tableNextColumn();
-        ImGui.textUnformatted(node.isArchive() ? "Project" : "Folder");
-
-        if (!searching && node.isOpen() != open) {
-            node.setOpen(open);
-            node.save();
-        }
-
-        if (open && trinity.getExecution().isClassesLoaded()) {
-            for (Package pkg : node.getPackages()) {
-                if (isPackageSearchMatch(pkg)) {
-                    renderTree(pkg, imguiId++);
-                }
-            }
-
-            for (ArchiveEntry archiveEntry : node.getEntries()) {
-                if (!this.filterComponent.getFilteredList().contains(archiveEntry)) {
-                    continue;
-                }
-
-                ImGui.tableNextRow();
-                ImGui.tableNextColumn();
-
-                ImGui.treeNodeEx("", ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen |
-                        ImGuiTreeNodeFlags.SpanFullWidth);
-                ImGui.sameLine();
-                archiveEntry.getBrowserViewerNode().draw();
-
-                ImGui.tableNextColumn();
-                this.drawSize(archiveEntry.getSize(), archiveEntry.getSizeInBytes());
-                ImGui.tableNextColumn();
-                ImGui.textUnformatted(archiveEntry.getArchiveEntryTypeName());
-            }
-        }
-
-        if (open) ImGui.treePop();
+    public String getSearch() {
+        return search;
     }
 
-    private void drawSize(String sizeText, long sizeInBytes) {
-        ImGui.text(sizeText);
-        GuiUtil.tooltip(sizeInBytes + "B");
-        if (ImGui.isItemClicked(1)) {
-            Main.getDisplayManager().getPopupMenu().show(PopupItemBuilder.create().menuItem("Copy Size", () -> SystemUtil.copyToClipboard(String.valueOf(sizeInBytes))));
+    private void setNodeRoot() {
+        this.rootNode = new ProjectBrowserTreeNodePackage(trinity.getExecution().getRootPackage());
+        List<ProjectBrowserTreeNodePackage> packages = new ArrayList<>();
+        packages.add(this.rootNode);
+
+        while (!packages.isEmpty()) {
+            ProjectBrowserTreeNodePackage[] array = packages.toArray(ProjectBrowserTreeNodePackage[]::new);
+            packages.clear();
+            for (ProjectBrowserTreeNodePackage pkg : array) {
+                this.addChildrenNodes(pkg, packages);
+            }
+        }
+    }
+
+    private void addChildrenNodes(ProjectBrowserTreeNodePackage node, List<ProjectBrowserTreeNodePackage> packages) {
+        for (Package pkg : node.getNode().getPackages()) {
+            if (!this.isPackageSearchMatch(pkg)) {
+                continue;
+            }
+
+            ProjectBrowserTreeNodePackage pkgNode = new ProjectBrowserTreeNodePackage(pkg);
+            node.addChild(pkgNode);
+            packages.add(pkgNode);
+        }
+
+        for (ArchiveEntry entry : node.getNode().getEntries()) {
+            if (!this.filterComponent.getFilteredList().contains(entry)) {
+                continue;
+            }
+
+            node.addChild(new ProjectBrowserTreeNodeEntry(entry));
         }
     }
 
@@ -170,9 +148,5 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
             }
         }
         return false;
-    }
-
-    private boolean matchesSearch(Package node) {
-        return this.search.isEmpty() || node.getName().toLowerCase().contains(this.search);
     }
 }

@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.components.filter;
 
 import imgui.ImGui;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -14,6 +15,7 @@ public class ListFilterComponent<T> {
      * List after filtering is done.
      */
     private List<T> filteredList;
+    private List<Runnable> filterChangeListeners = new ArrayList<>(1);
 
     @SafeVarargs
     public ListFilterComponent(Collection<T> elementList, Filter<T>... filters) {
@@ -25,6 +27,11 @@ public class ListFilterComponent<T> {
         }
 
         this.refreshFilteredList();
+    }
+
+    public void addFilterChangeListener(Runnable listener) {
+        this.filterChangeListeners.add(listener);
+        listener.run();
     }
 
     public Collection<T> getElementList() {
@@ -42,7 +49,8 @@ public class ListFilterComponent<T> {
             stream = stream.filter(filter.filter());
         }
 
-        this.filteredList = stream.collect(Collectors.toUnmodifiableList());
+        this.filteredList = stream.toList();
+        this.filterChangeListeners.forEach(Runnable::run);
     }
 
     public List<T> getFilteredList() {
@@ -56,7 +64,9 @@ public class ListFilterComponent<T> {
         for (Filter<T> filter : filters) {
             refresh |= filter.draw();
         }
-        if (refresh) this.refreshFilteredList();
+        if (refresh) {
+            this.refreshFilteredList();
+        }
         ImGui.unindent(indentW);
     }
 }
