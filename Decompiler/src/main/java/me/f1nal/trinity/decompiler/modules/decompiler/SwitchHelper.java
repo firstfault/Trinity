@@ -1,7 +1,7 @@
 // Copyright 2000-2020 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package me.f1nal.trinity.decompiler.modules.decompiler;
 
-import me.f1nal.trinity.decompiler.ClassNameConstants;
+import me.f1nal.trinity.decompiler.code.ClassNameConstants;
 import me.f1nal.trinity.decompiler.code.CodeConstants;
 import me.f1nal.trinity.decompiler.main.ClassesProcessor;
 import me.f1nal.trinity.decompiler.main.DecompilerContext;
@@ -12,8 +12,6 @@ import me.f1nal.trinity.decompiler.modules.decompiler.stats.*;
 import me.f1nal.trinity.decompiler.struct.gen.VarType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import me.f1nal.trinity.decompiler.modules.decompiler.exps.*;
-import me.f1nal.trinity.decompiler.modules.decompiler.stats.*;
 import me.f1nal.trinity.decompiler.modules.decompiler.stats.Statement.StatementType;
 
 import java.util.*;

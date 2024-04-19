@@ -72,4 +72,8 @@ public class InstructionList extends ArrayList<InstructionComponent> {
         }
         return -1;
     }
+
+    public void removeReferenceArrowsFrom(InstructionComponent instruction) {
+        instructionReferenceArrowList.removeIf(r -> r.getFrom() == instruction);
+    }
 }

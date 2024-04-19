@@ -12,7 +12,7 @@ import org.objectweb.asm.tree.LabelNode;
 
 import java.util.function.BiConsumer;
 
-public class LabelArgument extends AbstractInsnArgument {
+public class LabelArgument extends InstructionOperand {
     private final AssemblerFrame assemblerFrame;
     private final MethodLabel label;
     private final LabelNode labelNode;
@@ -44,7 +44,7 @@ public class LabelArgument extends AbstractInsnArgument {
     }
 
     @Override
-    public AbstractInsnArgument copy() {
+    public InstructionOperand copy() {
         return new LabelArgument(this.assemblerFrame, this.methodInput, this.labelNode, this.updateLabel);
     }
 }

@@ -22,8 +22,7 @@ import me.f1nal.trinity.util.ByteUtil;
 import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.SystemUtil;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class ProjectBrowserFrame extends StaticWindow implements IEventListener {
     private final SearchBarFilter<IBrowserViewerNode> searchBarFilter = new SearchBarFilter<>();
@@ -102,7 +101,10 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
         return search;
     }
 
+    private Set<IBrowserViewerNode> filteredSet;
+
     private void setNodeRoot() {
+        this.filteredSet = new HashSet<>(this.filterComponent.getFilteredList());
         this.rootNode = new ProjectBrowserTreeNodePackage(trinity.getExecution().getRootPackage());
         List<ProjectBrowserTreeNodePackage> packages = new ArrayList<>();
         packages.add(this.rootNode);
@@ -128,7 +130,7 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
         }
 
         for (ArchiveEntry entry : node.getNode().getEntries()) {
-            if (!this.filterComponent.getFilteredList().contains(entry)) {
+            if (!this.filteredSet.contains(entry)) {
                 continue;
             }
 
@@ -143,7 +145,7 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
             }
         }
         for (ArchiveEntry entry : pkg.getEntries()) {
-            if (this.filterComponent.getFilteredList().contains(entry)) {
+            if (this.filteredSet.contains(entry)) {
                 return true;
             }
         }

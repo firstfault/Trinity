@@ -7,7 +7,7 @@ import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.execution.labels.MethodLabel;
 import me.f1nal.trinity.gui.windows.impl.assembler.AssemblerFrame;
 import me.f1nal.trinity.gui.windows.impl.assembler.InstructionComponent;
-import me.f1nal.trinity.gui.windows.impl.assembler.args.AbstractInsnArgument;
+import me.f1nal.trinity.gui.windows.impl.assembler.args.InstructionOperand;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +46,7 @@ public class LabelRefsField extends InstructionField {
 
         componentLoop:
         for (InstructionComponent component : assemblerFrame.getInstructions()) {
-            for (AbstractInsnArgument argument : component.getArguments()) {
+            for (InstructionOperand argument : component.getOperands()) {
                 for (InstructionField field : argument.getFields()) {
                     if (field instanceof LabelRefsField) {
                         if (field == this) {

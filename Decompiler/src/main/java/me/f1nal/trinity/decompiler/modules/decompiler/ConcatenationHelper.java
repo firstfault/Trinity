@@ -5,8 +5,7 @@ import me.f1nal.trinity.decompiler.code.CodeConstants;
 import me.f1nal.trinity.decompiler.modules.decompiler.exps.*;
 import me.f1nal.trinity.decompiler.struct.gen.MethodDescriptor;
 import me.f1nal.trinity.decompiler.struct.gen.VarType;
-import me.f1nal.trinity.decompiler.ClassNameConstants;
-import me.f1nal.trinity.decompiler.modules.decompiler.exps.*;
+import me.f1nal.trinity.decompiler.code.ClassNameConstants;
 import me.f1nal.trinity.decompiler.struct.consts.PooledConstant;
 import me.f1nal.trinity.decompiler.struct.consts.PrimitiveConstant;
 

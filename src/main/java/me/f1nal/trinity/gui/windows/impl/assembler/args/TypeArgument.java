@@ -3,7 +3,7 @@ package me.f1nal.trinity.gui.windows.impl.assembler.args;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
-public class TypeArgument extends AbstractInsnArgument {
+public class TypeArgument extends InstructionOperand {
     private final String className;
     
     public TypeArgument(String className) {
@@ -12,7 +12,7 @@ public class TypeArgument extends AbstractInsnArgument {
     }
 
     @Override
-    public AbstractInsnArgument copy() {
+    public InstructionOperand copy() {
         return new TypeArgument(this.className);
     }
 }

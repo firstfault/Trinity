@@ -1,6 +1,7 @@
 package me.f1nal.trinity.decompiler.output.colors;
 
 
+import imgui.ImDrawList;
 import me.f1nal.trinity.util.NameUtil;
 import imgui.ImGui;
 
@@ -37,6 +38,14 @@ public class ColoredString {
                 ImGui.sameLine(0.F, 0.F);
             }
             ImGui.textColored(detail.getColor(), NameUtil.cleanNewlines(detail.getText()));
+        }
+    }
+
+    public static void drawText(ImDrawList drawList, float x, float y, List<ColoredString> text) {
+        for (ColoredString detail : text) {
+            String txt = detail.getText();
+            drawList.addText(x, y, detail.getColor(), txt);
+            x += ImGui.calcTextSize(txt).x;
         }
     }
 

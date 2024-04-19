@@ -6,6 +6,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.windows.impl.assembler.AssemblerFrame;
 import me.f1nal.trinity.gui.windows.impl.assembler.InstructionComponent;
 import me.f1nal.trinity.gui.windows.impl.assembler.InstructionList;
+import me.f1nal.trinity.gui.windows.impl.assembler.args.InstructionOperand;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +19,7 @@ public class AssemblerInstructionTable {
     public float sourceFileStartX;
     private SourceLineNumber hoveredSourceLine;
     private InstructionComponent hoveredInstruction;
-    private InstructionComponent draggingInstruction;
+    private InstructionOperand hoveredOperand;
     private InstructionReferenceArrow hoveredReferenceArrow;
     public float instructionStartX;
     public float instructionOperandsStartX;
@@ -32,6 +33,14 @@ public class AssemblerInstructionTable {
         this.assemblerFrame = assemblerFrame;
         this.instructions = instructions;
         this.sourceMapping = sourceMapping;
+    }
+
+    public void setHoveredOperand(InstructionOperand hoveredOperand) {
+        this.hoveredOperand = hoveredOperand;
+    }
+
+    public InstructionOperand getHoveredOperand() {
+        return hoveredOperand;
     }
 
     public void setDraggingInstruction(InstructionComponent draggingInstruction) {

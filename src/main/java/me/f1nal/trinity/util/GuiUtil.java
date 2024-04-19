@@ -3,6 +3,7 @@ package me.f1nal.trinity.util;
 import imgui.ImGui;
 import imgui.ImGuiStyle;
 import imgui.ImVec2;
+import imgui.ImVec4;
 import imgui.flag.ImGuiMouseButton;
 import imgui.type.ImBoolean;
 
@@ -19,6 +20,10 @@ public class GuiUtil {
             runnable.run();
             ImGui.endPopup();
         }
+    }
+
+    public static boolean isMouseHoveringRect(ImVec4 vec4) {
+        return ImGui.isMouseHoveringRect(vec4.x, vec4.y, vec4.x + vec4.z, vec4.y + vec4.w);
     }
 
     public static boolean isFocusLostOnItem() {

@@ -158,7 +158,7 @@ public final class DisplayManager extends Application {
 
     @Override
     public void process() {
-        ImGui.showDemoWindow();
+//        ImGui.showDemoWindow();
         ImGuiIO io = ImGui.getIO();
         io.setFontGlobalScale(this.fontManager.getGlobalScale());
         this.setupDockspace();

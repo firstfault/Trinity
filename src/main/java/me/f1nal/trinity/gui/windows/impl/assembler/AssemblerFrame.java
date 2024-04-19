@@ -16,7 +16,7 @@ import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
-import me.f1nal.trinity.gui.windows.impl.assembler.args.AbstractInsnArgument;
+import me.f1nal.trinity.gui.windows.impl.assembler.args.InstructionOperand;
 import me.f1nal.trinity.gui.windows.impl.assembler.drag.InstructionPosition;
 import me.f1nal.trinity.gui.windows.impl.assembler.history.*;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.AssemblerInstructionTable;
@@ -68,7 +68,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     private boolean methodNotFresh, saveMethod;
 
     public AssemblerFrame(Trinity trinity, MethodInput methodInput, Instruction2SourceMapping sourceMapping) {
-        super("Assembler: " + methodInput.getName() + methodInput.getDescriptor(), 660, 500, trinity);
+        super("Assembler (beta!): " + methodInput.getName() + methodInput.getDescriptor(), 660, 500, trinity);
         this.methodInput = methodInput;
         this.sourceMapping = sourceMapping;
         this.setInstructions();
@@ -310,7 +310,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         boolean space = false;
         StringBuilder sb = new StringBuilder();
         sb.append(instruction.getName());
-        for (AbstractInsnArgument argument : instruction.getArguments()) {
+        for (InstructionOperand argument : instruction.getOperands()) {
             for (ColoredString coloredString : argument.getDetailsText()) {
                 if (!space) {
                     sb.append(' ');
@@ -346,6 +346,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         }
         this.addHistory(new InstructionDeleteHistory(new InstructionPosition(this.instructions, instruction, instructions.indexOf(instruction))));
         this.instructions.remove(instruction);
+        this.instructions.removeReferenceArrowsFrom(instruction);
         this.instructions.queueIdReset();
     }
 

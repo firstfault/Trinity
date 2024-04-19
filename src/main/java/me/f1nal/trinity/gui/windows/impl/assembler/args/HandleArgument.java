@@ -6,7 +6,7 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 
-public class HandleArgument extends AbstractInsnArgument {
+public class HandleArgument extends InstructionOperand {
     private final Handle handle;
 
     public HandleArgument(Handle handle) {
@@ -22,7 +22,7 @@ public class HandleArgument extends AbstractInsnArgument {
     }
 
     @Override
-    public AbstractInsnArgument copy() {
+    public InstructionOperand copy() {
         return new HandleArgument(this.handle);
     }
 }

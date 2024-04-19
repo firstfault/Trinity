@@ -1,21 +1,16 @@
 package me.f1nal.trinity.gui.windows.impl.assembler;
 
-import imgui.ImColor;
-import imgui.ImDrawList;
-import imgui.ImGui;
-import imgui.ImVec4;
+import imgui.*;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
-import me.f1nal.trinity.execution.labels.MethodLabel;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.assembler.action.*;
-import me.f1nal.trinity.gui.windows.impl.assembler.args.AbstractInsnArgument;
-import me.f1nal.trinity.gui.windows.impl.assembler.args.LabelArgument;
+import me.f1nal.trinity.gui.windows.impl.assembler.args.InstructionOperand;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.AssemblerInstructionTable;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionDrag;
-import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionReferenceArrow;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.SourceLineNumber;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.animation.Animation;
 import org.lwjgl.glfw.GLFW;
 import org.objectweb.asm.tree.*;
@@ -34,7 +29,7 @@ public class InstructionComponent {
 
 
     private final String name;
-    private final List<AbstractInsnArgument> arguments = new ArrayList<>();
+    private final List<InstructionOperand> operands = new ArrayList<>();
     private final AbstractInsnNode instruction;
     private int id;
     private Animation selectableAnimation;
@@ -57,6 +52,8 @@ public class InstructionComponent {
     }
 
     public void setControls(AssemblerInstructionTable table) {
+        this.setOperandBounds(table);
+
         if (table.isWindowHovered() && (table.getDraggingReferenceArrow() != null || table.getHoveredReferenceArrow() == null)) {
             float x = this.bounds.x;
             float y = this.bounds.y;
@@ -65,15 +62,41 @@ public class InstructionComponent {
                 table.setHoveredInstruction(this);
             }
 
-            if (table.getHoveredInstruction() == this && ImGui.isMouseHoveringRect(bounds.x + table.sourceFileStartX, bounds.y, bounds.x + table.instructionStartX - 40, bounds.y + bounds.w)) {
-                table.setHoveredSourceLine(table.getSourceMapping().getSourceComponent(this.getInstruction()));
-            } else if (table.getHoveredInstruction() == this && ImGui.isMouseClicked(0)) {
-                table.setDraggingInstruction(this);
+            if (table.getHoveredInstruction() == this) {
+                if (ImGui.isMouseHoveringRect(bounds.x + table.sourceFileStartX, bounds.y, bounds.x + table.instructionStartX - 40, bounds.y + bounds.w)) {
+                    table.setHoveredSourceLine(table.getSourceMapping().getSourceComponent(this.getInstruction()));
+                } else if (ImGui.isMouseClicked(0)) {
+                    table.setDraggingInstruction(this);
+                } else {
+                    final InstructionOperand hoveredOperand = this.operands.stream().filter(operand -> GuiUtil.isMouseHoveringRect(operand.getBounds())).findFirst().orElse(null);
+
+                    if (hoveredOperand != null) {
+                        table.setHoveredOperand(hoveredOperand);
+                        table.setHighlightedInstructions(Collections.singletonList(this));
+                    }
+                }
             }
 
             if (table.isDraggingInstruction(this)) {
                 table.setHighlightedInstructions(Collections.singletonList(this));
             }
+        }
+    }
+
+    private void setOperandBounds(AssemblerInstructionTable table) {
+        float y = this.bounds.y;
+        float x = this.bounds.x + table.instructionOperandsStartX;
+
+        for (InstructionOperand argument : operands) {
+            float width = 0.F;
+
+            for (ColoredString string : argument.getDetailsText()) {
+                ImVec2 textSize = ImGui.calcTextSize(string.getText());
+                width += textSize.x;
+            }
+
+            argument.setBounds(new ImVec4(x, y, width, this.getBounds().w));
+            x += width + 3.F;
         }
     }
 
@@ -125,11 +148,11 @@ public class InstructionComponent {
     }
 
     private void drawArguments(AssemblerInstructionTable table) {
-        float y = this.bounds.y;
-        float x = this.bounds.x + table.instructionOperandsStartX;
+        for (InstructionOperand operand : this.operands) {
+            ColoredString.drawText(ImGui.getWindowDrawList(), operand.getBounds().x, operand.getBounds().y, operand.getDetailsText());
+        }
 
-        List<AbstractInsnArgument> arguments = new ArrayList<>(this.getArguments());
-        List<MethodLabel> addedLabels = new ArrayList<>();
+/*        List<MethodLabel> addedLabels = new ArrayList<>();
 
         for (InstructionReferenceArrow arrow : table.getInstructions().getInstructionReferenceArrowList()) {
             if (arrow.getTo() == this) {
@@ -139,16 +162,7 @@ public class InstructionComponent {
                 addedLabels.add(arrow.getLabel());
                 arguments.add(new LabelArgument(table.getAssemblerFrame(), arrow.getLabel().getTable().getMethodInput(), new LabelNode(arrow.getLabel().findOriginal()), null));
             }
-        }
-
-        for (AbstractInsnArgument argument : arguments) {
-            for (ColoredString string : argument.getDetailsText()) {
-                ImGui.getWindowDrawList().addText(x, y, string.getColor(), string.getText());
-                x += ImGui.calcTextSize(string.getText()).x;
-            }
-
-            x += 3.F;
-        }
+        }*/
     }
 
     private PopupItemBuilder createPopup(AssemblerFrame af) {
@@ -192,8 +206,8 @@ public class InstructionComponent {
         return name;
     }
 
-    public List<AbstractInsnArgument> getArguments() {
-        return arguments;
+    public List<InstructionOperand> getOperands() {
+        return operands;
     }
 
     public void setId(int id) {
@@ -209,9 +223,9 @@ public class InstructionComponent {
     }
 
     public InstructionComponent copy() {
-        InstructionComponent component = new InstructionComponent(this.getName(), this.getInstruction().clone(null));
-        for (AbstractInsnArgument argument : this.getArguments()) {
-            component.getArguments().add(argument.copy());
+        InstructionComponent component = new InstructionComponent(this.getName(), this.getInstruction().clone(Collections.emptyMap()));
+        for (InstructionOperand argument : this.getOperands()) {
+            component.getOperands().add(argument.copy());
         }
         return component;
     }
@@ -220,7 +234,7 @@ public class InstructionComponent {
         List<ColoredString> text = new ArrayList<>();
         text.add(new ColoredString(this.getName(), CodeColorScheme.KEYWORD));
         boolean space = true;
-        for (AbstractInsnArgument argument : this.getArguments()) {
+        for (InstructionOperand argument : this.getOperands()) {
             if (space && !argument.getDetailsText().isEmpty()) {
                 text.add(new ColoredString(" ", CodeColorScheme.KEYWORD));
                 space = false;

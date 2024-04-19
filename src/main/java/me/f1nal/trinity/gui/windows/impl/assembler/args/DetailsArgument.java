@@ -2,7 +2,7 @@ package me.f1nal.trinity.gui.windows.impl.assembler.args;
 
 import me.f1nal.trinity.execution.MemberDetails;
 
-public class DetailsArgument extends AbstractInsnArgument {
+public class DetailsArgument extends InstructionOperand {
     private MemberDetails details;
     private final boolean method;
 
@@ -18,7 +18,7 @@ public class DetailsArgument extends AbstractInsnArgument {
     }
 
     @Override
-    public AbstractInsnArgument copy() {
+    public InstructionOperand copy() {
         return new DetailsArgument(this.details, this.method);
     }
 }

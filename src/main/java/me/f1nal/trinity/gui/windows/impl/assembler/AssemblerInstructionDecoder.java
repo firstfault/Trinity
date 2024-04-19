@@ -16,7 +16,6 @@ import java.awt.geom.Line2D;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 
 public class AssemblerInstructionDecoder {
     private final AssemblerFrame assemblerFrame;
@@ -39,7 +38,7 @@ public class AssemblerInstructionDecoder {
         List<InstructionReferenceArrow> arrowList = instructions.getInstructionReferenceArrowList();
 
         for (InstructionComponent instruction : instructions) {
-            for (AbstractInsnArgument argument : instruction.getArguments()) {
+            for (InstructionOperand argument : instruction.getOperands()) {
                 if (argument instanceof LabelArgument) {
                     LabelNode label = ((LabelArgument) argument).getLabelNode();
                     InstructionComponent meaningfulInstruction = getNextMeaningfulInstruction(label, instructions);
@@ -106,7 +105,7 @@ public class AssemblerInstructionDecoder {
 
     public InstructionComponent translateInstruction(AbstractInsnNode insnNode) {
         final InstructionComponent component = new InstructionComponent(this.getOpcodeName(insnNode), insnNode);
-        final List<AbstractInsnArgument> arguments = component.getArguments();
+        final List<InstructionOperand> arguments = component.getOperands();
         if (insnNode instanceof MethodInsnNode min) {
             arguments.add(new DetailsArgument(new MemberDetails(min.owner, min.name, min.desc), true));
         } else if (insnNode instanceof FieldInsnNode fin) {
@@ -165,13 +164,13 @@ public class AssemblerInstructionDecoder {
                 }));
             }
         } else if (insnNode instanceof LdcInsnNode) {
-            final AbstractInsnArgument cst = this.getCst(((LdcInsnNode)insnNode).cst);
+            final InstructionOperand cst = this.getCst(((LdcInsnNode)insnNode).cst);
             if (cst != null) arguments.add(cst);
         } else if (insnNode instanceof InvokeDynamicInsnNode indy) {
             arguments.add(new InvokeDynamicArgument(indy.name, indy.name));
             arguments.add(this.getCst(indy.bsm));
             for (Object arg : indy.bsmArgs) {
-                AbstractInsnArgument cst = getCst(arg);
+                InstructionOperand cst = getCst(arg);
                 if (cst != null) arguments.add(cst);
             }
         } else if (insnNode instanceof TypeInsnNode) {
@@ -190,7 +189,7 @@ public class AssemblerInstructionDecoder {
         return component;
     }
 
-    private AbstractInsnArgument getCst(Object cst) {
+    private InstructionOperand getCst(Object cst) {
         if (cst instanceof Number) {
             return new NumberArgument((Number) cst);
         } else if (cst instanceof String) {

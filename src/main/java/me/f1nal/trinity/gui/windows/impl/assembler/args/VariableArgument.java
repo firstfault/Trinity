@@ -5,7 +5,7 @@ import me.f1nal.trinity.execution.var.Variable;
 import me.f1nal.trinity.gui.windows.impl.assembler.fields.TextField;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
-public class VariableArgument extends AbstractInsnArgument {
+public class VariableArgument extends InstructionOperand {
     private final Variable variable;
 
     public VariableArgument(Variable variable) {
@@ -22,7 +22,7 @@ public class VariableArgument extends AbstractInsnArgument {
     }
 
     @Override
-    public AbstractInsnArgument copy() {
+    public InstructionOperand copy() {
         return new VariableArgument(this.variable);
     }
 }
