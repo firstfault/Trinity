@@ -9,10 +9,8 @@ import sun.misc.Unsafe;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 public class ProjectInputJARFile extends AbstractProjectInputFile {
@@ -24,21 +22,16 @@ public class ProjectInputJARFile extends AbstractProjectInputFile {
     private void readZipFile(byte[] bytes) throws IOException {
         boolean hasEntry = false;
         try (ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(bytes))) {
-            final boolean crcPatched = patchZipStreamCrc(zipInputStream);
+            ZeroCRC32 zeroCRC32 = new ZeroCRC32();
+            patchZipStreamCrc(zeroCRC32, zipInputStream);
             ZipEntry jarEntry;
 
             while ((jarEntry = zipInputStream.getNextEntry()) != null) {
-                long crc = jarEntry.getCrc();
                 String entryName = cleanEntryName(jarEntry.getName());
 
-                if (crcPatched) jarEntry.setCrc(0L);
+                zeroCRC32.setZipEntry(jarEntry);
                 byte[] entryBytes = zipInputStream.readAllBytes();
-                if (crcPatched)
-                    try {
-                        jarEntry.setCrc(crc);
-                    } catch (IllegalArgumentException illegalArgumentException) {
-                        // welp?
-                    }
+                zeroCRC32.setZipEntry(null);
 
                 hasEntry = true;
 
@@ -63,36 +56,40 @@ public class ProjectInputJARFile extends AbstractProjectInputFile {
         return name;
     }
 
-    private static long CRC_FIELD_OFFSET = -1L;
-    private static final ZeroCRC32 zeroCrc32 = new ZeroCRC32();
 
-    private static boolean patchZipStreamCrc(ZipInputStream zipInputStream) {
+    private static void patchZipStreamCrc(ZeroCRC32 zeroCRC32, ZipInputStream zipInputStream) {
         if (CRC_FIELD_OFFSET == -1L) {
-            return false;
+            return;
         }
 
         try {
             Unsafe unsafe = UnsafeUtil.getUnsafe();
-            unsafe.putObject(zipInputStream, CRC_FIELD_OFFSET, zeroCrc32);
-            return true;
+            unsafe.putObject(zipInputStream, CRC_FIELD_OFFSET, zeroCRC32);
         } catch (Throwable throwable) {
-            Logging.warn("Failed to set CRC field!");
-            return false;
+            Logging.warn("Failed to set CRC field! {}", throwable);
         }
     }
 
     private static class ZeroCRC32 extends CRC32 {
+        private ZipEntry zipEntry;
+
         @Override
         public long getValue() {
-            return 0L;
+            return zipEntry != null ? zipEntry.getCrc() : super.getValue();
+        }
+
+        public void setZipEntry(ZipEntry zipEntry) {
+            this.zipEntry = zipEntry;
         }
     }
+
+    private static long CRC_FIELD_OFFSET = -1L;
 
     static {
         try {
             CRC_FIELD_OFFSET = UnsafeUtil.getUnsafe().objectFieldOffset(ZipInputStream.class.getDeclaredField("crc"));
         } catch (Throwable e) {
-            Logging.warn("Failed to retrieve CRC field, may not be able to read certain ZIP files!");
+            Logging.warn("Failed to retrieve CRC field, may not be able to read certain ZIP files! {}", e);
         }
     }
 }
