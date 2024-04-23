@@ -153,7 +153,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
             }
         } else if (this.getReferences() != null) {
             Trinity trinity = Main.getTrinity();
-            if (trinity != null) {
+            if (trinity != null && trinity.getExecution().getAsynchronousLoad().isFinished()) {
                 Collection<ClassXref> references = this.getReferences();
 
                 for (ClassXref reference : references) {

@@ -19,7 +19,7 @@ import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchType;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeString;
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
-import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerUsagesRenderer;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerGhostTextRenderer;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
@@ -28,7 +28,6 @@ import me.f1nal.trinity.util.StringUtil;
 import me.f1nal.trinity.util.SystemUtil;
 import org.jetbrains.annotations.Nullable;
 
-import java.text.MessageFormat;
 import java.util.*;
 
 public class DecompilerComponentInitializer implements OutputMemberVisitor {
@@ -155,7 +154,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     public void visitFieldDeclaration(FieldDeclarationOutputMember fieldDeclaration) {
         FieldInput input = trinity.getExecution().getField(new MemberDetails(fieldDeclaration));
         if (input != null) {
-            component.setCustomRenderer(new DecompilerUsagesRenderer(trinity, input));
+            component.setCustomRenderer(new DecompilerGhostTextRenderer(trinity, input));
             component.input = input;
         }
     }
@@ -232,7 +231,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     public void visitMethodStartEnd(MethodStartEndOutputMember methodStartEnd) {
         MethodInput input = trinity.getExecution().getMethod(new MemberDetails(methodStartEnd));
         if (input != null) {
-            component.setCustomRenderer(new DecompilerUsagesRenderer(trinity, input));
+            component.setCustomRenderer(new DecompilerGhostTextRenderer(trinity, input));
             component.input = input;
         }
     }
