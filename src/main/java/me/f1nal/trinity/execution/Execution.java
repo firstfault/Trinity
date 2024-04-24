@@ -28,14 +28,9 @@ public final class Execution {
     private final List<ClassInput> classInputList = new ArrayList<>();
     private final Map<String, byte[]> resourceMap = new HashMap<>();
     /**
-     * Root package.
+     * Root package (this is the "project" package, with the project input being its children).
      */
     private final Package rootPackage;
-    /**
-     * Class detailing the entry point of the application.
-     */
-    private final EntryPoint entryPoint;
-
     /**
      * Reference map containing all references.
      */
@@ -47,13 +42,12 @@ public final class Execution {
     public Execution(Trinity trinity, ClassPath classPath) throws MissingEntryPointException {
         this.trinity = trinity;
         this.rootPackage = new Package(trinity.getDatabase());
-        this.entryPoint = new EntryPoint(this, this.getResourceMap());
         this.xrefMap = new XrefMap(this);
 
         this.asynchronousLoad = new AsynchronousLoad(this.getTrinity());
 
+        // If this method returned false, we are creating a new database.
         if (!this.trinity.getDatabase().addLoadTasks(this.asynchronousLoad)) {
-            // If this method returned false, we are creating a new database.
             if (classPath.getWarnings() != 0) {
                 Main.getDisplayManager().addNotification(new Notification(NotificationType.WARNING, new SimpleCaption("Class Path"), ColoredStringBuilder.create()
                         .fmt("Finished reading input with {} warnings", classPath.getWarnings()).get()));
@@ -176,10 +170,6 @@ public final class Execution {
      */
     public XrefMap getXrefMap() {
         return xrefMap;
-    }
-
-    public EntryPoint getEntryPoint() {
-        return entryPoint;
     }
 
     public List<ClassInput> getClassList() {

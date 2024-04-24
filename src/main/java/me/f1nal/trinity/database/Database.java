@@ -13,6 +13,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Database represents
+ */
 public class Database {
     private String name;
     private final Set<AbstractDatabaseObject> objects;

@@ -1,9 +1,23 @@
 package me.f1nal.trinity.util;
 
+import imgui.flag.ImGuiWindowFlags;
+
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 
 public class ByteUtil {
+    public static int setBitflag(int flags, int bitmask, boolean state) {
+        if (state) {
+            return flags | bitmask;
+        }
+
+        return flags & ~bitmask;
+    }
+
+    public static boolean getBitflag(int flags, int mask) {
+        return (flags & mask) != 0;
+    }
+
     public static long getNumber(byte[] bytes, int offset, int size) {
         long number = 0;
         int shift = (size - 1) * 8;

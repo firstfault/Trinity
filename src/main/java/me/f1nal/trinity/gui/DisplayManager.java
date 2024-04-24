@@ -81,11 +81,8 @@ public final class DisplayManager extends Application {
         } else return;
 
         Main.getAppDataManager().getRecentDatabases().addDatabase(new RecentDatabaseEntry(trinity.getDatabase().getName(), trinity.getDatabase().getPath().getAbsolutePath(), System.currentTimeMillis()));
-        trinity.runDeobf();
 
-        Main.runLater(() -> {
-            this.windowManager.addStaticWindow(ProjectBrowserFrame.class);
-        });
+        Main.runLater(() -> this.windowManager.addStaticWindow(ProjectBrowserFrame.class));
     }
 
     @Override

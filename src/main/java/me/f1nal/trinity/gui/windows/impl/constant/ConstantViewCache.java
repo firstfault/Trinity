@@ -3,9 +3,10 @@ package me.f1nal.trinity.gui.windows.impl.constant;
 import me.f1nal.trinity.execution.xref.XrefKind;
 import me.f1nal.trinity.execution.xref.where.XrefWhere;
 import me.f1nal.trinity.gui.components.filter.kind.IKind;
+import me.f1nal.trinity.gui.components.general.table.IWhere;
 import me.f1nal.trinity.util.SearchTermMatchable;
 
-public class ConstantViewCache implements SearchTermMatchable, IKind {
+public class ConstantViewCache implements SearchTermMatchable, IWhere, IKind {
     private final String constant;
     private final XrefWhere where;
     private final XrefKind kind;

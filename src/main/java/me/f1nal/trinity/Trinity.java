@@ -15,31 +15,35 @@ import java.io.IOException;
 
 public final class Trinity {
     /**
-     * Represents the program's execution flow, managing the sequence of operations.
-     * This field encapsulates the control of program execution.
+     * Program's execution flow, managing the sequence of operations.
      */
     private final Execution execution;
+    /**
+     * Remapping of members (fields, methods, classes) of this Trinity database.
+     */
     private final Remapper remapper;
     /**
-     * Represents input from the Java Runtime class.
+     * Input from the current Java runtime.
      */
-    private final JrtInput jrtInput = new JrtInput();
+    private static final JrtInput jrtInput = new JrtInput();
+    /**
+     * Database this Trinity instance is operating on.
+     * @see Database
+     */
     private final Database database;
+    /**
+     * Decompiler-related behavior.
+     */
     private final Decompiler decompiler;
+    /**
+     * Event manager bound to this Trinity instance.
+     */
     private final EventManager eventManager;
+    /**
+     * Automatic refactoring.
+     */
     private final RefactorManager refactorManager;
 
-    /**
-     * Constructs a new Trinity instance for the given JAR file.
-     * <p>
-     * This constructor initializes a Trinity instance with the provided JAR input stream
-     * and file name. It aims to encapsulate the behavior of processing the JAR file to
-     * identify the entry point and manage related operations.
-     * </p>
-     *
-     * @throws IOException If an I/O error occurs while processing the JAR input stream.
-     * @throws MissingEntryPointException If the entry point cannot be located in the JAR file.
-     */
     public Trinity(Database database, ClassPath classPath) throws IOException, MissingEntryPointException {
         this.database = database;
         this.execution = new Execution(this, classPath);
@@ -50,37 +54,14 @@ public final class Trinity {
         this.execution.getAsynchronousLoad().execute();
     }
 
-    public void runDeobf() {
-//        try {
-//            new RavenStringDeobf(this).runPass();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
-//        new RavenNumberDeobf(this).runPass();
-//        new RavenString2Deobf(this).runPass();
-//        new RavenFlow1Deobf(this).runPass();
-    }
-
-    /**
-     * Returns the execution control flow instance.
-     * @return The execution instance.
-     */
     public Execution getExecution() {
         return execution;
     }
 
-    /**
-     * Returns the remapper instance for name remapping.
-     * @return The remapper instance.
-     */
     public Remapper getRemapper() {
         return remapper;
     }
 
-    /**
-     * Returns the input manager for Java Runtime classes.
-     * @return The JRT input manager.
-     */
     public JrtInput getJrtInput() {
         return jrtInput;
     }

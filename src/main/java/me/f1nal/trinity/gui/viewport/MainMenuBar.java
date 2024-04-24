@@ -86,9 +86,9 @@ public class MainMenuBar {
                 if (ImGui.menuItem(FontAwesomeIcons.Search + " Constant Search")) {
                     Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
                 }
-/*                if (ImGui.menuItem(FontAwesomeIcons.Stream + " Member Search")) {
-                    Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
-                }*/
+//                if (ImGui.menuItem(FontAwesomeIcons.Stream + " Member Search")) {
+//                    Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
+//                }
                 ImGui.endMenu();
             }
 

@@ -1,12 +1,12 @@
 package me.f1nal.trinity.execution.xref.where;
 
+import imgui.ImGui;
+import imgui.ImVec2;
 import me.f1nal.trinity.Trinity;
-import me.f1nal.trinity.execution.xref.XrefKind;
+import me.f1nal.trinity.gui.components.filter.kind.IKindType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
 import me.f1nal.trinity.util.GuiUtil;
-import imgui.ImGui;
-import imgui.ImVec2;
 
 public abstract class XrefWhere {
     private final String name;
@@ -38,7 +38,7 @@ public abstract class XrefWhere {
         }
     }
 
-    public void draw(XrefKind kind, PopupMenu popupMenu, Trinity trinity) {
+    public void draw(IKindType kind, PopupMenu popupMenu, Trinity trinity) {
         ImGui.invisibleButton("XrefWhereButton", 12.F, 12.F);
         ImVec2 min = ImGui.getItemRectMin();
         ImVec2 max = ImGui.getItemRectMax();
