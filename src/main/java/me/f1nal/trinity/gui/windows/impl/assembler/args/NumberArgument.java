@@ -8,10 +8,25 @@ public class NumberArgument extends InstructionOperand {
 
     public NumberArgument(Number number) {
         this.number = number;
-        this.getDetailsText().add(new ColoredString(number + getPrefix(number), CodeColorScheme.NUMBER));
+        this.getDetailsText().add(new ColoredString(formatNumber(number), CodeColorScheme.NUMBER));
     }
 
-    public static String getPrefix(Number number) {
+    private static String formatNumber(Number number) {
+        final String suffix = getSuffix(number);
+        String text = String.valueOf(number);
+
+        if (!suffix.isEmpty()) {
+            if (text.endsWith(".0")) {
+                text = text.substring(text.length() - 1);
+            } else if (!(number instanceof Long) && !text.contains(".")) {
+                text += ".";
+            }
+        }
+
+        return text + suffix;
+    }
+
+    public static String getSuffix(Number number) {
         if (number instanceof Float) {
             return "F";
         }

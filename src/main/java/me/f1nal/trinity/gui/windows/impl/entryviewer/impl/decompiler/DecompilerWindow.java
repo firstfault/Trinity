@@ -144,7 +144,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 decompiledClass.resetLines();
                 this.resetLines = false;
             }
+            ImGui.pushFont(Main.getPreferences().getDecompilerFontEnum().getFont());
             this.drawDecompiledOutput(decompiledClass);
+            ImGui.popFont();
         }
 
         ImGui.endChild();

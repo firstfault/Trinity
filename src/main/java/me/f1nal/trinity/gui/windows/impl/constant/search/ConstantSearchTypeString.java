@@ -35,11 +35,15 @@ public class ConstantSearchTypeString extends ConstantSearchType {
         ImGui.sameLine();
         GuiUtil.smallCheckbox("Exact", this.exact);
         GuiUtil.tooltip("If set, the string must exactly match the input instead of containing it.");
-        return !this.searchTerm.get().isEmpty();
+        return true;
     }
 
     private SearchTermMatchable createMatchable() {
         String inputSearch = this.searchTerm.get();
+
+        if (inputSearch.isEmpty()) {
+            return searchTerm -> true;
+        }
 
         // Exact Search
         if (this.exact.get()) {

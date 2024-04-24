@@ -172,7 +172,7 @@ public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
             if (value.intValue() != this.value.get()) {
                 return null;
             }
-            return value.intValue() + NumberArgument.getPrefix(value);
+            return value.intValue() + NumberArgument.getSuffix(value);
         }
     }
 }

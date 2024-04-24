@@ -1,8 +1,7 @@
 # Trinity 
 Trinity is a powerful lightning-fast software reverse engineering suite for the Java bytecode architecture handling highly obfuscated binaries with ease.
 
-[![Download](https://img.shields.io/badge/Download%20Latest-green.svg)](https://github.com/firstfault/Trinity/releases)
-[![Apache License 2.0](https://img.shields.io/badge/License-Apache%20License%202.0-yellow.svg)](https://choosealicense.com/licenses/apache-2.0/)
+[![Download](https://img.shields.io/badge/Download-green.svg)](https://github.com/firstfault/Trinity/releases)
 
 ![Screenshot](screenshots/trinity.png)
 

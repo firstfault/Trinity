@@ -300,7 +300,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             final String varType = variableMember.getType() == null ? "unknown var type!" : variableMember.getType();
             final boolean stackVariable = varIndex >= VarExprent.STACK_BASE;
             text.text(CodeColorScheme.DISABLED, (stackVariable ? "Stack Variable" : variable == null ? "#" + varIndex : variable.getName()));
-            text.text(CodeColorScheme.TEXT, String.format(" (%s) ", (stackVariable ? varIndex - VarExprent.STACK_BASE : varIndex)));
+            text.text(CodeColorScheme.TEXT, String.format(" (%s) ", (stackVariable ? "-" + (varIndex - VarExprent.STACK_BASE) : varIndex)));
             text.text(CodeColorScheme.CLASS_REF, varType);
 
             return text.get();

@@ -4,6 +4,7 @@ import com.google.common.io.Resources;
 import imgui.*;
 import imgui.gl3.ImGuiImplGl3;
 import me.f1nal.trinity.Main;
+import me.f1nal.trinity.decompiler.output.DecompilerFontEnum;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 
 import java.io.IOException;
@@ -37,7 +38,7 @@ public class FontManager {
     private void buildFonts(final float size) {
         ImGuiIO io = ImGui.getIO();
 
-        io.getFonts().addFontFromMemoryTTF(loadFromResources("fonts/inter-regular.ttf"), size);
+        DecompilerFontEnum.INTER.setFont(io.getFonts().addFontFromMemoryTTF(loadFromResources("fonts/inter-regular.ttf"), size));
 
         final ImFontConfig fontConfig = new ImFontConfig();
         fontConfig.setMergeMode(true);
@@ -49,6 +50,8 @@ public class FontManager {
         final short[] glyphRanges = rangesBuilder.buildRanges();
 
         io.getFonts().addFontFromMemoryTTF(loadFromResources("fonts/fa-solid-900.ttf"), size, fontConfig, glyphRanges);
+        DecompilerFontEnum.JETBRAINS_MONO.setFont(io.getFonts().addFontFromMemoryTTF(loadFromResources("fonts/JetBrainsMonoNL-Regular.ttf"), size + 1.F));
+        DecompilerFontEnum.ZED_MONO.setFont(io.getFonts().addFontFromMemoryTTF(loadFromResources("fonts/zed-mono-regular.ttf"), size + 1.F));
         this.currentFontSize = size;
     }
 

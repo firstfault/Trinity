@@ -2,6 +2,7 @@ package me.f1nal.trinity.appdata;
 
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.appdata.keybindings.KeyBindingData;
+import me.f1nal.trinity.decompiler.output.DecompilerFontEnum;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.gui.windows.impl.xref.SearchMaxDisplay;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class PreferencesFile extends AppDataFile {
+    private DecompilerFontEnum decompilerFontEnum = DecompilerFontEnum.JETBRAINS_MONO;
     private NumberDisplayTypeEnum defaultNumberDisplayType = NumberDisplayTypeEnum.DECIMAL;
     private SearchMaxDisplay searchMaxDisplay = SearchMaxDisplay.MAX_200;
     private boolean decompilerHideComments = false;
@@ -84,6 +86,14 @@ public class PreferencesFile extends AppDataFile {
 
     public SearchMaxDisplay getSearchMaxDisplay() {
         return searchMaxDisplay;
+    }
+
+    public void setDecompilerFontEnum(DecompilerFontEnum decompilerFontEnum) {
+        this.decompilerFontEnum = decompilerFontEnum;
+    }
+
+    public DecompilerFontEnum getDecompilerFontEnum() {
+        return decompilerFontEnum;
     }
 
     public void setDecompilerHideComments(boolean decompilerHideComments) {

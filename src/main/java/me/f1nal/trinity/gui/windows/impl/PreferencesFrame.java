@@ -3,15 +3,15 @@ package me.f1nal.trinity.gui.windows.impl;
 import imgui.ImGui;
 import imgui.flag.ImGuiDataType;
 import imgui.flag.ImGuiSliderFlags;
+import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImFloat;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.PreferencesFile;
+import me.f1nal.trinity.decompiler.output.DecompilerFontEnum;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
-import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.general.EnumComboBox;
-import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.xref.SearchMaxDisplay;
 import me.f1nal.trinity.keybindings.Bindable;
@@ -21,15 +21,18 @@ import me.f1nal.trinity.util.GuiUtil;
 
 public class PreferencesFrame extends StaticWindow {
     private final String id = ComponentId.getId(this.getClass());
+    private final EnumComboBox<DecompilerFontEnum> decompilerFont;
     private final EnumComboBox<NumberDisplayTypeEnum> numberDisplayTypeComboBox;
     private final EnumComboBox<SearchMaxDisplay> searchMaxDisplayComboBox;
     private final PreferencesFile preferencesFile;
     private Bindable editingBind;
 
     public PreferencesFrame(Trinity trinity) {
-        super("Preferences", 500, 310, trinity);
+        super("Preferences", 450, 250, trinity);
         this.preferencesFile = Main.getPreferences();
-        this.numberDisplayTypeComboBox = new EnumComboBox<>("Default Number Display Type", NumberDisplayTypeEnum.values(), preferencesFile.getDefaultNumberDisplayType());
+        this.windowFlags |= ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoDocking;
+        this.decompilerFont = new EnumComboBox<>("Decompiler Font", DecompilerFontEnum.values(), preferencesFile.getDecompilerFontEnum());
+        this.numberDisplayTypeComboBox = new EnumComboBox<>("Number Display Type", NumberDisplayTypeEnum.values(), preferencesFile.getDefaultNumberDisplayType());
         this.searchMaxDisplayComboBox = new EnumComboBox<>("Search Element Limit", SearchMaxDisplay.values(), preferencesFile.getSearchMaxDisplay());
     }
 
@@ -70,6 +73,7 @@ public class PreferencesFrame extends StaticWindow {
             }
 
             if (ImGui.beginTabItem("Decompiler")) {
+                this.preferencesFile.setDecompilerFontEnum(this.decompilerFont.draw());
                 this.preferencesFile.setDefaultNumberDisplayType(this.numberDisplayTypeComboBox.draw());
 
                 if (ImGui.checkbox("Hide comments", preferencesFile.isDecompilerHideComments())) {
@@ -88,7 +92,7 @@ public class PreferencesFrame extends StaticWindow {
                 ImGui.endTabItem();
             }
 
-            if (ImGui.beginTabItem("Keybindings")) {
+            if (false&&ImGui.beginTabItem("Keybindings")) {
                 for (Bindable bindable : Main.getKeyBindManager().getBindables()) {
                     ImGui.text(bindable.getDisplayName());
                     ImGui.sameLine();
