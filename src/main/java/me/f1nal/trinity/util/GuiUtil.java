@@ -82,4 +82,8 @@ public class GuiUtil {
         ImGui.textDisabled(" (?)");
         tooltip(tooltip);
     }
+
+    public static ImVec2 getNextItemPosition() {
+        return ImGui.getCursorPos().minus(ImGui.getScrollX(), ImGui.getScrollY()).plus(ImGui.getWindowPos());
+    }
 }

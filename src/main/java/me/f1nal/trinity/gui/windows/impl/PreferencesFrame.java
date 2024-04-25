@@ -8,7 +8,7 @@ import imgui.type.ImFloat;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.PreferencesFile;
-import me.f1nal.trinity.decompiler.output.DecompilerFontEnum;
+import me.f1nal.trinity.decompiler.output.FontEnum;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
 import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.general.EnumComboBox;
@@ -21,7 +21,6 @@ import me.f1nal.trinity.util.GuiUtil;
 
 public class PreferencesFrame extends StaticWindow {
     private final String id = ComponentId.getId(this.getClass());
-    private final EnumComboBox<DecompilerFontEnum> decompilerFont;
     private final EnumComboBox<NumberDisplayTypeEnum> numberDisplayTypeComboBox;
     private final EnumComboBox<SearchMaxDisplay> searchMaxDisplayComboBox;
     private final PreferencesFile preferencesFile;
@@ -30,8 +29,7 @@ public class PreferencesFrame extends StaticWindow {
     public PreferencesFrame(Trinity trinity) {
         super("Preferences", 450, 250, trinity);
         this.preferencesFile = Main.getPreferences();
-        this.windowFlags |= ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoDocking;
-        this.decompilerFont = new EnumComboBox<>("Decompiler Font", DecompilerFontEnum.values(), preferencesFile.getDecompilerFontEnum());
+        this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoDocking;
         this.numberDisplayTypeComboBox = new EnumComboBox<>("Number Display Type", NumberDisplayTypeEnum.values(), preferencesFile.getDefaultNumberDisplayType());
         this.searchMaxDisplayComboBox = new EnumComboBox<>("Search Element Limit", SearchMaxDisplay.values(), preferencesFile.getSearchMaxDisplay());
     }
@@ -50,14 +48,7 @@ public class PreferencesFrame extends StaticWindow {
                     ImGui.endCombo();
                 }
 
-                ImFloat fontSize = new ImFloat(Main.getPreferences().getFontSize());
-                ImGui.inputScalar("Font Size", ImGuiDataType.Float, fontSize, 0.5F, 1.F, "%.2f px", ImGuiSliderFlags.AlwaysClamp);
-                Main.getPreferences().setFontSize(fontSize.get());
-
-                if (Main.getDisplayManager().getFontManager().getCurrentFontSize() != fontSize.get()) {
-                    ImGui.textDisabled("Please restart Trinity for a clear version of the font.");
-                }
-
+                this.preferencesFile.getDefaultFont().drawControls();
                 ImGui.endTabItem();
             }
 
@@ -73,7 +64,7 @@ public class PreferencesFrame extends StaticWindow {
             }
 
             if (ImGui.beginTabItem("Decompiler")) {
-                this.preferencesFile.setDecompilerFontEnum(this.decompilerFont.draw());
+                this.preferencesFile.getDecompilerFont().drawControls();
                 this.preferencesFile.setDefaultNumberDisplayType(this.numberDisplayTypeComboBox.draw());
 
                 if (ImGui.checkbox("Hide comments", preferencesFile.isDecompilerHideComments())) {

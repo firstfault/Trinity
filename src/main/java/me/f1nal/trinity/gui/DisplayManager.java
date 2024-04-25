@@ -16,6 +16,7 @@ import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.packages.ArchiveEntryViewerType;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
 import me.f1nal.trinity.gui.windows.WindowManager;
@@ -155,20 +156,19 @@ public final class DisplayManager extends Application {
 
     @Override
     public void process() {
-//        ImGui.showDemoWindow();
-        ImGuiIO io = ImGui.getIO();
-        io.setFontGlobalScale(this.fontManager.getGlobalScale());
+        FontSettings font = Main.getPreferences().getDefaultFont();
+        font.pushFont();
+
         this.setupDockspace();
-
         if (this.trinity == null && this.windowManager.getPopups().isEmpty()) this.homepage();
-
         Main.executeScheduledTasks();
-
         this.mainMenuBar.draw();
         this.popupMenu.draw();
         this.windowManager.draw();
         this.notificationRenderer.draw();
         this.dragAndDropHandler.draw();
+
+        font.popFont();
     }
 
     private void setupDockspace() {

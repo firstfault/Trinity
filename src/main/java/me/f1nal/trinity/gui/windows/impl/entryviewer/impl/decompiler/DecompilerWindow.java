@@ -19,6 +19,7 @@ import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
+import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.popup.MenuBarProgress;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
@@ -144,9 +145,11 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 decompiledClass.resetLines();
                 this.resetLines = false;
             }
-            ImGui.pushFont(Main.getPreferences().getDecompilerFontEnum().getFont());
+
+            FontSettings decompilerFont = Main.getPreferences().getDecompilerFont();
+            decompilerFont.pushFont();
             this.drawDecompiledOutput(decompiledClass);
-            ImGui.popFont();
+            decompilerFont.popFont();
         }
 
         ImGui.endChild();

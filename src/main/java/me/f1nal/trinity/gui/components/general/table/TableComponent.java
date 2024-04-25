@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.components.general.table;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiTableFlags;
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.components.ComponentId;
 
 import java.util.ArrayList;
@@ -30,7 +31,9 @@ public class TableComponent<T> {
         }
 
         ImGui.tableHeadersRow();
-        for (T element : this.elementList) {
+        for (int j = 0, size = Math.min(this.elementList.size(), Main.getPreferences().getSearchMaxDisplay().getMax()); j < size; j++) {
+            T element = this.elementList.get(j);
+
             ImGui.tableNextRow();
             for (int i = 0; i < this.columns.size(); i++) {
                 ImGui.tableSetColumnIndex(i);

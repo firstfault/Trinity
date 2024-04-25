@@ -15,6 +15,9 @@ import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.*;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.constant.ConstantSearchFrame;
+import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewCache;
+import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewFrame;
+import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeString;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.gui.windows.impl.project.settings.ProjectSettingsWindow;
@@ -27,6 +30,7 @@ import me.f1nal.trinity.theme.ThemeManager;
 
 import java.awt.*;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,9 +90,13 @@ public class MainMenuBar {
                 if (ImGui.menuItem(FontAwesomeIcons.Search + " Constant Search")) {
                     Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
                 }
-//                if (ImGui.menuItem(FontAwesomeIcons.Stream + " Member Search")) {
-//                    Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
-//                }
+                ImGui.separator();
+                if (ImGui.menuItem("View All Strings")) {
+                    ConstantSearchTypeString typeString = new ConstantSearchTypeString(displayManager.getTrinity());
+                    List<ConstantViewCache> constantList = new ArrayList<>();
+                    typeString.populate(constantList);
+                    Main.getWindowManager().addClosableWindow(new ConstantViewFrame(displayManager.getTrinity(), constantList));
+                }
                 ImGui.endMenu();
             }
 

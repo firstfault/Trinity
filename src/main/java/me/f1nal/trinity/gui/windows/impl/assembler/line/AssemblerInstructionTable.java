@@ -109,7 +109,7 @@ public class AssemblerInstructionTable {
     }
 
     public float draw(ImVec2 vMin, ImVec2 vMax) {
-        float fontSize = Main.getDisplayManager().getFontManager().getFontSize();
+        float fontSize = Main.getPreferences().getDefaultFont().getSize();
         float spacing = fontSize * 0.5F;
 
         this.instructionStartX = 58 + (instructions.getMaximumReferenceArrowDepth() * 4.F) + spacing;

@@ -43,7 +43,7 @@ public class InstructionComponent {
     }
 
     public void setBounds(AssemblerInstructionTable table, float x, float y) {
-        float height = 3.F + Main.getDisplayManager().getFontManager().getFontSize();
+        float height = 3.F + Main.getPreferences().getDefaultFont().getSize();
         this.bounds = new ImVec4(x, y, 0x10000, height);
     }
 

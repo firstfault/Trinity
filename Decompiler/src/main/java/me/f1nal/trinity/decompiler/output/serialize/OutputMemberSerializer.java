@@ -15,7 +15,7 @@ public final class OutputMemberSerializer {
     public final static String TAG_END;
 
     static {
-        final String tagName = RandomStringUtils.randomAlphanumeric(10);
+        final String tagName = RandomStringUtils.randomAlphanumeric(9);
 
         TAG_START = String.format("<%s>", tagName);
         TAG_END = String.format("</%s>", tagName);
