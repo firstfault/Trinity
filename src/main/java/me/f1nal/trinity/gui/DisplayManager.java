@@ -15,6 +15,7 @@ import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.packages.ArchiveEntryViewerType;
+import me.f1nal.trinity.gui.backend.ImGuiApplication;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
@@ -43,7 +44,7 @@ import java.io.File;
 import java.util.*;
 import java.util.zip.ZipFile;
 
-public final class DisplayManager extends Application {
+public final class DisplayManager extends ImGuiApplication {
     /**
      * Initial window title to be set when first creating the display.
      */

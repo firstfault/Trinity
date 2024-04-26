@@ -6,6 +6,7 @@ import me.f1nal.trinity.appdata.PreferencesFile;
 import me.f1nal.trinity.appdata.shutdown.ShutdownHook;
 import me.f1nal.trinity.database.semaphore.DatabaseSaveShutdownHook;
 import me.f1nal.trinity.gui.DisplayManager;
+import me.f1nal.trinity.gui.backend.ImGuiApplication;
 import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.keybindings.KeyBindManager;
 import me.f1nal.trinity.theme.ThemeManager;
@@ -61,7 +62,7 @@ public class Main {
         displayManager = new DisplayManager("Trinity: " + VERSION);
         appDataManager.getState().setLastLaunchedVersion(VERSION);
         addShutdownHook(new ShutdownHook("Database Save", new DatabaseSaveShutdownHook()));
-        Application.launch(displayManager);
+        ImGuiApplication.launch(displayManager);
         System.out.println("see you later!");
         Main.exit();
     }

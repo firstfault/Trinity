@@ -5,6 +5,7 @@ import imgui.ImGuiStyle;
 import imgui.ImVec2;
 import imgui.ImVec4;
 import imgui.flag.ImGuiMouseButton;
+import imgui.flag.ImGuiStyleVar;
 import imgui.type.ImBoolean;
 
 import java.util.function.Supplier;
@@ -74,7 +75,9 @@ public class GuiUtil {
     }
 
     public static void tooltip(String tooltip) {
-        if (ImGui.isItemHovered()) ImGui.setTooltip(tooltip);
+        if (ImGui.isItemHovered()) {
+            ImGui.setTooltip(tooltip);
+        }
     }
 
     public static void informationTooltip(String tooltip) {
