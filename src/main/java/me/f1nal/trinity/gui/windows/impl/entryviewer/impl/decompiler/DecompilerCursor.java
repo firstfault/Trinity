@@ -172,6 +172,7 @@ public class DecompilerCursor {
         if (this.selectionEnd != null && this.selectionEnd.getLine() == line) {
             // TODO: Selection box
             this.handleLineCursorDrawing(this.selectionEnd, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
+
         }
 
         if (this.coordinates != null && this.coordinates.getLine() == line) {

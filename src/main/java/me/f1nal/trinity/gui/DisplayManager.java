@@ -203,7 +203,7 @@ public final class DisplayManager extends ImGuiApplication {
         ColoredString.drawText(ColoredStringBuilder.create().fmt("Welcome to {}! You are running version {}.", "Trinity", Main.VERSION).get());
         ImGui.separator();
 
-        if (ImGui.beginListBox("###TrinityHomepageRecentProjects", 400.F, 164.F)) {
+        if (ImGui.beginListBox("###TrinityHomepageRecentProjects", ImGui.getContentRegionAvailX(), 164.F)) {
             RecentDatabasesFile recentDatabases = Main.getAppDataManager().getRecentDatabases();
             List<RecentDatabaseEntry> sortedDatabases = recentDatabases.getSortedDatabases();
             for (int i = 0; i < sortedDatabases.size(); i++) {

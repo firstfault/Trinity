@@ -52,6 +52,9 @@ public abstract class ClosableWindow extends AbstractWindow {
 
     @Override
     public void render() {
+        if (!this.isVisible()) {
+            return;
+        }
         if (!this.sizeSet) {
             ImGui.setNextWindowSize(width, height, ImGuiCond.Always);
             this.sizeSet = true;

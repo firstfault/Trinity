@@ -19,7 +19,7 @@ public class XrefWhereField extends XrefWhere {
 
     @Override
     public String getText() {
-        return this.fieldInput.getDisplayName().getName();
+        return this.fieldInput.getOwningClass().getDisplaySimpleName() + "." + this.fieldInput.getDisplayName().getName();
     }
 
     @Override

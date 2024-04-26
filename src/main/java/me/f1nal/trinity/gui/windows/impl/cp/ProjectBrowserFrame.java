@@ -9,7 +9,9 @@ import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiTreeNodeFlags;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventClassesLoaded;
+import me.f1nal.trinity.events.EventPackageStructureReload;
 import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
 import me.f1nal.trinity.execution.packages.Package;
@@ -42,6 +44,11 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
         this.refreshFilterComponent();
     }
 
+    @Subscribe
+    public void onPackageStructureReload(EventPackageStructureReload event) {
+        this.refreshFilterComponent();
+    }
+
     private void refreshFilterComponent() {
         this.filterComponent = null;
     }
@@ -57,7 +64,6 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
         collection.addAll(pkg.getEntries());
         pkg.getPackages().forEach(other -> addTreeToCollection(other, collection));
     }
-
 
     @Override
     public void render() {

@@ -22,7 +22,7 @@ public class TableComponent<T> {
     }
 
     public void draw() {
-        if (!ImGui.beginTable(this.id, this.columns.size(), ImGuiTableFlags.Borders | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.Sortable)) {
+        if (!ImGui.beginTable(this.id, this.columns.size(), ImGuiTableFlags.Borders | ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable)) {
             return;
         }
 

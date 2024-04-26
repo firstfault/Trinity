@@ -5,3 +5,4 @@
 - Searching in text editor
 - Sorting in tables
 - Assembler operand overhaul
+- Fix new project & global rename with different font sizes

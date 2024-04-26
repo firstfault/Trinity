@@ -1,6 +1,7 @@
 package me.f1nal.trinity.execution.packages;
 
 import me.f1nal.trinity.Main;
+import me.f1nal.trinity.events.EventPackageStructureReload;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
@@ -79,6 +80,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         this.targetPackage = targetPackage;
         targetPackage.getEntries().add(this);
         this.targetPackage.getEntries().sort(Comparator.comparing(ArchiveEntry::getDisplaySimpleName));
+        Main.getTrinity().getEventManager().postEvent(new EventPackageStructureReload());
     }
 
     /**

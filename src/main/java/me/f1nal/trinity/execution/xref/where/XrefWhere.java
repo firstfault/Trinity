@@ -2,6 +2,7 @@ package me.f1nal.trinity.execution.xref.where;
 
 import imgui.ImGui;
 import imgui.ImVec2;
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.gui.components.filter.kind.IKindType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
@@ -39,13 +40,14 @@ public abstract class XrefWhere {
     }
 
     public void draw(IKindType kind, PopupMenu popupMenu, Trinity trinity) {
-        ImGui.invisibleButton("XrefWhereButton", 12.F, 12.F);
+        float rectSize = 12.F * Main.getPreferences().getDefaultFont().getSize() / 15F;
+        ImGui.invisibleButton("XrefWhereButton", rectSize, rectSize);
         ImVec2 min = ImGui.getItemRectMin();
         ImVec2 max = ImGui.getItemRectMax();
         float yOffset = 1.5F;
         ImGui.getWindowDrawList().addRectFilled(min.x, min.y + yOffset, max.x, max.y + yOffset, kind.getColor(), 1.F);
         GuiUtil.tooltip(kind.getName());
-        ImGui.sameLine(0.F, 3.F);
+        ImGui.sameLine(0.F, 4.F);
         ImGui.text(getText());
         controls(popupMenu, trinity);
     }

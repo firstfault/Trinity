@@ -18,13 +18,14 @@ import org.objectweb.asm.tree.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class InstructionComponent {
     private static final List<InstructionAction> INSTRUCTION_ACTIONS = List.of(
-            new DeleteInstructionAction(),
-            new DuplicateInstructionAction(),
+            new InsertInstructionAction(),
             new EditInstructionAction(),
-            new InsertInstructionAction()
+            new DeleteInstructionAction(),
+            new DuplicateInstructionAction()
     );
 
 
@@ -72,7 +73,6 @@ public class InstructionComponent {
 
                     if (hoveredOperand != null) {
                         table.setHoveredOperand(hoveredOperand);
-                        table.setHighlightedInstructions(Collections.singletonList(this));
                     }
                 }
             }
@@ -150,32 +150,26 @@ public class InstructionComponent {
     private void drawArguments(AssemblerInstructionTable table) {
         for (InstructionOperand operand : this.operands) {
             ColoredString.drawText(ImGui.getWindowDrawList(), operand.getBounds().x, operand.getBounds().y, operand.getDetailsText());
+
+//            if (table.getHoveredOperand() == operand) {
+//                ImGui.beginTooltip();
+//                ImGui.text("operand");
+//                ImGui.endTooltip();
+//            }
         }
-
-/*        List<MethodLabel> addedLabels = new ArrayList<>();
-
-        for (InstructionReferenceArrow arrow : table.getInstructions().getInstructionReferenceArrowList()) {
-            if (arrow.getTo() == this) {
-                if (addedLabels.contains(arrow.getLabel())) {
-                    continue;
-                }
-                addedLabels.add(arrow.getLabel());
-                arguments.add(new LabelArgument(table.getAssemblerFrame(), arrow.getLabel().getTable().getMethodInput(), new LabelNode(arrow.getLabel().findOriginal()), null));
-            }
-        }*/
     }
 
     private PopupItemBuilder createPopup(AssemblerFrame af) {
         PopupItemBuilder popup = PopupItemBuilder.create();
 
-        if (getId() != 0) popup.menuItem("Move Up", () -> af.moveInstruction(this, -1));
-        if (getId() != af.getInstructions().size() - 1) popup.menuItem("Move Down", () -> af.moveInstruction(this, 1));
+        for (InstructionAction instructionAction : INSTRUCTION_ACTIONS) {
+            popup.menuItem(instructionAction.getName(), instructionAction.getKeyName(), false, () -> instructionAction.execute(af, this));
+        }
 
         popup.separator();
 
-        for (InstructionAction instructionAction : INSTRUCTION_ACTIONS) {
-            popup.menuItem(instructionAction.getName(), GLFW.glfwGetKeyName(instructionAction.getKey(), 0), false, () -> instructionAction.execute(af, this));
-        }
+        if (getId() != 0) popup.menuItem("Move Up", () -> af.moveInstruction(this, -1));
+        if (getId() != af.getInstructions().size() - 1) popup.menuItem("Move Down", () -> af.moveInstruction(this, 1));
 
         popup.separator();
 

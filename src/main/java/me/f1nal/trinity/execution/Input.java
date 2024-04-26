@@ -59,7 +59,7 @@ public abstract class Input<N> implements AccessFlagsMaskProvider, IRenameHandle
 
         builder.disabled(() -> displayName.getType() == RenameType.NONE, (items) -> {
             items.menuItem("Revert Name", () -> {
-                displayName.setName(displayName.getOriginalName());
+                rename(Main.getTrinity().getRemapper(), displayName.getOriginalName());
                 Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
             });
         });

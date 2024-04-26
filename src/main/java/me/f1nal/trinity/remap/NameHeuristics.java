@@ -11,6 +11,7 @@ public class NameHeuristics {
             "ok"
     );
 
+    // TODO: need proper handling of classes & respective packages
     public boolean isNameObfuscated(@NotNull String name, InputType type) {
         if (type == InputType.CLASS) {
             name = NameUtil.getSimpleName(name);
@@ -36,11 +37,7 @@ public class NameHeuristics {
             return true;
         }
 
-        if (isRandomSequence(chars)) {
-            return true;
-        }
-
-        return false;
+        return isRandomSequence(chars);
     }
 
     private static boolean isRandomSequence(char[] chars) {
@@ -69,7 +66,7 @@ public class NameHeuristics {
             return true;
         }
 
-        return lowercase > 2 && uppercase >= lowercase / 3.F;
+        return uppercase >= lowercase / 3.F;
     }
 
     private static boolean isUnicodeName(char[] chars) {
