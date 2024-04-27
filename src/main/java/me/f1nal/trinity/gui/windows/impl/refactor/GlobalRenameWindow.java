@@ -14,12 +14,12 @@ import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
+import me.f1nal.trinity.refactor.globalrename.api.GlobalRenameContext;
 import me.f1nal.trinity.remap.NameHeuristics;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
 
 public class GlobalRenameWindow extends StaticWindow implements ICaption {
     private final ListBoxComponent<GlobalRenameType> listBox;
@@ -67,7 +67,8 @@ public class GlobalRenameWindow extends StaticWindow implements ICaption {
         GlobalRenameType type = this.listBox.getSelection();
         NameHeuristics nameHeuristics = trinity.getRemapper().getNameHeuristics();
         List<Rename> renames = new ArrayList<>();
-        type.runRefactor(trinity.getExecution(), renames, nameHeuristics);
+        GlobalRenameContext context = new GlobalRenameContext(trinity.getExecution(), renames, nameHeuristics);
+        type.refactor(context);
         renames.forEach(rename -> rename.rename(trinity.getRemapper()));
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
         Main.getDisplayManager().addNotification(new Notification(NotificationType.INFO, this, ColoredStringBuilder.create().fmt("Issued a global rename on {} objects", renames.size()).get()));

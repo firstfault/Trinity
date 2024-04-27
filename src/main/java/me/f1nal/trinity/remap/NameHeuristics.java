@@ -11,7 +11,7 @@ public class NameHeuristics {
             "ok", "io", "co", "gg"
     );
 
-    public boolean isNameObfuscated(@NotNull String name, InputType type) {
+    public boolean isObfuscated(@NotNull String name, InputType type) {
         final char[] chars = name.toCharArray();
         final int length = chars.length;
 

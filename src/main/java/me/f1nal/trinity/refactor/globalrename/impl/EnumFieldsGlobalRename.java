@@ -2,7 +2,7 @@ package me.f1nal.trinity.refactor.globalrename.impl;
 
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
-import me.f1nal.trinity.remap.NameHeuristics;
+import me.f1nal.trinity.refactor.globalrename.api.GlobalRenameContext;
 import me.f1nal.trinity.util.InstructionUtil;
 import me.f1nal.trinity.util.NameUtil;
 import me.f1nal.trinity.execution.*;
@@ -16,8 +16,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class EnumFieldsGlobalRenameType extends GlobalRenameType {
-    public EnumFieldsGlobalRenameType() {
+public class EnumFieldsGlobalRename extends GlobalRenameType {
+    public EnumFieldsGlobalRename() {
         super("Enum Field Naming", "Recovers enum field namings.");
     }
 
@@ -26,8 +26,8 @@ public class EnumFieldsGlobalRenameType extends GlobalRenameType {
     }
 
     @Override
-    public void runRefactor(Execution execution, List<Rename> renames, NameHeuristics nameHeuristics) {
-        for (ClassInput classInput : execution.getClassList()) {
+    public void refactor(GlobalRenameContext context) {
+        for (ClassInput classInput : context.execution().getClassList()) {
             if (classInput.getAccessFlags().isEnum()) {
                 MethodInput clinit = classInput.getMethod("<clinit>", "()V");
 
@@ -47,7 +47,7 @@ public class EnumFieldsGlobalRenameType extends GlobalRenameType {
                 for (AbstractInsnNode instruction : instructions) {
                     if (instruction.getOpcode() == Opcodes.NEW) {
                         try {
-                            this.processNewSeq(classInput, (TypeInsnNode) instruction, targetFields, renames);
+                            this.processNewSeq(classInput, (TypeInsnNode) instruction, targetFields, context.renames());
                         } catch (Throwable throwable) {
                             // Handling nulls for every instruction is annoying
                         }

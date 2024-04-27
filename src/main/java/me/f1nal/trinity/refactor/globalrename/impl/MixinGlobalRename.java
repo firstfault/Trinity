@@ -1,12 +1,11 @@
 package me.f1nal.trinity.refactor.globalrename.impl;
 
 import me.f1nal.trinity.execution.ClassInput;
-import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.PackageSelectComponent;
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
-import me.f1nal.trinity.remap.NameHeuristics;
+import me.f1nal.trinity.refactor.globalrename.api.GlobalRenameContext;
 import me.f1nal.trinity.util.AnnotationUtil;
 import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.NameUtil;
@@ -16,10 +15,10 @@ import org.objectweb.asm.Type;
 
 import java.util.List;
 
-public class MixinGlobalRenameType extends GlobalRenameType {
+public class MixinGlobalRename extends GlobalRenameType {
     private final PackageSelectComponent packageSelect;
 
-    public MixinGlobalRenameType() {
+    public MixinGlobalRename() {
         super("Spongepowered Mixins", "Renames classes, methods and fields that use Mixin features by deduction from available injection type information inside annotations.");
         this.packageSelect = new PackageSelectComponent("com/example/mixins/");
     }
@@ -32,12 +31,12 @@ public class MixinGlobalRenameType extends GlobalRenameType {
     }
 
     @Override
-    public void runRefactor(Execution execution, List<Rename> renames, NameHeuristics nameHeuristics) {
-        for (ClassInput classInput : execution.getClassList()) {
-            this.renameClass(classInput, renames);
+    public void refactor(GlobalRenameContext context) {
+        for (ClassInput classInput : context.execution().getClassList()) {
+            this.renameClass(classInput, context.renames());
 
             for (MethodInput methodInput : classInput.getMethodMap().values()) {
-                this.renameMethod(methodInput, renames);
+                this.renameMethod(methodInput, context.renames());
             }
         }
     }
