@@ -1,5 +1,7 @@
 package me.f1nal.trinity.execution;
 
+import com.google.common.collect.Streams;
+import com.google.common.graph.Traverser;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.ClassPath;
@@ -19,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Class representing a program's execution flow
@@ -94,9 +97,8 @@ public final class Execution {
     }
 
     public void renameResource(ResourceArchiveEntry archiveEntry, String newName) {
-        Package pkg = archiveEntry.getPackage();
         this.deleteResource(archiveEntry);
-        this.createResource(pkg, newName, archiveEntry.getBytes());
+        this.createResource(this.rootPackage, newName, archiveEntry.getBytes());
     }
 
     public boolean isClassesLoaded() {
@@ -121,6 +123,11 @@ public final class Execution {
 
     public Package getRootPackage() {
         return rootPackage;
+    }
+
+    public List<Package> getAllPackages() {
+        Traverser<Package> traverser = Traverser.forTree(Package::getPackages);
+        return Streams.stream(traverser.depthFirstPreOrder(this.rootPackage)).collect(Collectors.toList());
     }
 
     public @Nullable ClassInput getClassInput(String className) {

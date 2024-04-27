@@ -20,20 +20,6 @@ public class FieldInput extends MemberInput<FieldNode> implements IDatabaseSavab
         return InputType.FIELD;
     }
 
-    public RenameHandler getRenameHandler() {
-        return new RenameHandler() {
-            @Override
-            public String getFullName() {
-                return getDisplayName().getName();
-            }
-
-            @Override
-            public void rename(Remapper remapper, String newName) {
-                FieldInput.this.rename(remapper, newName);
-            }
-        };
-    }
-
     @Override
     public void setAccessFlagsMask(int accessFlagsMask) {
         getNode().access = accessFlagsMask;

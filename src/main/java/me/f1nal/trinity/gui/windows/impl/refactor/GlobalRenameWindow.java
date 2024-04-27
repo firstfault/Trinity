@@ -5,8 +5,12 @@ import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.gui.components.general.ListBoxComponent;
+import me.f1nal.trinity.gui.viewport.notifications.ICaption;
+import me.f1nal.trinity.gui.viewport.notifications.Notification;
+import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
@@ -17,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
-public class GlobalRenameWindow extends StaticWindow {
+public class GlobalRenameWindow extends StaticWindow implements ICaption {
     private final ListBoxComponent<GlobalRenameType> listBox;
 
     public GlobalRenameWindow(Trinity trinity) {
@@ -63,14 +67,14 @@ public class GlobalRenameWindow extends StaticWindow {
         GlobalRenameType type = this.listBox.getSelection();
         NameHeuristics nameHeuristics = trinity.getRemapper().getNameHeuristics();
         List<Rename> renames = new ArrayList<>();
-        type.runRefactor(trinity.getExecution(), renames);
-        renames.stream()
-                .filter(rename -> {
-                    if (rename.getCurrentName().equals(rename.getNewName())) return false;
-
-                    return nameHeuristics.isNameObfuscated(rename.getCurrentName(), rename.getInput().getType());
-                })
-                .forEach(rename -> rename.rename(trinity.getRemapper()));
+        type.runRefactor(trinity.getExecution(), renames, nameHeuristics);
+        renames.forEach(rename -> rename.rename(trinity.getRemapper()));
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
+        Main.getDisplayManager().addNotification(new Notification(NotificationType.INFO, this, ColoredStringBuilder.create().fmt("Issued a global rename on {} objects", renames.size()).get()));
+    }
+
+    @Override
+    public String getCaption() {
+        return "Global Rename";
     }
 }

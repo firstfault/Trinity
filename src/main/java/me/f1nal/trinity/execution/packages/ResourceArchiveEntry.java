@@ -5,6 +5,7 @@ import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.filter.kind.IKindType;
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.NameUtil;
 
@@ -27,7 +28,17 @@ public class ResourceArchiveEntry extends ArchiveEntry {
 
     @Override
     public RenameHandler getRenameHandler() {
-        return (r, newName) -> r.getExecution().renameResource(this, newName);
+        return new RenameHandler() {
+            @Override
+            public String getFullName() {
+                return getDisplayOrRealName();
+            }
+
+            @Override
+            public void rename(Remapper r, String newName) {
+                r.getExecution().renameResource(ResourceArchiveEntry.this, newName);
+            }
+        };
     }
 
     @Override

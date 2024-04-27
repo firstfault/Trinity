@@ -6,6 +6,7 @@ import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.PackageSelectComponent;
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
+import me.f1nal.trinity.remap.NameHeuristics;
 import me.f1nal.trinity.util.AnnotationUtil;
 import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.NameUtil;
@@ -31,7 +32,7 @@ public class MixinGlobalRenameType extends GlobalRenameType {
     }
 
     @Override
-    public void runRefactor(Execution execution, List<Rename> renames) {
+    public void runRefactor(Execution execution, List<Rename> renames, NameHeuristics nameHeuristics) {
         for (ClassInput classInput : execution.getClassList()) {
             this.renameClass(classInput, renames);
 

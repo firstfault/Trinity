@@ -2,6 +2,7 @@ package me.f1nal.trinity.refactor.globalrename.impl;
 
 import me.f1nal.trinity.refactor.globalrename.GlobalRenameType;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
+import me.f1nal.trinity.remap.NameHeuristics;
 import me.f1nal.trinity.util.InstructionUtil;
 import me.f1nal.trinity.util.NameUtil;
 import me.f1nal.trinity.execution.*;
@@ -25,7 +26,7 @@ public class EnumFieldsGlobalRenameType extends GlobalRenameType {
     }
 
     @Override
-    public void runRefactor(Execution execution, List<Rename> renames) {
+    public void runRefactor(Execution execution, List<Rename> renames, NameHeuristics nameHeuristics) {
         for (ClassInput classInput : execution.getClassList()) {
             if (classInput.getAccessFlags().isEnum()) {
                 MethodInput clinit = classInput.getMethod("<clinit>", "()V");

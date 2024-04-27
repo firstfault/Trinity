@@ -95,7 +95,10 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
                         open.menuItem(viewerType.getName(), () -> Main.getWindowManager().addClosableWindow(viewerType.getWindow(this)));
                     }
                 }).
-                menuItem("Copy Path", () -> SystemUtil.copyToClipboard(this.getDisplayOrRealName())).
+                menu("Copy", (copy) -> {
+                    copy.menuItem("Full Path", () -> SystemUtil.copyToClipboard(this.getDisplayOrRealName()))
+                            .menuItem("Name", () -> SystemUtil.copyToClipboard(this.getDisplaySimpleName()));
+                }).
                 separator().
                 predicate(() -> getPackage() != null && getPackage().isOpen() && getBrowserViewerNode().isRenameAvailable(),
                         items -> items.menuItem("Rename", () -> this.getBrowserViewerNode().beginRenaming())).

@@ -1,19 +1,20 @@
 package me.f1nal.trinity.refactor.globalrename.api;
 
 import me.f1nal.trinity.execution.Input;
+import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.remap.Remapper;
 
 public final class Rename {
-    private final Input<?> input;
+    private final RenameHandler handler;
     private final String newName;
 
-    public Rename(Input<?> input, String newName) {
-        this.input = input;
+    public Rename(RenameHandler handler, String newName) {
+        this.handler = handler;
         this.newName = newName;
     }
 
-    public Input<?> getInput() {
-        return input;
+    public RenameHandler getHandler() {
+        return handler;
     }
 
     public String getNewName() {
@@ -21,10 +22,6 @@ public final class Rename {
     }
 
     public void rename(Remapper remapper) {
-        input.rename(remapper, this.getNewName());
-    }
-
-    public String getCurrentName() {
-        return input.getDisplayName().getName();
+        this.handler.rename(remapper, newName);
     }
 }

@@ -42,20 +42,6 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
         return methodHierarchy;
     }
 
-    public RenameHandler getRenameHandler() {
-        return isInit() ? getOwningClass().getRenameHandler() : new RenameHandler() {
-            @Override
-            public String getFullName() {
-                return getDisplayName().getName();
-            }
-
-            @Override
-            public void rename(Remapper remapper, String newName) {
-                MethodInput.this.rename(remapper, newName);
-            }
-        };
-    }
-
     public VariableTable getVariableTable() {
         return variableTable;
     }
@@ -85,6 +71,10 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
 
     @Override
     public void rename(Remapper remapper, String newName) {
+        if (this.isInit()) {
+            this.getOwningClass().rename(remapper, newName);
+            return;
+        }
         remapper.renameMethod(this, newName);
     }
 

@@ -2,6 +2,7 @@ package me.f1nal.trinity.refactor.globalrename;
 
 import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.refactor.globalrename.api.Rename;
+import me.f1nal.trinity.remap.NameHeuristics;
 import me.f1nal.trinity.util.IDescribable;
 import me.f1nal.trinity.util.INameable;
 
@@ -30,5 +31,5 @@ public abstract class GlobalRenameType implements INameable, IDescribable {
      * Draw user inputs required for this global rename.
      */
     public abstract void drawInputs();
-    public abstract void runRefactor(Execution execution, List<Rename> renames);
+    public abstract void runRefactor(Execution execution, List<Rename> renames, NameHeuristics nameHeuristics);
 }

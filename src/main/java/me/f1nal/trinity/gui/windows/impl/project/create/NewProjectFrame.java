@@ -100,6 +100,7 @@ public class NewProjectFrame extends StaticWindow implements ICaption {
                     .fmt("Failed to load new Trinity: {}", e).get()));
             return;
         }
+        database.setLoaded(trinity);
         Main.getDisplayManager().closeDatabase(() -> Main.getDisplayManager().setDatabase(trinity));
     }
 

@@ -1,6 +1,7 @@
 package me.f1nal.trinity.util;
 
-import org.jetbrains.annotations.NotNull;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Multimaps;
 import org.objectweb.asm.util.Printer;
 
 import java.io.BufferedReader;
@@ -8,12 +9,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class NameUtil {
+    /**
+     * List of words mapped by their initial character.
+     */
+    private final static ListMultimap<Character, String> wordMap = Multimaps.newListMultimap(new HashMap<>(), ArrayList::new);
     private final static String[] wordList;
 
     private final static Random random = new SecureRandom();
@@ -52,20 +54,6 @@ public class NameUtil {
         return indexOf == -1 ? fileName : fileName.substring(0, indexOf);
     }
 
-    private static int uniqueWordSequenceIndex, uniqueWordSequenceDepth;
-
-    /**
-     * Generates a unique random word sequence.
-     * <p>
-     *     This method will never return the same {@link String} twice. If the word list has been used, words will be chained together until the result is unique.
-     * </p>
-     * @return A unique sequence of words.
-     */
-    public static @NotNull String generateUniqueWords() {
-        // TODO
-        return generateWord();
-    }
-
     /**
      * Generates a random sequence of uppercase letters, lowercase letters, and numbers.
      *
@@ -91,9 +79,54 @@ public class NameUtil {
 
     public static String getOpcodeName(int opcode) {
         if (opcode < 0 || opcode >= Printer.OPCODES.length) {
-            return java.lang.String.valueOf(opcode);
+            return String.valueOf(opcode);
         }
         return Printer.OPCODES[opcode];
+    }
+
+    /**
+     * Counts the amount of words in this text.
+     * @param string Text to analyze.
+     * @return Count of words.
+     */
+    public static TextAnalysisResult getWordAnalysis(String string) {
+        final char[] chars = string.toCharArray();
+        final int length = chars.length;
+        int wordCount = 0, recognizedCount = 0, unrecognizedCount = 0;
+
+        for (int i = 0; i < length; i++) {
+            final char c = chars[i];
+
+            List<String> strings = wordMap.get(c);
+            String word = getWord(chars, i, strings);
+
+            if (word != null) {
+                i += word.length() - 1;
+                recognizedCount += word.length();
+                ++wordCount;
+            } else {
+                ++unrecognizedCount;
+            }
+        }
+
+        return new TextAnalysisResult(wordCount, recognizedCount, unrecognizedCount);
+    }
+
+    private static String getWord(char[] chars, int index, List<String> strings) {
+        stringLoop:
+        for (String string : strings) {
+            char[] wordChars = string.toCharArray();
+
+            for (int j = 0; j < wordChars.length; j++) {
+                if (j >= chars.length - index || wordChars[j] != chars[index + j]) {
+                    continue stringLoop;
+                }
+            }
+
+            return string;
+        }
+
+        return null;
     }
 
     public static String[] getWordList() {
@@ -110,7 +143,12 @@ public class NameUtil {
             final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(stream));
             String line;
             while ((line = bufferedReader.readLine()) != null) {
+                if (line.length() <= (wordArrayList.size() < 200 ? 1 : 2)) {
+                    continue;
+                }
                 if (PatternUtil.LETTERS_ONLY.matcher(line).matches()) {
+                    char c = line.charAt(0);
+                    wordMap.put(c, line);
                     wordArrayList.add(line);
                 }
             }
@@ -122,6 +160,30 @@ public class NameUtil {
         }
         if (wordList.length < 1024) {
             throw new RuntimeException("Not enough words! " + wordList.length);
+        }
+    }
+
+    public static class TextAnalysisResult {
+        private final int words;
+        private final int recognizedCharacters;
+        private final int unrecognizedCharacters;
+
+        public TextAnalysisResult(int words, int recognizedCharacters, int unrecognizedCharacters) {
+            this.words = words;
+            this.recognizedCharacters = recognizedCharacters;
+            this.unrecognizedCharacters = unrecognizedCharacters;
+        }
+
+        public int getWords() {
+            return words;
+        }
+
+        public int getRecognizedCharacters() {
+            return recognizedCharacters;
+        }
+
+        public int getUnrecognizedCharacters() {
+            return unrecognizedCharacters;
         }
     }
 }

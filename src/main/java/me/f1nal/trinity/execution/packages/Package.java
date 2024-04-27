@@ -10,18 +10,23 @@ import me.f1nal.trinity.gui.components.filter.kind.IKindType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.BrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.IBrowserViewerNode;
+import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.util.SystemUtil;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewerNode {
     private final String name;
     private final String prettyPath;
-    private final String path;
+    private final String internalPath;
     private Package parent;
     private final List<Package> packages = new ArrayList<>();
-    private final List<ArchiveEntry> classTargets = new ArrayList<>();
+    private final List<ArchiveEntry> archiveEntries = new ArrayList<>();
     private PackageHierarchy packageHierarchy;
     private final BrowserViewerNode browserViewerNode;
     private boolean open;
@@ -36,7 +41,7 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
         this.name = name;
         this.parent = parent;
         this.prettyPath = this.createPrettyPath();
-        this.path = this.createPath();
+        this.internalPath = this.createPath();
         if (parent != null) {
             this.packageHierarchy = parent.getPackageHierarchy();
             parent.getPackages().add(this);
@@ -45,10 +50,14 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
         this.browserViewerNode = new BrowserViewerNode(null,
                 this.isArchive() ? () -> CodeColorScheme.ARCHIVE_REF : () -> CodeColorScheme.PACKAGE,
                 this::getDisplayName,
-                this.isArchive() ? (r, newName) -> packageHierarchy.getDatabase().setName(newName) : null);
+                this::rename);
         this.browserViewerNode.addMouseClickHandler(clickType -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
                 PopupItemBuilder popup = PopupItemBuilder.create().
+                        menu("Copy", (copy) -> {
+                            copy.menuItem("Full Path", () -> SystemUtil.copyToClipboard(this.getPrettyPath().replace('.', '/')))
+                                    .menuItem("Name", () -> SystemUtil.copyToClipboard(this.getDisplayName()));
+                        }).
                         menu("Create...", (menu) -> {
                             menu.menuItem("Empty File", () -> {
                                 ArchiveEntry newFile = Main.getTrinity().getExecution().createResource(this, "New File", new byte[0]);
@@ -66,6 +75,27 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
         this.updateBrowserViewerNode();
     }
 
+    public void rename(Remapper remapper, String newName) {
+        if (newName.equals(this.getDisplayName()) || newName.isEmpty()) {
+            return;
+        }
+
+        if (this.isArchive()) {
+            this.packageHierarchy.getDatabase().setName(newName);
+        } else {
+            final Map<RenameHandler, String> renames = new HashMap<>();
+            final int startLength = this.getPrettyPath().length() - this.getName().length();
+            final int endLength = startLength + this.getName().length();
+            this.addPackageRename(this, renames, newName, startLength, endLength);
+            renames.forEach((renameHandler, fullNewName) -> renameHandler.rename(remapper, fullNewName));
+        }
+    }
+
+    private void addPackageRename(Package pkg, Map<RenameHandler, String> renames, String newName, int startLength, int endLength) {
+        pkg.getPackages().forEach(otherPackage -> this.addPackageRename(otherPackage, renames, newName, startLength, endLength));
+        pkg.getEntries().forEach(archiveEntry -> renames.put(archiveEntry.getRenameHandler(), archiveEntry.getDisplayOrRealName().substring(0, startLength) + newName + archiveEntry.getDisplayOrRealName().substring(endLength)));
+    }
+
     private String getDisplayName() {
         return this.isArchive() ? packageHierarchy.getDatabase().getName() : this.getName();
     }
@@ -79,7 +109,7 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
     }
 
     private void addToHierarchy() {
-        this.packageHierarchy.getPathToPackage().put(this.getPath(), this);
+        this.packageHierarchy.getPathToPackage().put(this.getInternalPath(), this);
     }
 
     public boolean isOpen() {
@@ -136,8 +166,8 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
         return name;
     }
 
-    public String getPath() {
-        return path;
+    public String getInternalPath() {
+        return internalPath;
     }
 
     public Package getParent() {
@@ -149,14 +179,14 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
     }
 
     public List<ArchiveEntry> getEntries() {
-        return classTargets;
+        return archiveEntries;
     }
 
     public void remove(ArchiveEntry classTarget) {
-        classTargets.remove(classTarget);
+        archiveEntries.remove(classTarget);
 
-        if (classTargets.isEmpty()) {
-            packageHierarchy.getPathToPackage().remove(this.getPath());
+        if (archiveEntries.isEmpty()) {
+            packageHierarchy.getPathToPackage().remove(this.getInternalPath());
             if (parent != null) parent.getPackages().remove(this);
         }
     }
@@ -181,7 +211,7 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
 
     @Override
     public DatabasePackage createDatabaseObject() {
-        return new DatabasePackage(this.getPath(), this.isOpen());
+        return new DatabasePackage(this.getInternalPath(), this.isOpen());
     }
 
     @Override

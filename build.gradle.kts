@@ -10,11 +10,11 @@ repositories {
 }
 
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.9.1"))
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     implementation(project(":Decompiler"))
     implementation("org.jetbrains:annotations:24.1.0")
-    implementation("com.google.guava:guava:32.1.3-jre")
+    implementation("com.google.guava:guava:33.1.0-jre")
     implementation("org.lz4:lz4-java:1.8.0")
     implementation("com.thoughtworks.xstream:xstream:1.4.20")
     implementation("org.tukaani:xz:1.9")

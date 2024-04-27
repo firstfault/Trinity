@@ -134,7 +134,7 @@ public class Database {
      * Loads this database back into Trinity.
      * Classes are loaded manually, right after database creation, unrelated to here.
      */
-    public void reload(Trinity trinity) {
+    public void setLoaded(Trinity trinity) {
         long millis = System.currentTimeMillis();
         this.resetLastOpen();
         this.opened = true;

@@ -97,7 +97,7 @@ public class DecompilerComponent {
     }
 
     public void addInputControls(Input<?> input) {
-        this.setRenameHandler(input.getRenameHandler());
+        this.setRenameHandler(input);
         this.addPopupBuilder(input::populatePopup);
     }
 

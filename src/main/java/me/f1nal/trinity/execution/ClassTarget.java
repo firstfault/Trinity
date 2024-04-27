@@ -64,7 +64,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
     }
 
     /**
-     * Simply put, tells us if our class path contains this class.
+     * Tells us if we have a class file for this reference.
      * @return If we have a {@link ClassInput} linked to this reference.
      */
     public boolean isInputAvailable() {

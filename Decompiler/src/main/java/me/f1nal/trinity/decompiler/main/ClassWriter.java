@@ -842,8 +842,7 @@ public class ClassWriter {
         StructExceptionsAttribute attr = mt.getAttribute(StructGeneralAttribute.ATTRIBUTE_EXCEPTIONS);
         if ((descriptor != null && !descriptor.exceptionTypes.isEmpty()) || attr != null) {
           throwsExceptions = true;
-          buffer.append(" throws ");
-
+          buffer.append(" " + OutputMemberSerializer.keyword("throws") + " ");
           for (int i = 0; i < attr.getThrowsExceptions().size(); i++) {
             if (i > 0) {
               buffer.append(", ");

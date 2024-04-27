@@ -23,7 +23,7 @@ public class DatabaseReadObjectsLoadTask extends ProgressiveLoadTask {
             finishedWork();
         });
         invalid.forEach(database.getObjects()::remove);
-        database.reload(getTrinity());
+        database.setLoaded(getTrinity());
     }
 }
 

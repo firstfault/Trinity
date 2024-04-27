@@ -8,36 +8,36 @@ import java.util.List;
 
 public class NameHeuristics {
     private static final List<String> WHITELISTED_SHORT_NAMES = List.of(
-            "ok"
+            "ok", "io", "co", "gg"
     );
 
-    // TODO: need proper handling of classes & respective packages
     public boolean isNameObfuscated(@NotNull String name, InputType type) {
-        if (type == InputType.CLASS) {
-            name = NameUtil.getSimpleName(name);
-        }
-
-        final int stringLength = name.length();
-
-        if (stringLength <= 2) {
-            if (!WHITELISTED_SHORT_NAMES.contains(name.toLowerCase())) {
-                return true;
-            }
-        }
-
         final char[] chars = name.toCharArray();
+        final int length = chars.length;
 
-        if (stringLength >= 4) {
-            if (isIlIName(chars)) {
+        if (type == InputType.PACKAGE) {
+            if (length <= 1) {
                 return true;
             }
+        }
+        if (length <= 2 && WHITELISTED_SHORT_NAMES.contains(name.toLowerCase())) {
+            return true;
+        }
+
+        if (length >= 3 && isIlIName(chars)) {
+            return true;
         }
 
         if (isUnicodeName(chars)) {
             return true;
         }
 
-        return isRandomSequence(chars);
+        if (isRandomSequence(chars)) {
+            return true;
+        }
+
+        NameUtil.TextAnalysisResult analysis = NameUtil.getWordAnalysis(name.toLowerCase());
+        return ((float)analysis.getUnrecognizedCharacters() * 0.87F) * (Math.max(chars.length / 10.F, 1.F)) > (float)analysis.getRecognizedCharacters() * 2.F;
     }
 
     private static boolean isRandomSequence(char[] chars) {
@@ -66,7 +66,7 @@ public class NameHeuristics {
             return true;
         }
 
-        return uppercase >= lowercase / 3.F;
+        return lowercase > 3 && uppercase >= lowercase / 3.F;
     }
 
     private static boolean isUnicodeName(char[] chars) {

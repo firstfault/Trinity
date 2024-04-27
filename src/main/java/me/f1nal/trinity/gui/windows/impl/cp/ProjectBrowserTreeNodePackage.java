@@ -19,7 +19,7 @@ public class ProjectBrowserTreeNodePackage extends ProjectBrowserTreeNode<Packag
         ImGui.tableNextColumn();
         boolean searching = !projectBrowserFrame.getSearch().isEmpty();
         ImGui.setNextItemOpen((node.isOpen() && (node.getParent() == null || node.getParent().isOpen())) || searching);
-        boolean open = ImGui.treeNodeEx("###" + node.getPath(), ImGuiTreeNodeFlags.SpanFullWidth);
+        boolean open = ImGui.treeNodeEx("###" + node.getInternalPath(), ImGuiTreeNodeFlags.SpanFullWidth);
         ImGui.sameLine();
 
         node.getBrowserViewerNode().draw();
