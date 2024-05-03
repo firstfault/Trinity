@@ -38,8 +38,10 @@ public class Main {
     private static ThemeManager themeManager;
     private static final List<ShutdownHook> shutdownHooks = new ArrayList<>();
     private static final Queue<FutureTask<?>> scheduledTasks = Queues.newArrayDeque();
+    private static Thread renderThread;
 
     public static void main(String[] args) throws IOException {
+        renderThread = Thread.currentThread();
         scheduler = new ScheduledThreadPoolExecutor(1);
         scheduler.setRemoveOnCancelPolicy(true);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -132,5 +134,11 @@ public class Main {
     public static void exit() {
         executeShutdownHooks();
         Runtime.getRuntime().exit(0);
+    }
+
+    public static void assertRenderThread() {
+        if (Thread.currentThread() != renderThread) {
+            throw new RuntimeException("Not on render thread");
+        }
     }
 }

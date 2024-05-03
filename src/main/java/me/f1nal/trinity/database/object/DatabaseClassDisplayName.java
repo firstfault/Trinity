@@ -1,5 +1,6 @@
 package me.f1nal.trinity.database.object;
 
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.logging.Logging;
@@ -39,7 +40,9 @@ public class DatabaseClassDisplayName extends AbstractDatabaseObject {
             return false;
         }
         target.getDisplayName().setName(this.getDisplayName(), this.getRenameType());
-        target.setPackage(trinity.getExecution().getRootPackage());
+        Main.runLater(() -> {
+            target.setPackage(trinity.getExecution().getRootPackage());
+        });
         return true;
     }
 

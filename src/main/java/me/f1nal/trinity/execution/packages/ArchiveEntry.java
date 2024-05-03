@@ -62,6 +62,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
     }
 
     public void setPackage(Package root) {
+        Main.assertRenderThread();
         if (getPackage() != null) {
             getPackage().remove(this);
         }
