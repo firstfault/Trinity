@@ -23,7 +23,7 @@ public abstract class FullRenameClassMember<I extends MemberInput<?>> extends Fu
             // :P
             if (type == MethodInput.class) {
                 //noinspection unchecked
-                classInput.getMethodMap().values().forEach(method -> refactorMember((I) method, context));
+                classInput.getMethodMap().values().stream().filter(m -> !m.isInitOrClinit()).forEach(m -> refactorMember((I) m, context));
             } else {
                 //noinspection unchecked
                 classInput.getFieldMap().values().forEach(field -> refactorMember((I) field, context));

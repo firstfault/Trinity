@@ -96,7 +96,7 @@ public class DecompilerMemberReader {
     private void handleBytecodeMarker(BytecodeMarkerOutputMember marker) {
         ClassInput classInput = decompiledClass.getClassInput();
         for (MethodInput methodInput : classInput.getMethodMap().values()) {
-            if (marker.getMethod() != BytecodeMarkerOutputMember.getHashcode(classInput.getFullName(), methodInput.getDescriptor(), methodInput.getName())) {
+            if (marker.getMethod() != BytecodeMarkerOutputMember.getHashcode(classInput.getRealName(), methodInput.getDescriptor(), methodInput.getName())) {
                 continue;
             }
             DecompiledMethod method = decompiledClass.createMethod(methodInput);

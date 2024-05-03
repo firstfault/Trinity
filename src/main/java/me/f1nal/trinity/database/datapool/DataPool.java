@@ -61,7 +61,7 @@ public class DataPool {
             final byte[] bytes = writeClassNode(classInput.getNode());
 
             if (bytes.length == 0) {
-                Logging.error("Why are class bytes zero? {}", classInput.getFullName());
+                Logging.error("Why are class bytes zero? {}", classInput.getRealName());
                 continue;
             }
 

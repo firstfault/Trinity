@@ -17,8 +17,8 @@ import java.util.regex.Pattern;
 public class XrefSearchTypeMember extends XrefSearchType {
     private final MemberSelectComponent memberSelectComponent;
     private MemberDetails details;
-    private static final MemorableCheckboxComponent exact = new MemorableCheckboxComponent("xrefSearchMemberCaseInsensitive", true);
-    private static final MemorableCheckboxComponent caseInsensitive = new MemorableCheckboxComponent("xrefSearchMemberCaseInsensitive", true);
+    private static final MemorableCheckboxComponent exact = new MemorableCheckboxComponent("xrefSearchMemberExact", "Exact", true);
+    private static final MemorableCheckboxComponent caseInsensitive = new MemorableCheckboxComponent("xrefSearchMemberCaseInsensitive", "Case Insensitive", true);
 
     protected XrefSearchTypeMember(Trinity trinity, ClassSelectComponent classSelectComponent) {
         super("Method/Field", trinity);
@@ -28,10 +28,10 @@ public class XrefSearchTypeMember extends XrefSearchType {
     @Override
     public boolean draw() {
         this.details = memberSelectComponent.draw();
-        GuiUtil.smallWidget(() -> exact.drawCheckbox("Exact"));
+        GuiUtil.smallWidget(exact::draw);
         GuiUtil.tooltip("If not exact, the field only has to contain the provided string.");
         ImGui.sameLine();
-        GuiUtil.smallWidget(() -> caseInsensitive.drawCheckbox("Case Insensitive"));
+        GuiUtil.smallWidget(caseInsensitive::draw);
         return true;
     }
 
@@ -53,13 +53,13 @@ public class XrefSearchTypeMember extends XrefSearchType {
     }
 
     private void addPattern(StringBuilder pattern, String field) {
-        if (caseInsensitive.getState()) pattern.append("(?i)");
+        if (caseInsensitive.isChecked()) pattern.append("(?i)");
 
         if (field.isEmpty()) {
             pattern.append("(?s).*");
         } else {
             final String quote = Pattern.quote(field);
-            if (true||exact.getState()) {
+            if (true||exact.isChecked()) {
                 pattern.append(quote);
             } else {
                 // FIXME: This (contains) is broken

@@ -17,7 +17,7 @@ import java.util.List;
 
 public class ConstantSearchFrame extends StaticWindow {
     private final EnumComboBox<ConstantSearchType> searchTypeCombo;
-    private static final MemorableCheckboxComponent closeFrame = new MemorableCheckboxComponent("closeFrameAfterConstantSearch", false);
+    private static final MemorableCheckboxComponent closeFrame = new MemorableCheckboxComponent("closeFrameAfterConstantSearch", "Close After Search", false);
 
     public ConstantSearchFrame(Trinity trinity) {
         super("Constant Search", 100, 100, trinity);
@@ -42,10 +42,10 @@ public class ConstantSearchFrame extends StaticWindow {
             List<ConstantViewCache> constantList = new ArrayList<>();
             type.populate(constantList);
             Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantList));
-            if (closeFrame.getState()) this.close();
+            if (closeFrame.isChecked()) this.close();
         }
         if (!result) ImGui.endDisabled();
         ImGui.sameLine();
-        closeFrame.drawCheckbox("Close After Search");
+        closeFrame.draw();
     }
 }

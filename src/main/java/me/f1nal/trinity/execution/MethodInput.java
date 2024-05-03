@@ -7,21 +7,14 @@ import me.f1nal.trinity.execution.hierarchy.MethodHierarchy;
 import me.f1nal.trinity.execution.labels.LabelTable;
 import me.f1nal.trinity.execution.var.VariableTable;
 import me.f1nal.trinity.execution.xref.XrefMap;
-import me.f1nal.trinity.execution.xref.where.XrefWhere;
-import me.f1nal.trinity.execution.xref.where.XrefWhereMethod;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.assembler.AssemblerFrame;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.Instruction2SourceMapping;
-import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
-import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.Remapper;
-import me.f1nal.trinity.util.NameUtil;
 import org.objectweb.asm.tree.*;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public final class MethodInput extends MemberInput<MethodNode> implements IDatabaseSavable<DatabaseMethodDisplayName> {
@@ -30,7 +23,7 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
     private MethodHierarchy methodHierarchy;
 
     public MethodInput(MethodNode node, ClassInput owner) {
-        super(node, owner, new MemberDetails(owner.getFullName(), node.name, node.desc));
+        super(node, owner, new MemberDetails(owner.getRealName(), node.name, node.desc));
         this.variableTable = new VariableTable(this);
     }
 

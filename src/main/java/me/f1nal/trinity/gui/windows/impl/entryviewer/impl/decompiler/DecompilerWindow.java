@@ -269,6 +269,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
     @Override
     public DatabaseDecompiler createDatabaseObject() {
-        return new DatabaseDecompiler(this.selectedClass.getFullName());
+        return new DatabaseDecompiler(this.selectedClass.getRealName());
     }
 }

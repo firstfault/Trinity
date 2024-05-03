@@ -20,7 +20,7 @@ import me.f1nal.trinity.gui.windows.impl.classstructure.nodes.ClassStructureNode
 import java.awt.event.KeyEvent;
 
 public class ClassStructureWindow extends StaticWindow {
-    private static final MemorableCheckboxComponent showFilter = new MemorableCheckboxComponent("classStructureShowFilter", false);
+    private static final MemorableCheckboxComponent showFilter = new MemorableCheckboxComponent("classStructureShowFilter", "Show Filter", false);
     private ClassStructure classStructure;
     private ListFilterComponent<ClassStructureNode> filterComponent;
     private final KindFilter<ClassStructureNode> kindFilter = new KindFilter<>(StructureKind.values());
@@ -52,11 +52,11 @@ public class ClassStructureWindow extends StaticWindow {
 
     @Override
     protected void renderFrame() {
-        this.popupMenuBar.set(PopupItemBuilder.create().menu("Find", find -> find.menuItem("Show Filter", "Ctrl+F", showFilter.getState(), showFilter::toggleState)));
+        this.popupMenuBar.set(PopupItemBuilder.create().menu("Find", find -> find.menuItem("Show Filter", "Ctrl+F", showFilter.isChecked(), showFilter::toggleChecked)));
         this.popupMenuBar.draw();
 
         if (ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(KeyEvent.VK_F)) {
-            showFilter.toggleState();
+            showFilter.toggleChecked();
         }
 
         final ClassStructure structure = this.getClassStructure();
@@ -65,7 +65,7 @@ public class ClassStructureWindow extends StaticWindow {
             return;
         }
 
-        if (showFilter.getState()) {
+        if (showFilter.isChecked()) {
             this.filterComponent.draw();
 
             ImGui.separator();

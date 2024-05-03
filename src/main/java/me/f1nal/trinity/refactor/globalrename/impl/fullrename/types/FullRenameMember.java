@@ -11,7 +11,7 @@ public abstract class FullRenameMember {
     protected FullRenameMember(String label, String namePrefix) {
         this.label = label;
         this.namePrefix = namePrefix;
-        this.enabled = new MemorableCheckboxComponent("fullRename" + label, true);
+        this.enabled = new MemorableCheckboxComponent("fullRename" + label, label, true);
     }
 
     public abstract void refactor(GlobalRenameContext context);
@@ -21,7 +21,7 @@ public abstract class FullRenameMember {
     }
 
     public final void draw() {
-        this.enabled.drawCheckbox(this.getLabel());
+        this.enabled.draw();
     }
 
     protected final String generateName() {
@@ -33,7 +33,7 @@ public abstract class FullRenameMember {
     }
 
     public final boolean isEnabled() {
-        return enabled.getState();
+        return enabled.isChecked();
     }
 
     public final String getLabel() {

@@ -1,6 +1,7 @@
 package me.f1nal.trinity.remap;
 
 import me.f1nal.trinity.execution.InputType;
+import me.f1nal.trinity.gui.components.MemorableCheckboxComponent;
 import me.f1nal.trinity.util.NameUtil;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,8 +11,13 @@ public class NameHeuristics {
     private static final List<String> WHITELISTED_SHORT_NAMES = List.of(
             "ok", "io", "co", "gg"
     );
+    private final MemorableCheckboxComponent enabledCheckbox = new MemorableCheckboxComponent("nameHeuristicsEnabled", "Name Heuristics", true);
 
     public boolean isObfuscated(@NotNull String name, InputType type) {
+        if (!enabledCheckbox.isChecked()) {
+            return true;
+        }
+
         final char[] chars = name.toCharArray();
         final int length = chars.length;
 
@@ -38,6 +44,10 @@ public class NameHeuristics {
 
         NameUtil.TextAnalysisResult analysis = NameUtil.getWordAnalysis(name.toLowerCase());
         return ((float)analysis.getUnrecognizedCharacters() * 0.87F) * (Math.max(chars.length / 10.F, 1.F)) > (float)analysis.getRecognizedCharacters() * 2.F;
+    }
+
+    public MemorableCheckboxComponent getEnabledCheckbox() {
+        return enabledCheckbox;
     }
 
     private static boolean isRandomSequence(char[] chars) {

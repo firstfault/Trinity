@@ -6,17 +6,16 @@ import me.f1nal.trinity.Main;
 
 import java.util.Map;
 
-public class MemorableCheckboxComponent {
-    private final ImBoolean state;
+public class MemorableCheckboxComponent extends CheckboxComponent {
     private final String identifier;
 
-    public MemorableCheckboxComponent(String identifier, boolean defaultValue) {
-        this.state = new ImBoolean(defaultValue);
+    public MemorableCheckboxComponent(String identifier, String label, boolean defaultValue) {
+        super(label, defaultValue);
         this.identifier = identifier;
 
         Boolean memorized = getMemorizedCheckboxes().get(identifier);
         if (memorized != null) {
-            this.state.set(memorized);
+            this.setChecked(memorized);
         }
     }
 
@@ -24,25 +23,14 @@ public class MemorableCheckboxComponent {
         return Main.getPreferences().getMemorizedCheckboxes();
     }
 
-    public void drawCheckbox(String label) {
-        boolean state = getState();
-        boolean newState = ImGui.checkbox(label, this.state);
-
-        if (state != this.state.get()) {
-            setState(this.state.get());
-        }
+    @Override
+    public void draw() {
+        super.draw();
     }
 
-    public void setState(boolean state) {
-        this.state.set(state);
-        getMemorizedCheckboxes().put(this.identifier, state);
-    }
-
-    public boolean getState() {
-        return state.get();
-    }
-
-    public void toggleState() {
-        this.setState(!this.getState());
+    @Override
+    public void setChecked(boolean checked) {
+        super.setChecked(checked);
+        getMemorizedCheckboxes().put(this.identifier, checked);
     }
 }

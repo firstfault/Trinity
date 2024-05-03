@@ -3,7 +3,6 @@ package me.f1nal.trinity.execution;
 import me.f1nal.trinity.execution.hierarchy.ClassHierarchy;
 import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
-import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.remap.DisplayName;
 import me.f1nal.trinity.remap.IDisplayNameProvider;
@@ -104,8 +103,13 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
      * Gives the full class name.
      * @return Returns {@link ClassNode#name}.
      */
-    public String getFullName() {
+    public String getRealName() {
         return getNode().name;
+    }
+
+    @Override
+    public String getFullName() {
+        return getDisplayName().getName();
     }
 
     @Override
@@ -182,11 +186,11 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
 
     @Override
     public String toString() {
-        return this.getFullName();
+        return this.getRealName();
     }
 
     private static final Map<String, Function<Input<?>, String>> COPYABLE_ELEMENTS = new LinkedHashMap<>() {{
-        put("Full Name", input -> ((ClassInput)input).getFullName());
-        put("Name", input -> NameUtil.getSimpleName(((ClassInput)input).getFullName()));
+        put("Full Name", input -> ((ClassInput)input).getRealName());
+        put("Name", input -> NameUtil.getSimpleName(((ClassInput)input).getRealName()));
     }};
 }

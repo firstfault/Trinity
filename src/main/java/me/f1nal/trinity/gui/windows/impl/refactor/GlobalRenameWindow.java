@@ -17,6 +17,7 @@ import me.f1nal.trinity.refactor.globalrename.api.Rename;
 import me.f1nal.trinity.refactor.globalrename.api.GlobalRenameContext;
 import me.f1nal.trinity.remap.NameHeuristics;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.util.GuiUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +58,8 @@ public class GlobalRenameWindow extends StaticWindow implements ICaption {
                 this.runRefactor();
             }
             ImGui.sameLine();
-            ImGui.progressBar(0.F);
+            trinity.getRemapper().getNameHeuristics().getEnabledCheckbox().draw();
+            GuiUtil.informationTooltip("Detect if the name is obfuscated before renaming");
         }
         ImGui.endChild();
         ImGui.endGroup();
@@ -71,7 +73,7 @@ public class GlobalRenameWindow extends StaticWindow implements ICaption {
         type.refactor(context);
         renames.forEach(rename -> rename.rename(trinity.getRemapper()));
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
-        Main.getDisplayManager().addNotification(new Notification(NotificationType.INFO, this, ColoredStringBuilder.create().fmt("Issued a global rename on {} objects", renames.size()).get()));
+        Main.getDisplayManager().addNotification(new Notification(NotificationType.INFO, this, ColoredStringBuilder.create().fmt("Automatically renamed {} objects", renames.size()).get()));
     }
 
     @Override

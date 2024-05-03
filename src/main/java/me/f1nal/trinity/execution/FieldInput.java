@@ -1,18 +1,13 @@
 package me.f1nal.trinity.execution;
 
-import me.f1nal.trinity.Main;
 import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.object.DatabaseFieldDisplayName;
-import me.f1nal.trinity.execution.xref.XrefMap;
-import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
-import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
-import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.remap.Remapper;
 import org.objectweb.asm.tree.FieldNode;
 
 public class FieldInput extends MemberInput<FieldNode> implements IDatabaseSavable<DatabaseFieldDisplayName> {
     public FieldInput(FieldNode node, ClassInput owner) {
-        super(node, owner, new MemberDetails(owner.getFullName(), node.name, node.desc));
+        super(node, owner, new MemberDetails(owner.getRealName(), node.name, node.desc));
     }
 
     @Override

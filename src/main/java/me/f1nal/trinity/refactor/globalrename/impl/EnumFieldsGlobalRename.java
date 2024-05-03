@@ -58,7 +58,7 @@ public class EnumFieldsGlobalRename extends GlobalRenameType {
     }
 
     private void processNewSeq(ClassInput classInput, TypeInsnNode newInsn, Map<MemberDetails, FieldInput> targetFields, List<Rename> renames) {
-        if (!NameUtil.internalToNormal(newInsn.desc).equals(classInput.getFullName())) {
+        if (!NameUtil.internalToNormal(newInsn.desc).equals(classInput.getRealName())) {
             return;
         }
         AbstractInsnNode nxt = newInsn;
