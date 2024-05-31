@@ -1,9 +1,16 @@
 # Trinity 
 Trinity is a powerful lightning-fast software reverse engineering suite for the Java bytecode architecture handling highly obfuscated binaries with ease.
 
-[![Download](https://img.shields.io/badge/Download-green.svg)](https://github.com/firstfault/Trinity/releases)
-
 ![Screenshot](screenshots/trinity.png)
+
+## Building
+I highly recommend running Trinity from source:
+```bash
+git clone https://github.com/firstfault/Trinity.git
+cd Trinity
+./gradlew run
+```
+However, there are [binaries (usually outdated) available which you can get from here](https://github.com/firstfault/Trinity/releases).
 
 ## Features
 - Databases

@@ -46,6 +46,11 @@ tasks.shadowJar {
     mergeServiceFiles()
 }
 
+tasks.register<JavaExec>("run") {
+    mainClass.set("me.f1nal.trinity.Main")
+    classpath = sourceSets["main"].runtimeClasspath
+}
+
 tasks.build {
     dependsOn(tasks.shadowJar)
 }
