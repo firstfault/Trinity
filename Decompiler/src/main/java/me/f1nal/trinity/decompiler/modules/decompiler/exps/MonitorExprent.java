@@ -4,6 +4,7 @@
 package me.f1nal.trinity.decompiler.modules.decompiler.exps;
 
 import me.f1nal.trinity.decompiler.main.collectors.BytecodeMappingTracer;
+import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.decompiler.util.TextBuffer;
 
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public class MonitorExprent extends Exprent {
     tracer.addMapping(bytecode);
 
     if (monType == MONITOR_ENTER) {
-      return value.toJava(indent, tracer).enclose("synchronized(", ")");
+      return value.toJava(indent, tracer).enclose(OutputMemberSerializer.keyword("synchronized") + " (", ")");
     }
     else {
       return new TextBuffer();
