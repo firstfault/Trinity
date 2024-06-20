@@ -88,8 +88,23 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
         component.memberKey = member.getClassName();
         component.setIdentifier(member, member.getClassName());
-        component.setColorFunction(() -> member.isImport() || target == null ? CodeColorScheme.CLASS_REF : target.getKind().getColor());
+        component.setColorFunction(() -> member.isImport() || target == null ? CodeColorScheme.CLASS_REF : this.getClassKindColor(target.getKind()));
         component.setTooltip(() -> ColoredStringBuilder.create().text(CodeColorScheme.CLASS_REF, target != null ? target.getDisplayOrRealName() : member.getClassName()).get());
+    }
+
+    private int getClassKindColor(FileKind kind) {
+        switch (kind) {
+            case ABSTRACT -> {
+                return CodeColorScheme.CLASS_REF_ABSTRACT;
+            }
+            case ENUM -> {
+                return CodeColorScheme.CLASS_REF_ENUM;
+            }
+            case INTERFACES -> {
+                return CodeColorScheme.CLASS_REF_INTERFACE;
+            }
+        }
+        return kind.getColor();
     }
 
     private static String getArrayDimensions(String text) {
