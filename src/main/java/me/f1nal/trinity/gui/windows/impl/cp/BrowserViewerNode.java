@@ -97,11 +97,11 @@ public class BrowserViewerNode {
     }
 
     public void draw() {
-        final ImVec2 cursorPos = GuiUtil.getNextItemPosition();
+//        final ImVec2 cursorPos = GuiUtil.getNextItemPosition();
 
-        if (!ImGui.isRectVisible(cursorPos.x, cursorPos.y, cursorPos.x + 1.F, cursorPos.y + 20.F)) {
-            return;
-        }
+//        if (!ImGui.isRectVisible(cursorPos.x, cursorPos.y, cursorPos.x + 1.F, cursorPos.y + 20.F)) {
+//            return;
+//        }
 
         final boolean hovered = ImGui.isItemHovered();
 

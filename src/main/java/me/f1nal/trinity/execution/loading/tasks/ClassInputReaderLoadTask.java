@@ -50,7 +50,7 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
         if (classLoadFails.get() != 0) {
             Main.getDisplayManager().addNotification(new Notification(NotificationType.WARNING, this,
                     ColoredStringBuilder.create()
-                            .fmt("Failed to load {} classes", classLoadFails.get()).get()));
+                            .fmt("Failed to load {} class" + (classLoadFails.get() == 1 ? "" : "es"), classLoadFails.get()).get()));
         }
 
         tasks.add(() -> {
