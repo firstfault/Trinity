@@ -103,6 +103,12 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             case INTERFACES -> {
                 return CodeColorScheme.CLASS_REF_INTERFACE;
             }
+            case CLASSES -> {
+                return CodeColorScheme.CLASS_REF;
+            }
+            case ANNOTATION -> {
+                return CodeColorScheme.CLASS_REF_ANNOTATION;
+            }
         }
         return kind.getColor();
     }

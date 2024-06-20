@@ -78,7 +78,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     @Override
     protected int getIconColor() {
-        return CodeColorScheme.CLASS_REF;
+        return CodeColorScheme.FILE_CLASS;
     }
 
     @Override

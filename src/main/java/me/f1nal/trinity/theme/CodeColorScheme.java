@@ -52,6 +52,8 @@ public final class CodeColorScheme {
     /////////////////////////
     // File Kind
     /////////////////////////
+    @LabeledColor(category = FILE_KIND, label = "Class")
+    public static int FILE_CLASS = getRgb(new Color(64, 87, 133, 215));
     @LabeledColor(category = FILE_KIND, label = "Interface")
     public static int FILE_INTERFACE = getRgb(new Color(99, 162, 81));
     @LabeledColor(category = FILE_KIND, label = "Abstract")
@@ -60,6 +62,8 @@ public final class CodeColorScheme {
     public static int FILE_ENUM = getRgb(new Color(192, 133, 73));
     @LabeledColor(category = FILE_KIND, label = "Resource")
     public static int FILE_RESOURCE = getRgb(new Color(157, 57, 84));
+    @LabeledColor(category = FILE_KIND, label = "Annotation")
+    public static int FILE_ANNOTATION = getRgb(new Color(136, 66, 145));
 
     /////////////////////////
     // Decompiler Colors
@@ -69,13 +73,15 @@ public final class CodeColorScheme {
     @LabeledColor(category = CODE_EDITOR, label = "Field Reference")
     public static int FIELD_REF = getRgb(new Color(137, 68, 164));
     @LabeledColor(category = CODE_EDITOR, label = "Class Reference")
-    public static int CLASS_REF = getRgb(new Color(64, 87, 133, 215));
+    public static int CLASS_REF = FILE_CLASS;
     @LabeledColor(category = CODE_EDITOR, label = "Class Reference (Interface)")
     public static int CLASS_REF_INTERFACE = FILE_INTERFACE;
     @LabeledColor(category = CODE_EDITOR, label = "Class Reference (Abstract)")
     public static int CLASS_REF_ABSTRACT = FILE_ABSTRACT;
     @LabeledColor(category = CODE_EDITOR, label = "Class Reference (Enum)")
     public static int CLASS_REF_ENUM = FILE_ENUM;
+    @LabeledColor(category = CODE_EDITOR, label = "Class Reference (Annotation)")
+    public static int CLASS_REF_ANNOTATION = FILE_ANNOTATION;
     @LabeledColor(category = CODE_EDITOR, label = "Variable Reference")
     public static int VAR_REF = getRgb(new Color(61, 134, 141, 215));
     @LabeledColor(category = CODE_EDITOR, label = "Parameter Reference")
@@ -136,7 +142,7 @@ public final class CodeColorScheme {
     @LabeledColor(category = XREF_KIND, label = "Exception")
     public static int XREF_EXCEPTION = getRgb(new Color(192, 125, 70));
     @LabeledColor(category = XREF_KIND, label = "Annotation")
-    public static int XREF_ANNOTATION = getRgb(new Color(136, 66, 145));
+    public static int XREF_ANNOTATION = FILE_ANNOTATION;
 
     public static float[] toRgba(int in) {
         Color clr = toColor(in);

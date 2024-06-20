@@ -6,11 +6,11 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 import java.util.function.Supplier;
 
 public enum FileKind implements IKindType {
-    CLASSES("Classes", "Class", () -> CodeColorScheme.CLASS_REF),
+    CLASSES("Classes", "Class", () -> CodeColorScheme.FILE_CLASS),
     ABSTRACT("Abstract", "Abstract Class", () -> CodeColorScheme.FILE_ABSTRACT),
     INTERFACES("Interface", "Interface", () -> CodeColorScheme.FILE_INTERFACE),
     ENUM("Enum", "Enum Class", () -> CodeColorScheme.FILE_ENUM),
-    ANNOTATION("Annotation", "Annotation Class", () -> CodeColorScheme.XREF_ANNOTATION),
+    ANNOTATION("Annotation", "Annotation Class", () -> CodeColorScheme.FILE_ANNOTATION),
     RESOURCE("Resource", "Resource File", () -> CodeColorScheme.FILE_RESOURCE),
     ;
 
