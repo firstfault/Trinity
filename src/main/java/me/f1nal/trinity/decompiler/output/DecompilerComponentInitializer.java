@@ -145,7 +145,8 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         });
 
         component.setIdentifier(constant, number);
-        component.setTextFunction(() -> settings.displayType.getText(number));
+        String suffix = constant.getSuffix() == '\0' ? "" : String.valueOf(constant.getSuffix());
+        component.setTextFunction(() -> settings.displayType.getText(number) + suffix);
         component.setColorFunction(() -> CodeColorScheme.NUMBER);
         component.setTooltip(() -> ColoredStringBuilder.create().text(component.getColor(), StringUtil.capitalizeFirstLetter(number.getClass().getSimpleName())).get());
     }
@@ -293,7 +294,8 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         }
 
         component.setIdentifier(variableMember, variable instanceof ImmutableVariable ? "this" : Objects.toString(this.decompilingMethod) + varIndex);
-        component.setColorFunction(() -> CodeColorScheme.VAR_REF);
+        boolean editable = variable != null && variable.isEditable();
+        component.setColorFunction(() -> editable ? CodeColorScheme.VAR_REF : CodeColorScheme.KEYWORD);
         component.setTooltip(() -> {
             ColoredStringBuilder text = ColoredStringBuilder.create();
 

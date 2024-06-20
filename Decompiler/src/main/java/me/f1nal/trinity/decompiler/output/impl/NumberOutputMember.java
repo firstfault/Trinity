@@ -11,26 +11,30 @@ import java.io.IOException;
 public class NumberOutputMember extends OutputMember {
     private ConstType type;
     private Number number;
+    private char suffix;
 
     public NumberOutputMember(int length) {
         super(length);
     }
 
-    public NumberOutputMember(int length, ConstType type, Number value) {
+    public NumberOutputMember(int length, ConstType type, Number value, char suffix) {
         super(length);
         this.type = type;
         this.number = value;
+        this.suffix = suffix;
     }
 
     @Override
     protected void serializeImpl(DataOutput dataOutput) throws IOException {
         dataOutput.writeByte(type.ordinal());
+        dataOutput.writeChar(suffix);
         type.serialize(dataOutput, this.number);
     }
 
     @Override
     protected void deserializeImpl(DataInput dataInput) throws IOException {
         type = ConstType.values()[dataInput.readByte()];
+        suffix = dataInput.readChar();
         number = type.deserialize(dataInput);
     }
 
@@ -40,11 +44,19 @@ public class NumberOutputMember extends OutputMember {
     }
 
     public static String getConst(String string, ConstType type, Number value) {
-        return OutputMemberSerializer.tag(string, l -> new NumberOutputMember(l, type, value));
+        return getConst(string, type, value, '\0');
+    }
+
+    public static String getConst(String string, ConstType type, Number value, char suffix) {
+        return OutputMemberSerializer.tag(string, l -> new NumberOutputMember(l, type, value, suffix));
     }
 
     public ConstType getType() {
         return type;
+    }
+
+    public char getSuffix() {
+        return suffix;
     }
 
     public Number getNumber() {
