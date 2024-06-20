@@ -78,6 +78,8 @@ public final class CodeColorScheme {
     public static int CLASS_REF_ENUM = FILE_ENUM;
     @LabeledColor(category = CODE_EDITOR, label = "Variable Reference")
     public static int VAR_REF = getRgb(new Color(61, 134, 141, 215));
+    @LabeledColor(category = CODE_EDITOR, label = "Parameter Reference")
+    public static int PARAM_REF = getRgb(new Color(120, 211, 253, 215));
     @LabeledColor(category = CODE_EDITOR, label = "Archive")
     public static int ARCHIVE_REF = getRgb(new Color(117, 78, 134));
     @LabeledColor(category = CODE_EDITOR, label = "Keyword")

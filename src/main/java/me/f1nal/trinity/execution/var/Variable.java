@@ -40,6 +40,10 @@ public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHand
         return table.getIndex(this);
     }
 
+    public boolean isParameter() {
+        return table.getParameterIndexEnd() != 0 && findIndex() <= table.getParameterIndexEnd();
+    }
+
     @Override
     public DatabaseVariable createDatabaseObject() {
         return new DatabaseVariable(table.getMethod().getDetails(), findIndex(), this.getName());
