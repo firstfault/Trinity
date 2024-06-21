@@ -5,6 +5,7 @@ import imgui.ImColor;
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiMouseButton;
+import imgui.flag.ImGuiMouseCursor;
 import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
@@ -27,7 +28,9 @@ import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructure;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,6 +52,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
      */
     public final DecompilerCursor cursor = new DecompilerCursor(this);
     private DecompilerAutoScroll autoscrollTo;
+    private final Stopwatch focusTime = new Stopwatch();
+    private static Stopwatch viewMember = new Stopwatch();
 
     public DecompilerWindow(ClassTarget classTarget, Trinity trinity) {
         super(trinity, classTarget);
@@ -82,6 +87,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
     @Override
     protected void onFocusGain() {
+        this.focusTime.reset();
         this.updateClassStructure();
     }
 
@@ -228,6 +234,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
 
         boolean rightClick = ImGui.isWindowHovered() && ImGui.isMouseClicked(ImGuiMouseButton.Right);
+        boolean leftClick = !rightClick && ImGui.isWindowHovered() && ImGui.isMouseClicked(ImGuiMouseButton.Left);
 
         if (this.hoveredComponent != null) {
             List<ColoredString> tooltip = this.hoveredComponent.createTooltip();
@@ -238,6 +245,17 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 ColoredString.drawText(tooltip);
 
                 ImGui.endTooltip();
+            }
+
+            if (this.hoveredComponent.getViewMember() != null) {
+                if (ImGui.getIO().getKeyCtrl()) {
+                    ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
+
+                    if (focusTime.hasPassed(150L) && viewMember.hasPassed(250L) && (ImGui.isKeyPressed(GLFW.GLFW_KEY_B) || leftClick)) {
+                        Main.getDisplayManager().openDecompilerView(this.hoveredComponent.getViewMember());
+                        viewMember.reset();
+                    }
+                }
             }
 
             if (rightClick) {

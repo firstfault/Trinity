@@ -126,12 +126,10 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
     @Override
     public void visitComment(CommentOutputMember comment) {
-        component.addPopupBuilder(builder -> {
-            builder.menuItem("Hide comments", () -> {
-                Main.getPreferences().setDecompilerHideComments(true);
-                Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
-            });
-        });
+        component.addPopupBuilder(builder -> builder.menuItem("Hide comments", () -> {
+            Main.getPreferences().setDecompilerHideComments(true);
+            Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
+        }));
 
         component.setTextFunction(() -> Main.getPreferences().isDecompilerHideComments() ? "" : this.originalText);
         component.setColorFunction(() -> CodeColorScheme.DISABLED);
@@ -145,9 +143,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         };
 
         component.addPopupBuilder(builder -> {
-            builder.menuItem("Copy", () -> {
-                SystemUtil.copyToClipboard(component.getText());
-            });
+            builder.menuItem("Copy", () -> SystemUtil.copyToClipboard(component.getText()));
             builder.separator();
             for (NumberDisplayType displayType : INTEGER_TYPES) {
                 builder.menuItem(String.format("%s (%s)", displayType.getLabel(), displayType.getText(number)), () -> {
@@ -287,19 +283,17 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     public void visitString(StringOutputMember string) {
         final String unquotedText = string.getData();
 
-        component.addPopupBuilder(builder -> {
-            builder.menuItem("Copy", () -> SystemUtil.copyToClipboard(unquotedText))
+        component.addPopupBuilder(builder -> builder.menuItem("Copy", () -> SystemUtil.copyToClipboard(unquotedText))
 
-                    .menuItem("Search All Occurrences...", () -> {
-                        Trinity trinity = Main.getTrinity();
-                        ConstantSearchTypeString constantSearchType = new ConstantSearchTypeString(trinity);
-                        constantSearchType.getSearchTerm().set(unquotedText);
-                        constantSearchType.getExact().set(true);
-                        List<ConstantViewCache> constantViewList = new ArrayList<>();
-                        constantSearchType.populate(constantViewList);
-                        Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
-                    });
-        });
+                .menuItem("Search All Occurrences...", () -> {
+                    Trinity trinity = Main.getTrinity();
+                    ConstantSearchTypeString constantSearchType = new ConstantSearchTypeString(trinity);
+                    constantSearchType.getSearchTerm().set(unquotedText);
+                    constantSearchType.getExact().set(true);
+                    List<ConstantViewCache> constantViewList = new ArrayList<>();
+                    constantSearchType.populate(constantViewList);
+                    Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
+                }));
         component.setIdentifier(string, originalText.hashCode());
         component.setColorFunction(() -> CodeColorScheme.STRING);
     }

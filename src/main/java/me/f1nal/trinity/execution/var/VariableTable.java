@@ -69,7 +69,7 @@ public class VariableTable {
         return null;
     }
 
-    public int getIndex(Variable variable) {
+    public Integer getIndex(Variable variable) {
         return variableMap.inverse().get(variable);
     }
 }

@@ -36,12 +36,16 @@ public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHand
         return true;
     }
 
-    public int findIndex() {
+    public Integer findIndex() {
         return table.getIndex(this);
     }
 
     public boolean isParameter() {
-        return table.getParameterIndexEnd() != 0 && findIndex() <= table.getParameterIndexEnd();
+        if (table.getParameterIndexEnd() == 0) {
+            return false;
+        }
+        Integer index = findIndex();
+        return index != null && index <= table.getParameterIndexEnd();
     }
 
     @Override

@@ -44,9 +44,7 @@ public abstract class Input<N> implements AccessFlagsMaskProvider, RenameHandler
         Trinity trinity = getOwningClass().getExecution().getTrinity();
 
         addXrefViewerMenuItem(trinity, builder);
-        builder.menuItem("View Member", () -> {
-            Main.getDisplayManager().openDecompilerView(this);
-        });
+        builder.menuItem("View Member", () -> Main.getDisplayManager().openDecompilerView(this));
 
         DisplayName displayName = getDisplayName();
         builder.menu("Copy...", copy -> {

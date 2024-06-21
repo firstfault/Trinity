@@ -35,6 +35,7 @@ public class DecompilerComponent {
      * Renderer to run after text drawing finished.
      */
     private Runnable customRenderer;
+    private Input<?> viewMember;
     // Temporary
     public Input<?> input;
     public String memberKey;
@@ -59,6 +60,14 @@ public class DecompilerComponent {
         }
 
         this.setText(this.textFunction.get());
+    }
+
+    public void setViewMember(Input<?> viewMember) {
+        this.viewMember = viewMember;
+    }
+
+    public Input<?> getViewMember() {
+        return viewMember;
     }
 
     public void setIdentifier(OutputMember type, Object identifier) {
@@ -97,6 +106,7 @@ public class DecompilerComponent {
     }
 
     public void addInputControls(Input<?> input) {
+        this.setViewMember(input);
         this.setRenameHandler(input);
         this.addPopupBuilder(input::populatePopup);
     }
