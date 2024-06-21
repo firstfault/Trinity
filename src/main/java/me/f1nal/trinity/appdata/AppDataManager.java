@@ -43,7 +43,7 @@ public class AppDataManager {
     }
 
     public File getThemeFile(Theme theme) {
-        return new File(this.themesDirectory, FileUtil.normalizeFileName(theme.getName().replace(' ', '_')) + ".theme");
+        return new File(this.themesDirectory, Main.getThemeManager().getThemeFileName(theme.getName()));
     }
 
     public boolean saveTheme(Theme theme) {
@@ -52,11 +52,8 @@ public class AppDataManager {
 
     public boolean saveTheme(Theme theme, File file) {
         try {
-            ThemeFile themeFile = new ThemeFile();
-            for (ThemeColor color : theme.getColors()) {
-                themeFile.getColors().put(color.getLabel(), CodeColorScheme.getRgb(color.getRgba()));
-            }
-            byte[] bytes = ThemeFile.serialize(themeFile).getBytes();
+            ThemeFileNew themeFile = new ThemeFileNew(theme);
+            byte[] bytes = ThemeFileNew.serialize(themeFile).getBytes();
             Files.write(bytes, file);
             return true;
         } catch (Throwable e) {
@@ -94,10 +91,7 @@ public class AppDataManager {
     public Theme loadTheme(String themeName, File file) {
         try {
             byte[] bytes = Files.toByteArray(file);
-            ThemeFile themeFile = new ThemeFile();
-            ThemeFile.deserialize(themeFile, new String(bytes));
-            Theme theme = new Theme(themeName, true);
-            theme.readFrom(themeFile);
+            Theme theme = Main.getThemeManager().deserializeTheme(themeName, bytes, true);
             if (!Main.getThemeManager().addTheme(theme)) {
                 throw new IOException("Unable to add theme to manager");
             }

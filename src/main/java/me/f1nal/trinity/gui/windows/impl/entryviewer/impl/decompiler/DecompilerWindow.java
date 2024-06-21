@@ -202,7 +202,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         for (DecompilerLine line : decompiledClass.getLines()) {
             final float cursorScreenPosX = ImGui.getCursorScreenPosX();
 
-            int textOffset = 0;
+            int textOffset = 0, sameLines = 0;
             ImGui.setCursorPosX(cursorPosX + lineNumberSpacing);
             for (DecompilerLineText text : line.getComponents()) {
                 if (!text.getComponent().render()) {
@@ -286,10 +286,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (cursor.hasTextSelection() && ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_C)) {
             this.copyToClipboard();
         }
-    }
-
-    private String formatClassName() {
-        return null;
     }
 
     public void setDecompileTarget(Input<?> input) {

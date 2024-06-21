@@ -1,20 +1,42 @@
 package me.f1nal.trinity.theme;
 
+import com.google.common.io.Resources;
 import me.f1nal.trinity.Main;
+import me.f1nal.trinity.appdata.ThemeFileNew;
 import me.f1nal.trinity.logging.Logging;
+import me.f1nal.trinity.util.FileUtil;
+import me.f1nal.trinity.util.NameUtil;
 
 import java.io.File;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ThemeManager {
     private final List<Theme> themes = new ArrayList<>();
     private Theme currentTheme;
-    private final Theme defaultTheme;
+    private Theme defaultTheme;
 
     public ThemeManager() {
-        this.defaultTheme = this.currentTheme = new Theme("Trinity Dark", false);
-        this.themes.add(defaultTheme);
+        this.registerBuiltInTheme("Gerry Dark");
+    }
+
+    private void registerBuiltInTheme(String name) {
+        try {
+            final String fileName = this.getThemeFileName(name);
+            final URL resource = Resources.getResource("themes/" + fileName);
+            final Theme theme = this.deserializeTheme(name, Resources.toByteArray(resource), false);
+
+            if (this.themes.isEmpty()) {
+                this.currentTheme = this.defaultTheme = theme;
+            }
+
+            this.themes.add(theme);
+        } catch (Throwable throwable) {
+            throw new RuntimeException("Registering built-in theme " + name, throwable);
+        }
     }
 
     public void setCurrentTheme(Theme currentTheme) {
@@ -74,5 +96,17 @@ public class ThemeManager {
         for (Theme theme : removal) {
             this.deleteTheme(theme);
         }
+    }
+
+    public String getThemeFileName(String name) {
+        return FileUtil.normalizeFileName(name.replace(' ', '_')) + ".theme";
+    }
+
+    public Theme deserializeTheme(String themeName, byte[] bytes, boolean editable) {
+        ThemeFileNew themeFile = new ThemeFileNew();
+        ThemeFileNew.deserialize(themeFile, new String(bytes));
+        Theme theme = new Theme(themeName, editable);
+        theme.readFrom(themeFile);
+        return theme;
     }
 }

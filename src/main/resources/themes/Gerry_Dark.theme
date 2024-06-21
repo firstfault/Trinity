@@ -1,0 +1,57 @@
+<theme>
+  <category name="Xref Kind">
+    <color name="Inherit" value="#5A6E95FF"/>
+    <color name="Return" value="#7B8649FF"/>
+    <color name="Parameter" value="#86495AFF"/>
+    <color name="Literal" value="#6FB4B2FF"/>
+    <color name="Exception" value="#C07D46FF"/>
+    <color name="Annotation" value="#884291FF"/>
+  </category>
+  <category name="Frame">
+    <color name="Highlight Background" value="#101010FF"/>
+    <color name="Background" value="#1E1F22FF"/>
+    <color name="Popup Background" value="#1E1E1EFF"/>
+    <color name="Widget Background" value="#3636368A"/>
+  </category>
+  <category name="Code Editor">
+    <color name="Method Reference" value="#FFC76BFF"/>
+    <color name="Field Reference" value="#FF9696FF"/>
+    <color name="Class Reference" value="#AFB9C3FF"/>
+    <color name="Class Reference (Interface)" value="#AFB9C3FF"/>
+    <color name="Class Reference (Abstract)" value="#AFB9C3FF"/>
+    <color name="Class Reference (Enum)" value="#AFB9C3FF"/>
+    <color name="Class Reference (Annotation)" value="#884291FF"/>
+    <color name="Variable Reference" value="#AFB9C3FF"/>
+    <color name="Parameter Reference" value="#5AAEE0FF"/>
+    <color name="Archive" value="#754E86FF"/>
+    <color name="Keyword" value="#C78BCCFF"/>
+    <color name="Label" value="#9D9D9DFF"/>
+    <color name="Number" value="#82BA77FF"/>
+    <color name="Disabled" value="#7D7D7DFF"/>
+    <color name="Text" value="#B9B9B9FF"/>
+    <color name="Package" value="#AFB9C3FF"/>
+    <color name="String" value="#67AA72FF"/>
+    <color name="Line Number" value="#525454FF"/>
+    <color name="Cursor" value="#AFAFAFFF"/>
+    <color name="Selection Box" value="#5375BD50"/>
+  </category>
+  <category name="Assembler">
+    <color name="Data" value="#4197D5FF"/>
+    <color name="Jump" value="#D78A3DFF"/>
+    <color name="Call" value="#79C046FF"/>
+  </category>
+  <category name="File Kind">
+    <color name="Class" value="#405785D7"/>
+    <color name="Interface" value="#253627FF"/>
+    <color name="Abstract" value="#623EA3FF"/>
+    <color name="Enum" value="#C08549FF"/>
+    <color name="Resource" value="#9D3954FF"/>
+    <color name="Annotation" value="#884291FF"/>
+  </category>
+  <category name="General">
+    <color name="Error" value="#A43C3CFF"/>
+    <color name="Warning" value="#BD8D37FF"/>
+    <color name="Information" value="#3A7198FF"/>
+    <color name="Success" value="#60983AFF"/>
+  </category>
+</theme>

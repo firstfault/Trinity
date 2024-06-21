@@ -246,7 +246,11 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
     @Override
     public void visitKeyword(KeywordOutputMember keyword) {
-        component.setColorFunction(() -> CodeColorScheme.KEYWORD);
+        if (originalText.equals("length")) {
+            component.setColorFunction(() -> CodeColorScheme.TEXT);
+        } else {
+            component.setColorFunction(() -> CodeColorScheme.KEYWORD);
+        }
     }
 
     @Override

@@ -34,7 +34,9 @@ public class ThemeEditorFrame extends StaticWindow {
 
     @Override
     protected void renderFrame() {
+        PopupMenu.style(true);
         this.drawMenuBar();
+        PopupMenu.style(false);
         if (ImGui.beginListBox("###ThemeManagerThemeSelector", 0.F, 300.F)) {
             for (Theme theme : this.themeManager.getThemes()) {
                 if (ImGui.selectable(theme.getName(), this.theme == theme) && (this.modifiedTheme == null || this.isModifyingTheme(theme))) this.theme = theme;
@@ -80,7 +82,11 @@ public class ThemeEditorFrame extends StaticWindow {
                 File file = selector.openFileChooser();
                 if (file != null) {
                     Theme importedTheme = appDataManager.loadTheme(appDataManager.getThemeName(file.getName()), file);
-                    if (importedTheme != null) appDataManager.saveTheme(importedTheme);
+                    if (importedTheme != null) {
+                        if (appDataManager.saveTheme(importedTheme)) {
+                            this.theme = importedTheme;
+                        }
+                    }
                 }
             }
 
@@ -125,8 +131,8 @@ public class ThemeEditorFrame extends StaticWindow {
 
         if (!this.theme.isEditable()) {
             ImGui.sameLine();
-            ImGui.textDisabled("Default Theme (?)");
-            GuiUtil.tooltip("Default Themes cannot be edited.");
+            ImGui.textDisabled("Built-in (?)");
+            GuiUtil.tooltip("Built-in themes cannot be edited.");
         } else if (this.isModifyingTheme(theme)) {
             ImGui.sameLine();
             if (ImGui.smallButton("Save")) {
