@@ -38,6 +38,7 @@ public final class ClassHierarchy {
 
         for (String itf : this.currentClass.getInterfaces()) {
             final @Nullable ClassInput interfaceInput = execution.getClassInput(itf);
+
             if (interfaceInput != null) {
                 this.extending.add(interfaceInput);
                 this.interfaces.add(interfaceInput);
@@ -67,7 +68,7 @@ public final class ClassHierarchy {
             for (ClassInput extendingInput : this.extending) {
                 final @Nullable MethodInput overridingMethod = extendingInput.getMethod(methodInput.getName(), methodInput.getDescriptor());
 
-                if (overridingMethod != null) {
+                if (overridingMethod != null && !overridingMethod.getAccessFlags().isStatic()) {
                     methodHierarchy.linkMethod(overridingMethod);
                 }
             }
@@ -90,7 +91,6 @@ public final class ClassHierarchy {
             if (processedSupers.contains(classHierarchy.getSuperClass())) {
                 break;
             }
-            processedSupers.add(superClass);
 
             superClass = classHierarchy.getSuperClass();
         }

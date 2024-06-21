@@ -26,12 +26,13 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     private final Map<String, MethodInput> methodList = new LinkedHashMap<>();
     private final Map<String, FieldInput> fieldList = new LinkedHashMap<>();
     private final Map<MemberDetails, MemberInput<?>> memberList = new HashMap<>();
-    private final List<String> interfaces = new ArrayList<>();
+    private final List<String> interfaces;
     private final ClassTarget classTarget;
     private final ClassHierarchy classHierarchy = new ClassHierarchy(this);
 
     public ClassInput(Execution execution, ClassNode classNode, ClassTarget classTarget) {
         super(classNode);
+        this.interfaces = Objects.requireNonNullElse(classNode.interfaces, Collections.emptyList());
         this.execution = execution;
         this.classTarget = classTarget;
     }

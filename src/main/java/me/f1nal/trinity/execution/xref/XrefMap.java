@@ -93,7 +93,7 @@ public final class XrefMap extends ProgressiveLoadTask {
             }
 
             if (instruction instanceof MethodInsnNode min) {
-                this.addReference(min.owner, min.name, min.desc, new MemberXref(methodInput, instruction));
+                this.addMethodReference(min.owner, min.name, min.desc, new MemberXref(methodInput, instruction));
             } else if (instruction instanceof FieldInsnNode fin) {
                 this.addReference(fin.owner, fin.name, fin.desc, new MemberXref(methodInput, instruction));
             } else if (instruction instanceof TypeInsnNode) {
@@ -106,6 +106,22 @@ public final class XrefMap extends ProgressiveLoadTask {
                 }
             }
         }
+    }
+
+    private void addMethodReference(String owner, String name, String desc, MemberXref memberXref) {
+        if (!name.equals("<init>")) {
+            ClassInput classInput = getTrinity().getExecution().getClassInput(owner);
+            if (classInput != null) {
+                MethodInput methodInput = classInput.getMethod(name, desc);
+                if (methodInput != null && methodInput.getMethodHierarchy() != null) {
+                    for (MethodInput linkedMethod : methodInput.getMethodHierarchy().getLinkedMethods()) {
+                        this.addReference(linkedMethod.getOwningClass().getRealName(), linkedMethod.getName(), linkedMethod.getDescriptor(), memberXref);
+                    }
+                    return;
+                }
+            }
+        }
+        this.addReference(owner, name, desc, memberXref);
     }
 
 

@@ -17,6 +17,7 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class DecompilerGhostTextRenderer implements Runnable {
     private final List<String> text = new ArrayList<>(2);
@@ -36,7 +37,7 @@ public class DecompilerGhostTextRenderer implements Runnable {
             if (false) {
                 MethodHierarchy methodHierarchy = ((MethodInput) input).getMethodHierarchy();
                 if (methodHierarchy != null) {
-                    List<MethodInput> linkedMethods = methodHierarchy.getLinkedMethods();
+                    Set<MethodInput> linkedMethods = methodHierarchy.getLinkedMethods();
                     if (linkedMethods.size() > 1) {
                         this.text.add(linkedMethods.size() + " linked methods");
                     }

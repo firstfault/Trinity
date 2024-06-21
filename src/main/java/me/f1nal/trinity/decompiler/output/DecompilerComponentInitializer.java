@@ -308,10 +308,10 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             component.setTextFunction(variable::getName);
         }
 
-        component.setIdentifier(variableMember, variable instanceof ImmutableVariable ? "this" : Objects.toString(this.decompilingMethod) + varIndex);
-        boolean editable = variable != null && variable.isEditable();
+        boolean aloadThis = varIndex == 0 && variable != null && !variable.isEditable();
+        component.setIdentifier(variableMember, aloadThis ? "this" : Objects.toString(this.decompilingMethod) + varIndex);
         boolean parameter = variable != null && variable.isParameter();
-        component.setColorFunction(() -> editable ? parameter ? CodeColorScheme.PARAM_REF : CodeColorScheme.VAR_REF : CodeColorScheme.KEYWORD);
+        component.setColorFunction(() -> aloadThis ? CodeColorScheme.KEYWORD : parameter ? CodeColorScheme.PARAM_REF : CodeColorScheme.VAR_REF);
         component.setTooltip(() -> {
             ColoredStringBuilder text = ColoredStringBuilder.create();
 

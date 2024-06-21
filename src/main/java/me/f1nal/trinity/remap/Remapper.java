@@ -5,6 +5,7 @@ import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public final class Remapper {
@@ -26,7 +27,7 @@ public final class Remapper {
     }
 
     public void renameMethod(MethodInput methodInput, String newName) {
-        List<MethodInput> affectedMethods;
+        Collection<MethodInput> affectedMethods;
 
         if (methodInput.getMethodHierarchy() != null) {
             affectedMethods = methodInput.getMethodHierarchy().getLinkedMethods();
