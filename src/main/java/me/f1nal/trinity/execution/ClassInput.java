@@ -61,6 +61,10 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     }
 
     public void addInput(MemberInput<?> input) {
+        addInput(input.getDetails(), input);
+    }
+
+    private void addInput(MemberDetails query, MemberInput<?> input) {
         final MemberDetails details = input.getDetails();
         final String memberKey = this.getMemberKey(details.getName(), details.getDesc());
 
@@ -70,7 +74,14 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
             fieldList.put(memberKey, (FieldInput) input);
         }
 
-        memberList.put(input.getDetails(), input);
+        memberList.put(query, input);
+    }
+
+    public void addInheritedMethod(MethodInput method) {
+        if (getMethod(method.getName(), method.getDescriptor()) != null) {
+            return;
+        }
+        addInput(new MemberDetails(this.getRealName(), method.getName(), method.getDescriptor()), method);
     }
 
     @Override

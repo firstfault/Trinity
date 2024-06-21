@@ -19,6 +19,7 @@ public class AsynchronousLoad extends Thread {
 
     public AsynchronousLoad(Trinity trinity) {
         this.trinity = trinity;
+        this.setPriority(Thread.MAX_PRIORITY);
     }
 
     @Override

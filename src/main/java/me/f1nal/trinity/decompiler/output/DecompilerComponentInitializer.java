@@ -90,6 +90,10 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         component.setIdentifier(member, member.getClassName());
         component.setColorFunction(() -> member.isImport() || target == null ? CodeColorScheme.CLASS_REF : this.getClassKindColor(target.getKind()));
         component.setTooltip(() -> ColoredStringBuilder.create().text(CodeColorScheme.CLASS_REF, target != null ? target.getDisplayOrRealName() : member.getClassName()).get());
+
+        if (member.isKeepText() && originalText.equals("super")) {
+            component.setColorFunction(() -> CodeColorScheme.KEYWORD);
+        }
     }
 
     private int getClassKindColor(FileKind kind) {
@@ -304,7 +308,9 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         final Variable variable = decompilingMethod == null ? null : decompilingMethod.getMethodInput().getVariableTable().getVariable(varIndex);
 
         if (variable != null) {
-            component.setRenameHandler(variable.getRenameHandler());
+            if (variable.isEditable()) {
+                component.setRenameHandler(variable.getRenameHandler());
+            }
             component.setTextFunction(variable::getName);
         }
 

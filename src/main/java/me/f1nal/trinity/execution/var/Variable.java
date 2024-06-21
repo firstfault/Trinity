@@ -63,8 +63,11 @@ public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHand
 
             @Override
             public void rename(Remapper remapper, String newName) {
-                getNameProperty().set(newName);
-                save();
+                if (isEditable()) {
+                    getNameProperty().set(newName);
+                    save();
+                }
+
             }
         };
     }

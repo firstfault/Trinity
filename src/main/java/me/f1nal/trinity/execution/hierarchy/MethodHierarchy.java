@@ -7,7 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class MethodHierarchy {
+public final class MethodHierarchy {
     /**
      * Methods linked to this hierarchy.
      */
