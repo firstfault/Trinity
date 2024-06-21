@@ -32,6 +32,7 @@ import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
 import org.lwjgl.glfw.GLFW;
 
+import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
@@ -64,11 +65,16 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                     file
                             .menuItem("Refresh", () -> this.forceRefresh = true)
                             .predicate(() -> getDecompiledClass() != null, b -> b.separator()
-                                    .menuItem("Copy", () -> SystemUtil.copyToClipboard(getDecompiledClass().getText()))
+                                    .menuItem("Copy", this::copyToClipboard)
                                     .menuItem("Save", () -> new ExtractArchiveEntryRunnable(classTarget.getDisplaySimpleName() + ".java", getDecompiledClass().getText().getBytes()).run()))
                     ;
                 }).
                 menu("Find", find -> {})));
+    }
+
+    private void copyToClipboard() {
+        final String text = cursor.hasTextSelection() ? cursor.getSelectionText() : this.getDecompiledClass().getText();
+        SystemUtil.copyToClipboard(text);
     }
 
     @Override
@@ -227,11 +233,14 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             ImGui.setCursorPosX(cursorPosX);
             ImGui.textColored(CodeColorScheme.LINE_NUMBER, String.valueOf(line.getLineNumber()));
             ImGui.sameLine();
+            line.pos = ImGui.getCursorScreenPos().minus(2.5F, 0.F);
 
             this.cursor.handleLineDrawing(line, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
 
             ImGui.newLine();
         }
+
+        this.cursor.drawSelectionBox();
 
         boolean rightClick = ImGui.isWindowHovered() && ImGui.isMouseClicked(ImGuiMouseButton.Right);
         boolean leftClick = !rightClick && ImGui.isWindowHovered() && ImGui.isMouseClicked(ImGuiMouseButton.Left);
@@ -269,10 +278,13 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
 
         if (rightClick) {
-            Main.getDisplayManager().showPopup(PopupItemBuilder.create().disabled(() -> cursor.selectionEnd == null, items -> {
-                items.menuItem("Copy", () -> {
-                });
+            Main.getDisplayManager().showPopup(PopupItemBuilder.create().disabled(() -> !cursor.hasTextSelection(), items -> {
+                items.menuItem("Copy", this::copyToClipboard);
             }));
+        }
+
+        if (cursor.hasTextSelection() && ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_C)) {
+            this.copyToClipboard();
         }
     }
 

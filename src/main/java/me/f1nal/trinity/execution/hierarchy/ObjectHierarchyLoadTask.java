@@ -43,27 +43,13 @@ public class ObjectHierarchyLoadTask extends ProgressiveLoadTask {
             }
             this.finishedWork();
         }
-        for (ClassWithMethod inheritorMethod : inheritorMethods) {
-            inheritorMethod.getClassInput().addInheritedMethod(inheritorMethod.getMethodInput());
-        }
+        inheritorMethods.forEach(ClassWithMethod::addInherited);
         this.finishedWork();
     }
 
-    private static class ClassWithMethod {
-        private final ClassInput classInput;
-        private final MethodInput methodInput;
-
-        private ClassWithMethod(ClassInput classInput, MethodInput methodInput) {
-            this.classInput = classInput;
-            this.methodInput = methodInput;
-        }
-
-        public ClassInput getClassInput() {
-            return classInput;
-        }
-
-        public MethodInput getMethodInput() {
-            return methodInput;
+    private record ClassWithMethod(ClassInput classInput, MethodInput methodInput) {
+        public void addInherited() {
+            this.classInput().addInheritedMethod(this.methodInput());
         }
     }
 }

@@ -1,5 +1,7 @@
 package me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler;
 
+import imgui.ImVec2;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,6 +15,7 @@ public class DecompilerLine {
      * Index of this line.
      */
     private final int lineNumber;
+    public ImVec2 pos;
 
     public DecompilerLine(int lineNumber) {
         this.lineNumber = lineNumber;

@@ -4,6 +4,8 @@ import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiMouseCursor;
+import me.f1nal.trinity.Main;
+import me.f1nal.trinity.gui.viewport.FontManager;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.Stopwatch;
 
@@ -169,14 +171,10 @@ public class DecompilerCursor {
     }
 
     public void handleLineDrawing(DecompilerLine line, float cursorScreenPosX, float lineNumberSpacing, float mousePosX, float cursorPosY, ImVec2 textSize) {
-        if (this.selectionEnd != null && this.selectionEnd.getLine() == line) {
-            // TODO: Selection box
-            this.handleLineCursorDrawing(this.selectionEnd, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
-
-        }
-
         if (this.coordinates != null && this.coordinates.getLine() == line) {
-            this.handleLineCursorDrawing(this.coordinates, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
+            if (this.selectionEnd == null) {
+                this.handleLineCursorDrawing(this.coordinates, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
+            }
 
             if (this.scroll) {
                 ImVec2 oldCursorPos = ImGui.getCursorPos();
@@ -191,32 +189,94 @@ public class DecompilerCursor {
         }
     }
 
-    public String getSelectionText() {
-        if (true) {
-            // TODO :(
-            return "";
+    public void drawSelectionBox() {
+        DecompilerCoordinates from = this.coordinates, to = this.selectionEnd;
+
+        if (from == null || to == null) {
+            return;
         }
-        if (this.coordinates == null || this.selectionEnd == null) {
+
+        if (from.getLine().getLineNumber() > to.getLine().getLineNumber() ||
+                (from.getLine().getLineNumber() == to.getLine().getLineNumber() && from.getCharacter() > to.getCharacter())) {
+            DecompilerCoordinates temp = from;
+            from = to;
+            to = temp;
+        }
+
+        List<DecompilerLine> lines = window.getDecompiledClass().getLines();
+        int startLine = lines.indexOf(from.getLine());
+        int endLine = lines.indexOf(to.getLine());
+
+        for (int i = startLine; i <= endLine; i++) {
+            DecompilerLine line = lines.get(i);
+            String text = line.getText();
+            ImVec2 pos = line.pos;
+
+            float xPos = pos.x;
+            float yPos = pos.y;
+            float endXPos;
+            ImVec2 textSize;
+
+            if (i == startLine) {
+                String substring = text.substring(0, from.getCharacter());
+                float substringWidth = (textSize = ImGui.calcTextSize(substring)).x;
+                xPos += substringWidth;
+            } else {
+                xPos = line.pos.x;
+            }
+
+            if (i == endLine) {
+                String substring = text.isEmpty() ? "" : text.substring(0, to.getCharacter() + 1);
+                float substringWidth = (textSize = ImGui.calcTextSize(substring)).x;
+                endXPos = line.pos.x + substringWidth;
+            } else {
+                endXPos = line.pos.x + (textSize = ImGui.calcTextSize(text)).x;
+            }
+
+            ImGui.getWindowDrawList().addRectFilled(xPos, yPos - 2.F, endXPos, yPos + textSize.y + 2.F - (Main.getPreferences().getDecompilerFont().getSize() % 0.5F == 0 ? 0.5F : 0), CodeColorScheme.CURSOR_SELECTION);
+        }
+    }
+
+    public boolean hasTextSelection() {
+        return selectionEnd != null && coordinates != null;
+    }
+
+    public String getSelectionText() {
+        if (!hasTextSelection()) {
             return "";
         }
 
         DecompilerCoordinates from = this.coordinates, to = this.selectionEnd;
 
-        if (from.getLine().getLineNumber() > to.getLine().getLineNumber()) {
-            DecompilerCoordinates temp;
-            temp = from;
+        if (from.getLine().getLineNumber() > to.getLine().getLineNumber() ||
+                (from.getLine().getLineNumber() == to.getLine().getLineNumber() && from.getCharacter() > to.getCharacter())) {
+            DecompilerCoordinates temp = from;
             from = to;
             to = temp;
         }
 
-        String text = from.getLine().getText();
         StringBuilder result = new StringBuilder();
-        // Start line
-        result.append(text.substring(Math.min(from.getCharacter(), text.length())));
-        if (!from.getLine().equals(to.getLine())) {
+        List<DecompilerLine> lines = window.getDecompiledClass().getLines();
+        int startLine = lines.indexOf(from.getLine());
+        int endLine = lines.indexOf(to.getLine());
 
+        for (int i = startLine; i <= endLine; i++) {
+            DecompilerLine line = lines.get(i);
+            String text = line.getText();
+
+            if (i == startLine) {
+                result.append(text.substring(Math.min(from.getCharacter(), text.length())));
+            } else if (i == endLine) {
+                result.append(text.substring(0, Math.min(to.getCharacter() + 1, text.length())));
+            } else {
+                result.append(text);
+            }
+
+            if (i != endLine) {
+                result.append(System.lineSeparator());
+            }
         }
-        // End line
+
         return result.toString();
     }
 }
