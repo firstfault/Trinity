@@ -207,6 +207,10 @@ public class DecompilerCursor {
         int startLine = lines.indexOf(from.getLine());
         int endLine = lines.indexOf(to.getLine());
 
+        if (startLine == -1 || endLine == -1) {
+            return;
+        }
+
         for (int i = startLine; i <= endLine; i++) {
             DecompilerLine line = lines.get(i);
             String text = line.getText();
@@ -259,6 +263,9 @@ public class DecompilerCursor {
         List<DecompilerLine> lines = window.getDecompiledClass().getLines();
         int startLine = lines.indexOf(from.getLine());
         int endLine = lines.indexOf(to.getLine());
+        if (startLine == -1 || endLine == -1) {
+            return "";
+        }
 
         for (int i = startLine; i <= endLine; i++) {
             DecompilerLine line = lines.get(i);
