@@ -34,6 +34,7 @@
     <color name="Line Number" value="#525454FF"/>
     <color name="Cursor" value="#AFAFAFFF"/>
     <color name="Selection Box" value="#5375BD50"/>
+    <color name="Search Result" value="#C49A3C70"/>
   </category>
   <category name="Assembler">
     <color name="Data" value="#4197D5FF"/>

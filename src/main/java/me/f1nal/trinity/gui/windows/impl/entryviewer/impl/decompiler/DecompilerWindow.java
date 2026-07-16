@@ -4,9 +4,13 @@ import com.google.common.eventbus.Subscribe;
 import imgui.ImColor;
 import imgui.ImGui;
 import imgui.ImVec2;
+import imgui.flag.ImGuiFocusedFlags;
+import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
 import imgui.flag.ImGuiWindowFlags;
+import imgui.type.ImBoolean;
+import imgui.type.ImString;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.IDatabaseSavable;
@@ -20,6 +24,7 @@ import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
+import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.popup.MenuBarProgress;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
@@ -28,14 +33,18 @@ import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructure;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
 import org.lwjgl.glfw.GLFW;
 
-import java.awt.event.KeyEvent;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> implements IEventListener, IDatabaseSavable<DatabaseDecompiler> {
     private ClassInput selectedClass;
@@ -48,6 +57,19 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
      */
     private DecompilerComponent hoveredComponent;
     private boolean resetLines;
+    private final ImString searchText = new ImString(256);
+    private final ImBoolean searchCaseSensitive = new ImBoolean();
+    private final ImBoolean searchWords = new ImBoolean();
+    private final ImBoolean searchRegex = new ImBoolean();
+    private final List<DecompilerSearchResult> searchResults = new ArrayList<>();
+    private DecompiledClass searchedClass;
+    private String searchError;
+    private int searchResultIndex = -1;
+    private boolean searchVisible;
+    private boolean focusSearch;
+    private boolean selectSearchText;
+    private boolean searchDirty = true;
+    private boolean searchBarFocused;
     /**
      * Selection cursor.
      */
@@ -69,7 +91,19 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                                     .menuItem("Save", () -> new ExtractArchiveEntryRunnable(classTarget.getDisplaySimpleName() + ".java", getDecompiledClass().getText().getBytes()).run()))
                     ;
                 }).
-                menu("Find", find -> {})));
+                menu("Find", find -> find.menuItem("Search Text", "Ctrl+F", this::openSearch))));
+    }
+
+    private void openSearch() {
+        this.searchVisible = true;
+        this.focusSearch = true;
+        this.selectSearchText = true;
+    }
+
+    private void closeSearch() {
+        this.searchVisible = false;
+        this.focusSearch = false;
+        this.searchBarFocused = false;
     }
 
     private void copyToClipboard() {
@@ -87,6 +121,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             return;
         }
         selectedClass = classInput;
+        this.searchDirty = true;
         if (classInput != null && !trinity.getDatabase().isLoading()) this.save();
         if (this.isFocusGained()) this.updateClassStructure();
     }
@@ -147,17 +182,28 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private void drawDecompileTab() {
         this.runControls();
 
-        ImGui.beginChild("DecompilerWindowChild", 0.F, 0.F, false, ImGuiWindowFlags.HorizontalScrollbar);
+        if (ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows) && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_F)) {
+            this.openSearch();
+        }
 
         DecompiledClass decompiledClass = this.getDecompiledClass();
+        if (decompiledClass != null && this.resetLines) {
+            decompiledClass.resetLines();
+            this.resetLines = false;
+            this.searchDirty = true;
+        }
+
+        if (this.searchVisible) {
+            this.drawSearchBar(decompiledClass);
+        } else {
+            this.searchBarFocused = false;
+        }
+
+        ImGui.beginChild("DecompilerWindowChild", 0.F, 0.F, false, ImGuiWindowFlags.HorizontalScrollbar);
+
         if (decompiledClass == null) {
             ImGui.textUnformatted("...");
         } else {
-            if (this.resetLines) {
-                decompiledClass.resetLines();
-                this.resetLines = false;
-            }
-
             FontSettings decompilerFont = Main.getPreferences().getDecompilerFont();
             decompilerFont.pushFont();
             this.drawDecompiledOutput(decompiledClass);
@@ -183,6 +229,146 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
     }
 
+    private void drawSearchBar(DecompiledClass decompiledClass) {
+        if (ImGui.beginChild(this.getId("DecompilerSearch"), 0.F, 64.F, true)) {
+            ImGui.textUnformatted("Search");
+            ImGui.sameLine();
+            ImGui.setNextItemWidth(Math.max(120.F, ImGui.getContentRegionAvailX() - 28.F));
+
+            if (this.focusSearch) {
+                ImGui.setKeyboardFocusHere();
+                this.focusSearch = false;
+            }
+
+            int searchInputFlags = this.selectSearchText ? ImGuiInputTextFlags.AutoSelectAll : ImGuiInputTextFlags.None;
+            this.selectSearchText = false;
+            boolean searchChanged = ImGui.inputText("###" + this.getId("DecompilerSearchText"), this.searchText, searchInputFlags);
+
+            ImGui.sameLine();
+            if (ImGui.smallButton(FontAwesomeIcons.Times + "###" + this.getId("CloseDecompilerSearch"))) {
+                this.closeSearch();
+            }
+            GuiUtil.tooltip("Close search (Esc)");
+
+            boolean optionsChanged = GuiUtil.smallCheckbox("Case Sensitive###" + this.getId("DecompilerSearchCase"), this.searchCaseSensitive);
+            ImGui.sameLine();
+            optionsChanged |= GuiUtil.smallCheckbox("Words###" + this.getId("DecompilerSearchWords"), this.searchWords);
+            GuiUtil.tooltip("Match whole Java identifier words");
+            ImGui.sameLine();
+            optionsChanged |= GuiUtil.smallCheckbox("Regex###" + this.getId("DecompilerSearchRegex"), this.searchRegex);
+
+            if (searchChanged || optionsChanged) {
+                this.searchDirty = true;
+            }
+            this.refreshSearchResults(decompiledClass);
+
+            ImGui.sameLine();
+            if (this.searchError == null) {
+                ImGui.textDisabled(this.getSearchStatus());
+            } else {
+                ImGui.textColored(CodeColorScheme.NOTIFY_ERROR, "Invalid regex");
+                GuiUtil.tooltip(this.searchError);
+            }
+
+            ImGui.sameLine();
+            if (GuiUtil.disabledWidget(this.searchResults.isEmpty(), () -> ImGui.smallButton(FontAwesomeIcons.ChevronUp + "###" + this.getId("PreviousDecompilerSearch")))) {
+                this.moveSearchResult(-1);
+            }
+            GuiUtil.tooltip("Previous match (Up or Enter)");
+            ImGui.sameLine();
+            if (GuiUtil.disabledWidget(this.searchResults.isEmpty(), () -> ImGui.smallButton(FontAwesomeIcons.ChevronDown + "###" + this.getId("NextDecompilerSearch")))) {
+                this.moveSearchResult(1);
+            }
+            GuiUtil.tooltip("Next match (Down)");
+
+            this.searchBarFocused = ImGui.isWindowFocused();
+            boolean enterPressed = ImGui.isKeyPressed(GLFW.GLFW_KEY_ENTER);
+            if (this.searchBarFocused && (ImGui.isKeyPressed(GLFW.GLFW_KEY_UP) || enterPressed)) {
+                this.moveSearchResult(-1);
+                if (enterPressed) this.focusSearch = true;
+            } else if (this.searchBarFocused && ImGui.isKeyPressed(GLFW.GLFW_KEY_DOWN)) {
+                this.moveSearchResult(1);
+            }
+            if (this.searchBarFocused && ImGui.isKeyPressed(GLFW.GLFW_KEY_ESCAPE)) {
+                this.closeSearch();
+            }
+        }
+        ImGui.endChild();
+    }
+
+    private String getSearchStatus() {
+        if (this.searchResults.isEmpty()) {
+            return this.searchText.get().isEmpty() ? "0 results" : "No matches";
+        }
+        return String.format("%d/%d", this.searchResultIndex + 1, this.searchResults.size());
+    }
+
+    private void refreshSearchResults(DecompiledClass decompiledClass) {
+        if (!this.searchDirty && this.searchedClass == decompiledClass) {
+            return;
+        }
+
+        this.searchDirty = false;
+        this.searchedClass = decompiledClass;
+        this.searchResults.clear();
+        this.searchResultIndex = -1;
+        this.searchError = null;
+
+        String query = this.searchText.get();
+        if (decompiledClass == null || query.isEmpty()) {
+            this.cursor.selectionEnd = null;
+            return;
+        }
+
+        int flags = this.searchCaseSensitive.get() ? 0 : Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
+        Pattern pattern;
+        try {
+            pattern = Pattern.compile(this.searchRegex.get() ? query : Pattern.quote(query), flags);
+        } catch (PatternSyntaxException exception) {
+            this.searchError = exception.getDescription();
+            this.cursor.selectionEnd = null;
+            return;
+        }
+
+        for (DecompilerLine line : decompiledClass.getLines()) {
+            String text = line.getText();
+            Matcher matcher = pattern.matcher(text);
+            while (matcher.find()) {
+                int start = matcher.start();
+                int end = matcher.end();
+                if (start == end || this.searchWords.get() && !this.isWholeWord(text, start, end)) {
+                    continue;
+                }
+                this.searchResults.add(new DecompilerSearchResult(line, start, end));
+            }
+        }
+
+        if (this.searchResults.isEmpty()) {
+            this.cursor.selectionEnd = null;
+        } else {
+            this.selectSearchResult(0);
+        }
+    }
+
+    private boolean isWholeWord(String text, int start, int end) {
+        return (start == 0 || !Character.isJavaIdentifierPart(text.charAt(start - 1))) &&
+                (end == text.length() || !Character.isJavaIdentifierPart(text.charAt(end)));
+    }
+
+    private void moveSearchResult(int delta) {
+        if (!this.searchResults.isEmpty()) {
+            this.selectSearchResult(this.searchResultIndex + delta);
+        }
+    }
+
+    private void selectSearchResult(int index) {
+        this.searchResultIndex = Math.floorMod(index, this.searchResults.size());
+        DecompilerSearchResult result = this.searchResults.get(this.searchResultIndex);
+        this.cursor.setCoordinates(new DecompilerCoordinates(result.line(), result.start()));
+        this.cursor.selectionEnd = new DecompilerCoordinates(result.line(), result.end() - 1);
+        this.cursor.setScrollToCursor();
+    }
+
     public DecompiledClass getDecompiledClass() {
         return trinity.getDecompiler().getFromCache(selectedClass);
     }
@@ -197,15 +383,21 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         float lineNumberSpacing = 3.F + textSize.x;
         float cursorPosX = ImGui.getCursorPosX();
 
-        cursor.handleInputs(mousePosX, mousePosY);
+        if (!this.searchBarFocused) cursor.handleInputs(mousePosX, mousePosY);
 
         for (DecompilerLine line : decompiledClass.getLines()) {
             final float cursorScreenPosX = ImGui.getCursorScreenPosX();
 
             int textOffset = 0, sameLines = 0;
             ImGui.setCursorPosX(cursorPosX + lineNumberSpacing);
+            line.pos = ImGui.getCursorScreenPos().minus(2.5F, 0.F);
+            boolean textPositioned = false;
             for (DecompilerLineText text : line.getComponents()) {
                 if (!text.getComponent().render()) {
+                    if (!textPositioned) {
+                        line.pos = ImGui.getCursorScreenPos().minus(2.5F, 0.F);
+                        textPositioned = true;
+                    }
                     text.render(decompiledClass.isComponentHighlighted(text.getComponent()));
                     ImGui.sameLine(0.F, 0.F);
                 }
@@ -233,13 +425,13 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             ImGui.setCursorPosX(cursorPosX);
             ImGui.textColored(CodeColorScheme.LINE_NUMBER, String.valueOf(line.getLineNumber()));
             ImGui.sameLine();
-            line.pos = ImGui.getCursorScreenPos().minus(2.5F, 0.F);
 
             this.cursor.handleLineDrawing(line, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
 
             ImGui.newLine();
         }
 
+        this.drawSearchResults();
         this.cursor.drawSelectionBox();
 
         boolean rightClick = ImGui.isWindowHovered() && ImGui.isMouseClicked(ImGuiMouseButton.Right);
@@ -288,6 +480,26 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
     }
 
+    private void drawSearchResults() {
+        if (!this.searchVisible) {
+            return;
+        }
+
+        for (DecompilerSearchResult result : this.searchResults) {
+            DecompilerLine line = result.line();
+            if (line.pos == null) {
+                continue;
+            }
+
+            String text = line.getText();
+            float startX = line.pos.x + ImGui.calcTextSize(text.substring(0, result.start())).x;
+            float endX = line.pos.x + ImGui.calcTextSize(text.substring(0, result.end())).x;
+            float textHeight = ImGui.calcTextSize(text).y;
+            float heightAdjustment = Main.getPreferences().getDecompilerFont().getSize() % 0.5F == 0 ? 0.5F : 0.F;
+            ImGui.getWindowDrawList().addRectFilled(startX, line.pos.y - 2.F, endX, line.pos.y + textHeight + 2.F - heightAdjustment, CodeColorScheme.SEARCH_RESULT);
+        }
+    }
+
     public void setDecompileTarget(Input<?> input) {
         this.autoscrollTo = new DecompilerAutoScroll(this, input);
         this.setDecompileTarget(input.getOwningClass());
@@ -296,5 +508,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     @Override
     public DatabaseDecompiler createDatabaseObject() {
         return new DatabaseDecompiler(this.selectedClass.getRealName());
+    }
+
+    private record DecompilerSearchResult(DecompilerLine line, int start, int end) {
     }
 }

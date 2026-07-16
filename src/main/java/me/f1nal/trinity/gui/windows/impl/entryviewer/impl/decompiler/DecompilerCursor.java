@@ -271,7 +271,11 @@ public class DecompilerCursor {
             DecompilerLine line = lines.get(i);
             String text = line.getText();
 
-            if (i == startLine) {
+            if (i == startLine && i == endLine) {
+                int startCharacter = Math.min(from.getCharacter(), text.length());
+                int endCharacter = Math.min(to.getCharacter() + 1, text.length());
+                result.append(text, startCharacter, endCharacter);
+            } else if (i == startLine) {
                 result.append(text.substring(Math.min(from.getCharacter(), text.length())));
             } else if (i == endLine) {
                 result.append(text.substring(0, Math.min(to.getCharacter() + 1, text.length())));

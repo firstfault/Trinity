@@ -11,6 +11,7 @@ import me.f1nal.trinity.execution.xref.ClassXref;
 import me.f1nal.trinity.execution.xref.XrefKind;
 import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
@@ -44,6 +45,12 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     public List<ClassXref> getReferences() {
         return references;
+    }
+
+    @Override
+    public PopupItemBuilder createPopup(PopupItemBuilder builder) {
+        this.addXrefViewerMenuItem(Main.getTrinity(), builder);
+        return super.createPopup(builder);
     }
 
     @Override

@@ -114,6 +114,8 @@ public final class CodeColorScheme {
     public static int CURSOR = getRgb(new Color(175, 175, 175));
     @LabeledColor(category = CODE_EDITOR, label = "Selection Box")
     public static int CURSOR_SELECTION = getRgb(new Color(83, 117, 189, 80));
+    @LabeledColor(category = CODE_EDITOR, label = "Search Result")
+    public static int SEARCH_RESULT = getRgb(new Color(196, 154, 60, 112));
 
     /////////////////////////
     // Assembler Instruction Types
