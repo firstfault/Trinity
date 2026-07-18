@@ -10,6 +10,7 @@ public interface OutputMemberVisitor {
     void visitFieldDeclaration(FieldDeclarationOutputMember fieldDeclaration);
     void visitField(FieldOutputMember field);
     void visitKeyword(KeywordOutputMember keyword);
+    void visitInvocation(InvocationOutputMember invocation);
     void visitMethod(MethodOutputMember method);
     void visitMethodStartEnd(MethodStartEndOutputMember methodStartEnd);
     void visitPackage(PackageOutputMember pkg);

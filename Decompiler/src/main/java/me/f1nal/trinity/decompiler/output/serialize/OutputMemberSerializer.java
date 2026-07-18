@@ -51,6 +51,7 @@ public final class OutputMemberSerializer {
             StringOutputMember.class,
             BytecodeMarkerOutputMember.class,
             KindOutputMember.class,
+            InvocationOutputMember.class,
     };
 
     public static String serialize(OutputMember outputMember) throws IOException {

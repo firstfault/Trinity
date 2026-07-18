@@ -20,6 +20,7 @@ import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeStrin
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerGhostTextRenderer;
+import me.f1nal.trinity.gui.windows.impl.invocation.InvocationDetailsWindow;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
@@ -211,10 +212,24 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     }
 
     @Override
+    public void visitInvocation(InvocationOutputMember invocation) {
+        MemberDetails memberDetails = new MemberDetails(invocation);
+        @Nullable MethodInput methodInput = trinity.getExecution().getMethod(memberDetails);
+        MethodInput caller = decompilingMethod == null ? null : decompilingMethod.getMethodInput();
+
+        component.addPopupBuilder(builder -> builder.menuItem("View Invocation", () ->
+                Main.getWindowManager().addClosableWindow(new InvocationDetailsWindow(trinity, invocation, caller, methodInput))));
+        initializeMethod(invocation, memberDetails, methodInput);
+    }
+
+    @Override
     public void visitMethod(MethodOutputMember method) {
         MemberDetails memberDetails = new MemberDetails(method);
         @Nullable MethodInput methodInput = trinity.getExecution().getMethod(memberDetails);
+        initializeMethod(method, memberDetails, methodInput);
+    }
 
+    private void initializeMethod(MethodOutputMember method, MemberDetails memberDetails, @Nullable MethodInput methodInput) {
         if (methodInput != null) {
             // super()/this() calls aren't named
             if (!this.originalText.equals("super") && !this.originalText.equals("this")) {

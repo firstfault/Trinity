@@ -276,7 +276,7 @@ public class NewExprent extends Exprent {
           }
         }
         if (constructor != null) {
-          buf.append(OutputMemberSerializer.serializeTags(new MethodOutputMember(typename.length(), constructor.getClassName(), constructor.getName(), constructor.getStringDescriptor())));
+          buf.append(OutputMemberSerializer.serializeTags(constructor.createInvocationOutputMember(typename.length(), indent)));
         }
         buf.append(typename);
       }

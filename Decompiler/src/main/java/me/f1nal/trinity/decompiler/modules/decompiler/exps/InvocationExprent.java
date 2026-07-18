@@ -2,6 +2,7 @@ package me.f1nal.trinity.decompiler.modules.decompiler.exps;
 
 import me.f1nal.trinity.decompiler.output.OutputMember;
 import me.f1nal.trinity.decompiler.output.impl.ClassOutputMember;
+import me.f1nal.trinity.decompiler.output.impl.InvocationOutputMember;
 import me.f1nal.trinity.decompiler.output.impl.MethodOutputMember;
 import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.decompiler.code.CodeConstants;
@@ -28,6 +29,7 @@ import me.f1nal.trinity.decompiler.struct.StructClass;
 import me.f1nal.trinity.decompiler.struct.StructMethod;
 import me.f1nal.trinity.decompiler.struct.consts.LinkConstant;
 import me.f1nal.trinity.decompiler.struct.consts.PooledConstant;
+import me.f1nal.trinity.decompiler.struct.consts.PrimitiveConstant;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -295,7 +297,7 @@ public class InvocationExprent extends Exprent {
           buf.append(".");
         }
 
-        buf.append(OutputMemberSerializer.serializeTags(new MethodOutputMember(name.length(), this.className, this.name, this.stringDescriptor)));
+        buf.append(OutputMemberSerializer.serializeTags(createInvocationOutputMember(name.length(), indent)));
         buf.append(name);
         if (invocationType == INVOKE_DYNAMIC) {
           buf.append("<invokedynamic:x1>");
@@ -304,7 +306,7 @@ public class InvocationExprent extends Exprent {
       }
       case TYPE_CLINIT -> throw new RuntimeException("Explicit invocation of " + CodeConstants.CLINIT_NAME);
       case TYPE_INIT -> {
-        Function<Integer, OutputMember> outputMemberFunction = l -> new MethodOutputMember(l, className, getName(), getStringDescriptor());
+        Function<Integer, OutputMember> outputMemberFunction = l -> createInvocationOutputMember(l, indent);
         if (super_qualifier != null) {
           buf.append(OutputMemberSerializer.tag("super", outputMemberFunction) + "(");
         }
@@ -383,6 +385,154 @@ public class InvocationExprent extends Exprent {
       return mtd != null && mtd.isVarArgs();
     }
     return false;
+  }
+
+  public InvocationOutputMember createInvocationOutputMember(int length, int indent) {
+    List<InvocationOutputMember.Argument> argumentDetails = new ArrayList<>(parameters.size());
+    for (int i = 0; i < parameters.size(); i++) {
+      Exprent parameter = parameters.get(i);
+      String declaredType = i < descriptor.params.length ? descriptor.params[i].toString() : "<not declared>";
+      argumentDetails.add(new InvocationOutputMember.Argument(
+        renderExpression(parameter, indent),
+        Objects.toString(parameter.getExprType(), "<unknown>"),
+        declaredType,
+        parameter.getClass().getSimpleName()
+      ));
+    }
+
+    List<String> bootstrapDetails = new ArrayList<>();
+    if (bootstrapArguments != null) {
+      for (PooledConstant bootstrapArgument : bootstrapArguments) {
+        bootstrapDetails.add(describeBootstrapArgument(bootstrapArgument));
+      }
+    }
+
+    List<Integer> bytecodeOffsets = bytecode == null ? new ArrayList<>() : new ArrayList<>(bytecode);
+    Collections.sort(bytecodeOffsets);
+
+    return new InvocationOutputMember(
+      length,
+      className,
+      name,
+      stringDescriptor,
+      getInvocationTypeName(),
+      getFunctionTypeName(),
+      isStatic,
+      isBoxingCall(),
+      isUnboxingCall(),
+      parameters.size() == descriptor.params.length && isVarArgCall(),
+      id,
+      instance == null ? null : renderExpression(instance, indent),
+      instance == null ? null : Objects.toString(instance.getExprType(), "<unknown>"),
+      instance == null ? null : instance.getClass().getSimpleName(),
+      invokeDynamicClassSuffix,
+      argumentDetails,
+      bootstrapDetails,
+      bytecodeOffsets
+    );
+  }
+
+  private String getInvocationTypeName() {
+    return switch (invocationType) {
+      case INVOKE_SPECIAL -> "invokespecial";
+      case INVOKE_VIRTUAL -> "invokevirtual";
+      case INVOKE_STATIC -> "invokestatic";
+      case INVOKE_INTERFACE -> "invokeinterface";
+      case INVOKE_DYNAMIC -> "invokedynamic";
+      default -> "unknown (" + invocationType + ")";
+    };
+  }
+
+  private String getFunctionTypeName() {
+    return switch (funcType) {
+      case TYPE_GENERAL -> "Method";
+      case TYPE_INIT -> "Constructor";
+      case TYPE_CLINIT -> "Class initializer";
+      default -> "Unknown (" + funcType + ")";
+    };
+  }
+
+  private static String renderExpression(Exprent expression, int indent) {
+    try {
+      return stripOutputMembers(expression.toJava(indent, BytecodeMappingTracer.DUMMY).toString());
+    }
+    catch (RuntimeException exception) {
+      return "<unavailable: " + exception.getClass().getSimpleName() + ">";
+    }
+  }
+
+  private static String stripOutputMembers(String text) {
+    StringBuilder result = new StringBuilder(text);
+    int start;
+    while ((start = result.indexOf(OutputMemberSerializer.TAG_START)) != -1) {
+      int end = result.indexOf(OutputMemberSerializer.TAG_END, start);
+      if (end == -1) {
+        break;
+      }
+      result.delete(start, end + OutputMemberSerializer.TAG_END.length());
+    }
+    return result.toString();
+  }
+
+  private static String describeBootstrapArgument(PooledConstant constant) {
+    StringBuilder description = new StringBuilder(getConstantTypeName(constant.type))
+      .append(" (tag ").append(constant.type).append(')');
+
+    if (constant instanceof LinkConstant link) {
+      description.append(": owner=").append(Objects.toString(link.classname, "<none>"))
+        .append(", name=").append(Objects.toString(link.elementname, "<none>"))
+        .append(", descriptor=").append(Objects.toString(link.descriptor, "<none>"))
+        .append(", index1=").append(link.index1)
+        .append(", index2=").append(link.index2);
+      if (constant.type == CodeConstants.CONSTANT_MethodHandle) {
+        description.append(", referenceKind=").append(getMethodHandleTypeName(link.index1));
+      }
+    }
+    else if (constant instanceof PrimitiveConstant primitive) {
+      description.append(": value=").append(Objects.toString(primitive.value, "<none>"))
+        .append(", index=").append(primitive.index)
+        .append(", array=").append(primitive.isArray);
+    }
+
+    return description.toString();
+  }
+
+  private static String getConstantTypeName(int type) {
+    return switch (type) {
+      case CodeConstants.CONSTANT_Utf8 -> "Utf8";
+      case CodeConstants.CONSTANT_Integer -> "Integer";
+      case CodeConstants.CONSTANT_Float -> "Float";
+      case CodeConstants.CONSTANT_Long -> "Long";
+      case CodeConstants.CONSTANT_Double -> "Double";
+      case CodeConstants.CONSTANT_Class -> "Class";
+      case CodeConstants.CONSTANT_String -> "String";
+      case CodeConstants.CONSTANT_Fieldref -> "Field reference";
+      case CodeConstants.CONSTANT_Methodref -> "Method reference";
+      case CodeConstants.CONSTANT_InterfaceMethodref -> "Interface method reference";
+      case CodeConstants.CONSTANT_NameAndType -> "Name and type";
+      case CodeConstants.CONSTANT_MethodHandle -> "Method handle";
+      case CodeConstants.CONSTANT_MethodType -> "Method type";
+      case CodeConstants.CONSTANT_Dynamic -> "Dynamic constant";
+      case CodeConstants.CONSTANT_InvokeDynamic -> "Invoke dynamic";
+      case CodeConstants.CONSTANT_Module -> "Module";
+      case CodeConstants.CONSTANT_Package -> "Package";
+      default -> "Unknown constant";
+    };
+  }
+
+  private static String getMethodHandleTypeName(int type) {
+    return switch (type) {
+      case CodeConstants.CONSTANT_MethodHandle_REF_getField -> "getField";
+      case CodeConstants.CONSTANT_MethodHandle_REF_getStatic -> "getStatic";
+      case CodeConstants.CONSTANT_MethodHandle_REF_putField -> "putField";
+      case CodeConstants.CONSTANT_MethodHandle_REF_putStatic -> "putStatic";
+      case CodeConstants.CONSTANT_MethodHandle_REF_invokeVirtual -> "invokeVirtual";
+      case CodeConstants.CONSTANT_MethodHandle_REF_invokeStatic -> "invokeStatic";
+      case CodeConstants.CONSTANT_MethodHandle_REF_invokeSpecial -> "invokeSpecial";
+      case CodeConstants.CONSTANT_MethodHandle_REF_newInvokeSpecial -> "newInvokeSpecial";
+      case CodeConstants.CONSTANT_MethodHandle_REF_invokeInterface -> "invokeInterface";
+      default -> "unknown (" + type + ")";
+    };
   }
 
   public boolean isBoxingCall() {
