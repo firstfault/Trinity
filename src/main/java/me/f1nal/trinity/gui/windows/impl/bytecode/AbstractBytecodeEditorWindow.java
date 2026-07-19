@@ -2,11 +2,11 @@ package me.f1nal.trinity.gui.windows.impl.bytecode;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiFocusedFlags;
+import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.theme.CodeColorScheme;
-import org.lwjgl.glfw.GLFW;
 
 abstract class AbstractBytecodeEditorWindow extends ClosableWindow {
     private String error;
@@ -44,7 +44,7 @@ abstract class AbstractBytecodeEditorWindow extends ClosableWindow {
         ImGui.endChild();
 
         if (ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
-                && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_S)) {
+                && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.S)) {
             try {
                 saveChanges();
                 savedState = stateFingerprint();

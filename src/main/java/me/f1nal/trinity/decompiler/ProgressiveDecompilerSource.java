@@ -12,6 +12,7 @@ import me.f1nal.trinity.decompiler.output.impl.PackageOutputMember;
 import me.f1nal.trinity.decompiler.output.impl.StringOutputMember;
 import me.f1nal.trinity.decompiler.output.impl.VariableOutputMember;
 import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
+import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.FieldInput;
@@ -27,6 +28,8 @@ import java.util.List;
 
 final class ProgressiveDecompilerSource {
     static final String IN_PROGRESS = "// -- // trinity: decompilation in progress... // -- //";
+    private static final String INDENT = IFernflowerPreferences.DEFAULTS
+            .get(IFernflowerPreferences.INDENT_STRING).toString();
 
     private ProgressiveDecompilerSource() {
     }
@@ -135,7 +138,7 @@ final class ProgressiveDecompilerSource {
         output.append(OutputMemberSerializer.serializeTags(new FieldStartEndOutputMember(
                 0, owner.getRealName(), field.desc, field.name)));
         FieldInput fieldInput = owner.getField(field.name, field.desc);
-        output.append("    ");
+        output.append(INDENT);
         output.append(OutputMemberSerializer.serializeTags(
                 new FieldDeclarationOutputMember(0, owner.getRealName(), field.desc, field.name)));
         appendVisibility(output, field.access);
@@ -160,7 +163,7 @@ final class ProgressiveDecompilerSource {
     private static void appendMethod(StringBuilder output, ClassInput owner, MethodNode method, MethodInput methodInput) {
         output.append(OutputMemberSerializer.serializeTags(new MethodStartEndOutputMember(
                 0, owner.getRealName(), method.desc, method.name)));
-        output.append("    ");
+        output.append(INDENT);
 
         if (methodInput.isClinit()) {
             appendKeyword(output, "static");
@@ -234,7 +237,8 @@ final class ProgressiveDecompilerSource {
     }
 
     private static void appendProgressBody(StringBuilder output) {
-        output.append("\n        ").append(IN_PROGRESS).append("\n    }\n");
+        output.append('\n').append(INDENT).append(INDENT).append(IN_PROGRESS)
+                .append('\n').append(INDENT).append("}\n");
     }
 
     private static void appendType(StringBuilder output, ClassInput context, Type type) {

@@ -44,7 +44,7 @@ public class AssemblerEditInstructionPopup extends PopupWindow {
 
         if (this.instruction == null) {
             if (ImGui.isItemFocused() && !this.autocompletedInstructions.isEmpty() &&
-                    ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Enter))) {
+                    ImGui.isKeyPressed(ImGuiKey.Enter)) {
                 this.opcodeName.set(this.autocompletedInstructions.get(0));
                 this.setAutocompletedInstructions();
             }

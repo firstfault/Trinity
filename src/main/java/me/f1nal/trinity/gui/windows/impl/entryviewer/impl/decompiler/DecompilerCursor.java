@@ -230,10 +230,10 @@ public class DecompilerCursor {
             return;
         }
 
-        if (ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.DownArrow))) this.moveVertically(1);
-        else if (ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.UpArrow))) this.moveVertically(-1);
-        else if (ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.LeftArrow))) this.moveHorizontally(-1);
-        else if (ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.RightArrow))) this.moveHorizontally(1);
+        if (ImGui.isKeyPressed(ImGuiKey.DownArrow)) this.moveVertically(1);
+        else if (ImGui.isKeyPressed(ImGuiKey.UpArrow)) this.moveVertically(-1);
+        else if (ImGui.isKeyPressed(ImGuiKey.LeftArrow)) this.moveHorizontally(-1);
+        else if (ImGui.isKeyPressed(ImGuiKey.RightArrow)) this.moveHorizontally(1);
         else return;
 
         this.setScrollToCursor();

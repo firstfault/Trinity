@@ -8,7 +8,6 @@ import imgui.type.ImBoolean;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
-import org.checkerframework.checker.units.qual.C;
 
 /**
  * A window that can be opened or closed, possibly with multiple instances.
@@ -71,7 +70,7 @@ public abstract class ClosableWindow extends AbstractWindow {
             }
             if (this.menuBar != null) this.menuBar.draw();
             renderFrame();
-            if (closeableByEscape && ImGui.isWindowFocused() && ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Escape))) {
+            if (closeableByEscape && ImGui.isWindowFocused() && ImGui.isKeyDown(ImGuiKey.Escape)) {
                 this.close();
             }
         } else {

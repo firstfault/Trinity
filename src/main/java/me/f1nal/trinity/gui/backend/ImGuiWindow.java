@@ -57,8 +57,8 @@ public abstract class ImGuiWindow {
      * Method to dispose all used application resources and destroy its window.
      */
     protected void dispose() {
-        imGuiGl3.dispose();
-        imGuiGlfw.dispose();
+        imGuiGl3.shutdown();
+        imGuiGlfw.shutdown();
         disposeImGui();
         disposeWindow();
     }
@@ -226,6 +226,7 @@ public abstract class ImGuiWindow {
      */
     protected void startFrame() {
         clearBuffer();
+        imGuiGl3.newFrame();
         imGuiGlfw.newFrame();
         ImGui.newFrame();
     }

@@ -48,7 +48,7 @@ public class PopupMenu {
             for (PopupItem popupItem : popupItems) {
                 popupItem.draw(state);
             }
-            if (ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Escape))) {
+            if (ImGui.isKeyPressed(ImGuiKey.Escape)) {
                 ImGui.closeCurrentPopup();
             }
             ImGui.endPopup();

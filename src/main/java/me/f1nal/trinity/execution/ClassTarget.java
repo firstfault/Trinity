@@ -23,7 +23,6 @@ import me.f1nal.trinity.remap.IDisplayNameProvider;
 import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.remap.RenameType;
 import me.f1nal.trinity.theme.CodeColorScheme;
-import org.checkerframework.checker.units.qual.C;
 
 import java.util.ArrayList;
 import java.util.Collection;

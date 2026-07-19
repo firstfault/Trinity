@@ -57,7 +57,7 @@ public class InstructionReferenceArrow {
     }
 
     public void setDraggingControls(AssemblerInstructionTable table) {
-        final boolean escape = ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Escape));
+        final boolean escape = ImGui.isKeyDown(ImGuiKey.Escape);
         boolean clearDrag = false;
 
         if (!table.draggingArrowNow && (ImGui.isMouseClicked(0) || escape)) {

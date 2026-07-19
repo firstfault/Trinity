@@ -54,19 +54,19 @@ public class DecompilerGhostTextRenderer implements Runnable {
 
         for (int i = 0, size = text.size(); i < size; i++) {
             String line = text.get(i);
-
-            ImGui.text(this.indent);
-            ImGui.sameLine(0.F, 0.F);
-
             FontSettings defaultFont = Main.getPreferences().getDecompilerFont();
             float fontSize = Math.max(defaultFont.getSize() - 1.F, 12.F);
             float globalScale = fontSize / 14;
-            ImVec2 rectMin = new ImVec2(ImGui.getItemRectMaxX(), ImGui.getItemRectMinY());
             ImFont font = defaultFont.getImFont();
+            float lineCursorPosY = ImGui.getCursorPosY();
+            float indentWidth = font.calcTextSizeA(defaultFont.getSize(), Float.MAX_VALUE, -1.F, this.indent).x;
+            ImGui.setCursorPosX(cursorPosX + indentWidth);
+            ImVec2 rectMin = ImGui.getCursorScreenPos();
             ImVec2 textSize = font.calcTextSizeA(fontSize, Float.MAX_VALUE, -1.F, line);
+            ImGui.dummy(textSize.x, textSize.y);
             ImVec2 mousePos = ImGui.getMousePos();
             boolean hovered = ImGui.isWindowHovered() && mousePos.x >= rectMin.x && mousePos.y >= rectMin.y && mousePos.x <= rectMin.x + textSize.x && mousePos.y <= rectMin.y + textSize.y;
-            ImGui.getWindowDrawList().addText(font, fontSize, rectMin.x, rectMin.y - globalScale, hovered ? CodeColorScheme.TEXT : CodeColorScheme.DISABLED, line);
+            ImGui.getWindowDrawList().addText(font, Math.round(fontSize), rectMin.x, rectMin.y - globalScale, hovered ? CodeColorScheme.TEXT : CodeColorScheme.DISABLED, line);
             if (hovered) {
                 ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
 
@@ -74,9 +74,8 @@ public class DecompilerGhostTextRenderer implements Runnable {
                     Main.getWindowManager().addClosableWindow(new XrefViewerFrame(this.input.createXrefBuilder(this.trinity.getExecution().getXrefMap()), trinity));
                 }
             }
-            ImGui.setCursorPosY(ImGui.getCursorPosY() + ((14.F + (i == size - 1 ? 0.F : 1.F)) * globalScale));
+            ImGui.setCursorPosX(cursorPosX);
+            ImGui.setCursorPosY(lineCursorPosY + textSize.y + (i == size - 1 ? 0.F : globalScale));
         }
-
-        ImGui.setCursorPosX(cursorPosX);
     }
 }

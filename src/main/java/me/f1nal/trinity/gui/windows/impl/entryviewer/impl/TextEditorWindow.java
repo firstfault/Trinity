@@ -2,7 +2,6 @@ package me.f1nal.trinity.gui.windows.impl.entryviewer.impl;
 
 import imgui.ImGui;
 import imgui.extension.texteditor.TextEditor;
-import imgui.extension.texteditor.TextEditorLanguageDefinition;
 import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
@@ -14,9 +13,8 @@ public class TextEditorWindow extends ArchiveEntryViewerWindow<ResourceArchiveEn
 
     public TextEditorWindow(Trinity trinity, ResourceArchiveEntry archiveEntry) {
         super(trinity, archiveEntry);
-        textEditor.setLanguageDefinition(new TextEditorLanguageDefinition());
-        textEditor.insertText(new String(archiveEntry.getBytes()));
-        textEditor.setShowWhitespaces(false);
+        textEditor.setText(new String(archiveEntry.getBytes()));
+        textEditor.setShowWhitespacesEnabled(false);
         this.windowFlags |= ImGuiWindowFlags.MenuBar;
     }
 
@@ -31,30 +29,30 @@ public class TextEditorWindow extends ArchiveEntryViewerWindow<ResourceArchiveEn
                 ImGui.endMenu();
             }
             if (ImGui.beginMenu("Edit")) {
-                final boolean ro = textEditor.isReadOnly();
+                final boolean ro = textEditor.isReadOnlyEnabled();
                 if (ImGui.menuItem("Read-only mode", "", ro)) {
-                    textEditor.setReadOnly(!ro);
+                    textEditor.setReadOnlyEnabled(!ro);
                 }
 
                 ImGui.separator();
 
                 if (ImGui.menuItem("Undo", "ALT-Backspace", !ro && textEditor.canUndo())) {
-                    textEditor.undo(1);
+                    textEditor.undo();
                 }
                 if (ImGui.menuItem("Redo", "Ctrl-Y", !ro && textEditor.canRedo())) {
-                    textEditor.redo(1);
+                    textEditor.redo();
                 }
 
                 ImGui.separator();
 
-                if (ImGui.menuItem("Copy", "Ctrl-C", textEditor.hasSelection())) {
+                if (ImGui.menuItem("Copy", "Ctrl-C", textEditor.anyCursorHasSelection())) {
                     textEditor.copy();
                 }
-                if (ImGui.menuItem("Cut", "Ctrl-X", !ro && textEditor.hasSelection())) {
+                if (ImGui.menuItem("Cut", "Ctrl-X", !ro && textEditor.anyCursorHasSelection())) {
                     textEditor.cut();
                 }
-                if (ImGui.menuItem("Delete", "Del", !ro && textEditor.hasSelection())) {
-                    textEditor.delete();
+                if (ImGui.menuItem("Delete", "Del", !ro && textEditor.anyCursorHasSelection())) {
+                    textEditor.replaceTextInAllCursors("");
                 }
                 if (ImGui.menuItem("Paste", "Ctrl-V", !ro && ImGui.getClipboardText() != null)) {
                     textEditor.paste();

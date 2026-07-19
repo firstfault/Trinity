@@ -134,13 +134,13 @@ public class BrowserViewerNode {
         }
 
         if (this.renamingText != null) {
-            if (ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Escape))) {
+            if (ImGui.isKeyDown(ImGuiKey.Escape)) {
                 this.renamingText = null;
             } else {
                 GuiUtil.smallWidget(() -> {
                     ImGui.setKeyboardFocusHere();
                     ImGui.inputText("###" + this.renamingId, this.renamingText);
-                    if ((this.renamingSetFocus && GuiUtil.isFocusLostOnItem()) || ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Enter))) {
+                    if ((this.renamingSetFocus && GuiUtil.isFocusLostOnItem()) || ImGui.isKeyDown(ImGuiKey.Enter)) {
                         final String newName = this.renamingText.get();
                         this.renamingText = null;
                         Main.runLater(() -> this.rename.rename(Main.getTrinity().getRemapper(), newName));

@@ -3,6 +3,7 @@ package me.f1nal.trinity.gui.windows.impl.classstructure;
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
+import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiTreeNodeFlags;
 import imgui.flag.ImGuiWindowFlags;
@@ -16,8 +17,6 @@ import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.classstructure.nodes.ClassStructureNode;
-
-import java.awt.event.KeyEvent;
 
 public class ClassStructureWindow extends StaticWindow {
     private static final MemorableCheckboxComponent showFilter = new MemorableCheckboxComponent("classStructureShowFilter", "Show Filter", false);
@@ -55,7 +54,7 @@ public class ClassStructureWindow extends StaticWindow {
         this.popupMenuBar.set(PopupItemBuilder.create().menu("Find", find -> find.menuItem("Show Filter", "Ctrl+F", showFilter.isChecked(), showFilter::toggleChecked)));
         this.popupMenuBar.draw();
 
-        if (ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(KeyEvent.VK_F)) {
+        if (ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.F)) {
             showFilter.toggleChecked();
         }
 

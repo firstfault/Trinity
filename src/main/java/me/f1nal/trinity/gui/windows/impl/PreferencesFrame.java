@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.windows.impl;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiDataType;
+import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiSliderFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImFloat;
@@ -19,7 +20,6 @@ import me.f1nal.trinity.keybindings.KeyBindManager;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;
 import me.f1nal.trinity.util.GuiUtil;
-import org.lwjgl.glfw.GLFW;
 
 public class PreferencesFrame extends StaticWindow {
     private final String id = ComponentId.getId(this.getClass());
@@ -144,11 +144,11 @@ public class PreferencesFrame extends StaticWindow {
             this.captureArmed = true;
             return;
         }
-        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_ESCAPE, false)) {
+        if (ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
             this.editingBind = null;
             return;
         }
-        for (int key = GLFW.GLFW_KEY_SPACE; key <= GLFW.GLFW_KEY_LAST; key++) {
+        for (int key = ImGuiKey.NamedKey_BEGIN; key <= ImGuiKey.Oem102; key++) {
             if (Bindable.isModifierKey(key) || !ImGui.isKeyPressed(key, false)) continue;
             Bindable changed = this.editingBind;
             Bindable conflict = Main.getKeyBindManager().bind(changed, key,

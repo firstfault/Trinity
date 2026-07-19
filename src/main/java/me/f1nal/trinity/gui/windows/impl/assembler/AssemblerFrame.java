@@ -40,7 +40,6 @@ import me.f1nal.trinity.util.SystemUtil;
 import me.f1nal.trinity.util.animation.Animation;
 import me.f1nal.trinity.util.animation.Easing;
 import me.f1nal.trinity.util.history.ChangeManager;
-import org.lwjgl.glfw.GLFW;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.*;
@@ -128,10 +127,10 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     protected void renderFrame() {
         if (historyFrame != null) historyFrame.render();
 
-        if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Z))) {
+        if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.Z)) {
             this.undoHistory();
         }
-        if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Y))) {
+        if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.Y)) {
             this.redoHistory();
         }
 
@@ -181,7 +180,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         ImGui.endDisabled();
 
         if (this.methodNotFresh) {
-            if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_S)) {
+            if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.S)) {
                 this.saveMethod = true;
             }
         }

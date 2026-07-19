@@ -108,8 +108,7 @@ public class FontSettings {
     }
 
     public void pushFont() {
-        this.imFont.setScale(this.getGlobalScale());
-        ImGui.pushFont(this.imFont);
+        ImGui.pushFont(this.imFont, this.getSize());
     }
 
     public void popFont() {

@@ -149,7 +149,7 @@ public final class ProjectNavigationBand implements IEventListener {
         }
         float textY = y + Math.max(0.F, (BAND_HEIGHT - textSize.y) * 0.5F);
         drawList.pushClipRect(startX, y, endX, y + BAND_HEIGHT, true);
-        drawList.addText(font, fontSize, startX + LABEL_PADDING, textY, LABEL_COLOR, segment.label());
+        drawList.addText(font, Math.round(fontSize), startX + LABEL_PADDING, textY, LABEL_COLOR, segment.label());
         drawList.popClipRect();
     }
 

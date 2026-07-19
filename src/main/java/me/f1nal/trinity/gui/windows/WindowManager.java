@@ -108,7 +108,7 @@ public class WindowManager {
 
         while (pops-- != 0) ImGui.endPopup();
 
-        if (ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Escape))) {
+        if (ImGui.isKeyPressed(ImGuiKey.Escape)) {
             if (last.canCloseOnEscapeNow()) {
                 last.close();
             }

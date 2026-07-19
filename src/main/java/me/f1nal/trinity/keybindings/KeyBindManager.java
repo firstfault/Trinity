@@ -1,7 +1,7 @@
 package me.f1nal.trinity.keybindings;
 
+import imgui.flag.ImGuiKey;
 import me.f1nal.trinity.appdata.keybindings.KeyBindingData;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,23 +16,23 @@ public final class KeyBindManager {
     private final Map<String, Bindable> bindables = new LinkedHashMap<>();
 
     public final Bindable ASSEMBLER_INSERT = register("assembler.instruction.insert", "Assembler",
-            ASSEMBLER_INSTRUCTION_SCOPE, "Insert Instruction", GLFW.GLFW_KEY_A);
+            ASSEMBLER_INSTRUCTION_SCOPE, "Insert Instruction", ImGuiKey.A);
     public final Bindable ASSEMBLER_EDIT = register("assembler.instruction.edit", "Assembler",
-            ASSEMBLER_INSTRUCTION_SCOPE, "Edit Instruction", GLFW.GLFW_KEY_E);
+            ASSEMBLER_INSTRUCTION_SCOPE, "Edit Instruction", ImGuiKey.E);
     public final Bindable ASSEMBLER_DELETE = register("assembler.instruction.delete", "Assembler",
-            ASSEMBLER_INSTRUCTION_SCOPE, "Delete Instruction", GLFW.GLFW_KEY_X);
+            ASSEMBLER_INSTRUCTION_SCOPE, "Delete Instruction", ImGuiKey.X);
     public final Bindable ASSEMBLER_DUPLICATE = register("assembler.instruction.duplicate", "Assembler",
-            ASSEMBLER_INSTRUCTION_SCOPE, "Duplicate Instruction", GLFW.GLFW_KEY_D);
+            ASSEMBLER_INSTRUCTION_SCOPE, "Duplicate Instruction", ImGuiKey.D);
     public final Bindable DECOMPILER_ASSEMBLE = register("decompiler.member.assemble", "Decompiler",
-            "decompiler.member", "Assemble Method", GLFW.GLFW_KEY_A);
+            "decompiler.member", "Assemble Method", ImGuiKey.A);
     public final Bindable DECOMPILER_RENAME = register("decompiler.member.rename", "Decompiler",
-            "decompiler.member", "Rename Member", GLFW.GLFW_KEY_R);
+            "decompiler.member", "Rename Member", ImGuiKey.R);
     public final Bindable DECOMPILER_EDIT = register("decompiler.member.edit", "Decompiler",
-            "decompiler.member", "Edit Field / Method / Class", GLFW.GLFW_KEY_E);
+            "decompiler.member", "Edit Field / Method / Class", ImGuiKey.E);
     public final Bindable DECOMPILER_VIEW_XREFS = register("decompiler.member.view_xrefs", "Decompiler",
-            "decompiler.member", "View Xrefs", GLFW.GLFW_KEY_X);
+            "decompiler.member", "View Xrefs", ImGuiKey.X);
     public final Bindable DECOMPILER_VIEW_MEMBER = register("decompiler.member.view", "Decompiler",
-            "decompiler.member", "View Member", GLFW.GLFW_KEY_V);
+            "decompiler.member", "View Member", ImGuiKey.V);
 
     public Bindable register(String identifier, String category, String scope, String displayName, int defaultKey) {
         if (bindables.containsKey(identifier)) {
@@ -58,15 +58,16 @@ public final class KeyBindManager {
     /** Assigns a chord and clears an existing binding in the same input scope. */
     public Bindable bind(Bindable target, int keyCode, boolean control, boolean shift,
                          boolean alt, boolean superKey) {
+        int normalizedKeyCode = Bindable.normalizeKeyCode(keyCode);
         Bindable conflict = null;
-        if (keyCode != -1) {
+        if (normalizedKeyCode != -1) {
             conflict = bindables.values().stream()
                     .filter(bindable -> bindable != target && bindable.getScope().equals(target.getScope()))
-                    .filter(bindable -> bindable.hasChord(keyCode, control, shift, alt, superKey))
+                    .filter(bindable -> bindable.hasChord(normalizedKeyCode, control, shift, alt, superKey))
                     .findFirst().orElse(null);
             if (conflict != null) conflict.clear();
         }
-        target.bind(keyCode, control, shift, alt, superKey);
+        target.bind(normalizedKeyCode, control, shift, alt, superKey);
         return conflict;
     }
 

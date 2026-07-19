@@ -6,6 +6,7 @@ import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiFocusedFlags;
 import imgui.flag.ImGuiInputTextFlags;
+import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
 import imgui.flag.ImGuiWindowFlags;
@@ -42,7 +43,6 @@ import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
 import org.objectweb.asm.tree.AbstractInsnNode;
-import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -208,7 +208,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private void drawDecompileTab() {
         this.runControls();
 
-        if (ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows) && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_F)) {
+        if (ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows) && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.F)) {
             this.openSearch();
         }
 
@@ -313,14 +313,14 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             GuiUtil.tooltip("Next match (Down)");
 
             this.searchBarFocused = ImGui.isWindowFocused();
-            boolean enterPressed = ImGui.isKeyPressed(GLFW.GLFW_KEY_ENTER);
-            if (this.searchBarFocused && (ImGui.isKeyPressed(GLFW.GLFW_KEY_UP) || enterPressed)) {
+            boolean enterPressed = ImGui.isKeyPressed(ImGuiKey.Enter);
+            if (this.searchBarFocused && (ImGui.isKeyPressed(ImGuiKey.UpArrow) || enterPressed)) {
                 this.moveSearchResult(-1);
                 if (enterPressed) this.focusSearch = true;
-            } else if (this.searchBarFocused && ImGui.isKeyPressed(GLFW.GLFW_KEY_DOWN)) {
+            } else if (this.searchBarFocused && ImGui.isKeyPressed(ImGuiKey.DownArrow)) {
                 this.moveSearchResult(1);
             }
-            if (this.searchBarFocused && ImGui.isKeyPressed(GLFW.GLFW_KEY_ESCAPE)) {
+            if (this.searchBarFocused && ImGui.isKeyPressed(ImGuiKey.Escape)) {
                 this.closeSearch();
             }
         }
@@ -506,7 +506,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 if (ImGui.getIO().getKeyCtrl()) {
                     ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
 
-                    if (focusTime.hasPassed(150L) && viewMember.hasPassed(250L) && (ImGui.isKeyPressed(GLFW.GLFW_KEY_B) || leftClick)) {
+                    if (focusTime.hasPassed(150L) && viewMember.hasPassed(250L) && (ImGui.isKeyPressed(ImGuiKey.B) || leftClick)) {
                         Main.getDisplayManager().openDecompilerView(this.hoveredComponent.getViewMember());
                         viewMember.reset();
                     }
@@ -529,7 +529,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             }));
         }
 
-        if (cursor.hasTextSelection() && ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_C)) {
+        if (cursor.hasTextSelection() && ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.C)) {
             this.copyToClipboard();
         }
 

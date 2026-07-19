@@ -9,7 +9,6 @@ import me.f1nal.trinity.refactor.globalrename.impl.fullrename.types.impl.FullRen
 import me.f1nal.trinity.refactor.globalrename.impl.fullrename.types.impl.FullRenameMethods;
 import me.f1nal.trinity.refactor.globalrename.impl.fullrename.types.impl.FullRenamePackages;
 
-import javax.annotation.Nullable;
 import java.util.List;
 
 public final class FullGlobalRename extends GlobalRenameType {
