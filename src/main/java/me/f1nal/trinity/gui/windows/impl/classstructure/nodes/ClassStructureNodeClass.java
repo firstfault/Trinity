@@ -3,13 +3,21 @@ package me.f1nal.trinity.gui.windows.impl.classstructure.nodes;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.AccessFlags;
 import me.f1nal.trinity.execution.ClassInput;
-import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.windows.impl.classstructure.StructureKind;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 public class ClassStructureNodeClass extends AbstractClassStructureNodeInput<ClassInput> {
     public ClassStructureNodeClass(ClassInput classInput) {
-        super(FontAwesomeIcons.FileCode, classInput);
+        super(getIcon(classInput), classInput);
+    }
+
+    private static String getIcon(ClassInput classInput) {
+        AccessFlags accessFlags = classInput.getAccessFlags();
+        if (accessFlags.isAnnotation()) return CodiconIcons.MENTION;
+        if (accessFlags.isInterface()) return CodiconIcons.SYMBOL_INTERFACE;
+        if (accessFlags.isEnum()) return CodiconIcons.SYMBOL_ENUM;
+        return CodiconIcons.SYMBOL_CLASS;
     }
 
     @Override

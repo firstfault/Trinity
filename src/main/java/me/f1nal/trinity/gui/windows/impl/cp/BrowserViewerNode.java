@@ -8,6 +8,7 @@ import imgui.type.ImString;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.gui.components.ComponentId;
+import me.f1nal.trinity.gui.components.IconFamily;
 import me.f1nal.trinity.gui.components.events.MouseClickEventHandler;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.util.GuiUtil;
@@ -22,6 +23,7 @@ import java.util.function.Supplier;
 
 public class BrowserViewerNode {
     private String icon;
+    private final IconFamily iconFamily;
     private final Supplier<Integer> color;
     private final Supplier<String> label;
     private final RenameHandler rename;
@@ -35,7 +37,12 @@ public class BrowserViewerNode {
     private boolean defaultOpen;
 
     public BrowserViewerNode(String icon, Supplier<Integer> color, Supplier<String> label, RenameHandler rename) {
+        this(icon, IconFamily.DEFAULT, color, label, rename);
+    }
+
+    public BrowserViewerNode(String icon, IconFamily iconFamily, Supplier<Integer> color, Supplier<String> label, RenameHandler rename) {
         this.icon = icon;
+        this.iconFamily = iconFamily;
         this.color = color;
         this.label = label;
         this.rename = rename;
@@ -120,13 +127,17 @@ public class BrowserViewerNode {
         }
 
         if (this.hoverAnimation != null) {
-            ImGui.getWindowDrawList().addRectFilled(0, ImGui.getItemRectMinY() - 4, 0x10000, ImGui.getItemRectMaxY() + 4, ImColor.rgba(75, 75, 75, (int) this.hoverAnimation.getValue()));
+            int color = ImColor.rgba(75, 75, 75, (int) this.hoverAnimation.getValue());
+            ImGui.getWindowDrawList().addRectFilled(0, ImGui.getItemRectMinY() - 4,
+                    0x10000, ImGui.getItemRectMaxY() + 4, color);
             this.hoverAnimation.run(hovered ? this.hoverAnimation.getStartValue() : 0.F);
             if (this.hoverAnimation.getValue() == 0.F) this.hoverAnimation = null;
         }
 
-        ImGui.textColored(getColor().get(), this.icon + " ");
-        ImGui.sameLine(0.F, 0.F);
+        this.iconFamily.pushFont();
+        ImGui.textColored(getColor().get(), this.icon + (this.iconFamily == IconFamily.DEFAULT ? " " : ""));
+        this.iconFamily.popFont();
+        ImGui.sameLine(0.F, this.iconFamily == IconFamily.CODICON ? 5.F : 0.F);
 
         if (this.prefix != null && !this.prefix.isEmpty()) {
             ColoredString.drawText(this.prefix);

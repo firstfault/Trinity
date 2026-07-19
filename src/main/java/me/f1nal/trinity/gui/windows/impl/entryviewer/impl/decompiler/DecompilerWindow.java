@@ -2,8 +2,10 @@ package me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler;
 
 import com.google.common.eventbus.Subscribe;
 import imgui.ImColor;
+import imgui.ImDrawList;
 import imgui.ImGui;
 import imgui.ImVec2;
+import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiFocusedFlags;
 import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiKey;
@@ -33,6 +35,7 @@ import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.popup.MenuBarProgress;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
+import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructure;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
@@ -42,6 +45,8 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
+import me.f1nal.trinity.util.animation.Animation;
+import me.f1nal.trinity.util.animation.Easing;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.io.IOException;
@@ -55,6 +60,7 @@ import java.util.regex.PatternSyntaxException;
 public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> implements IEventListener, IDatabaseSavable<DatabaseDecompiler> {
     private static final int MIN_LINE_NUMBER_DIGITS = 4;
     private static final int SELECTION_MATCH_BORDER = ImColor.rgba(145, 145, 145, 220);
+    private static final float STICKY_HOVER_ALPHA = 28.F;
     private ClassInput selectedClass;
     /**
      * Notifies the selected class must be refreshed.
@@ -78,6 +84,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private boolean selectSearchText;
     private boolean searchDirty = true;
     private boolean searchBarFocused;
+    private float stickyHeaderHeight;
+    private final Animation stickyClassHover = new Animation(Easing.EASE_OUT_QUAD, 110L);
+    private final Animation stickyMethodHover = new Animation(Easing.EASE_OUT_QUAD, 110L);
     private final List<DecompilerSearchResult> selectionMatches = new ArrayList<>();
     private DecompiledClass selectionMatchesClass;
     private String selectionMatchText = "";
@@ -126,7 +135,17 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
     @Override
     public String getTitle() {
-        return getArchiveEntry().getDisplayOrRealName() + ".java";
+        String simpleName = getArchiveEntry().getDisplaySimpleName();
+        ClosableWindow[] windows = Main.getWindowManager().getClosableWindows().toArray(new ClosableWindow[0]);
+        for (ClosableWindow window : windows) {
+            if (window == this || !window.isVisible() || !(window instanceof DecompilerWindow decompilerWindow)) {
+                continue;
+            }
+            if (simpleName.equals(decompilerWindow.getArchiveEntry().getDisplaySimpleName())) {
+                return getArchiveEntry().getDisplayOrRealName() + ".java";
+            }
+        }
+        return simpleName + ".java";
     }
 
     public void setDecompileTarget(ClassInput classInput) {
@@ -216,6 +235,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (decompiledClass != null && decompiledClass.applyPendingOutput()) {
             this.searchDirty = true;
             this.selectionMatchesDirty = true;
+            if (this.autoscrollTo != null) this.autoscrollTo.invalidate();
         }
         if (decompiledClass != null && this.resetLines) {
             decompiledClass.resetLines();
@@ -230,6 +250,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             this.searchBarFocused = false;
         }
 
+        ImGui.setCursorPosY(ImGui.getCursorPosY() - 3.F);
         ImGui.beginChild("DecompilerWindowChild", 0.F, 0.F, false, ImGuiWindowFlags.HorizontalScrollbar);
 
         if (decompiledClass == null) {
@@ -406,6 +427,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
     private void drawDecompiledOutput(DecompiledClass decompiledClass) {
         this.hoveredComponent = null;
+        this.cursor.updateScrollAnimation();
 
         float mousePosY = ImGui.getMousePosY() + ImGui.getScrollY() - ImGui.getWindowPosY();
         float mousePosX = ImGui.getMousePosX() + ImGui.getScrollX();
@@ -415,6 +437,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         ImVec2 textSize = ImGui.calcTextSize("0".repeat(lineNumberDigits));
         float lineNumberSpacing = 3.F + textSize.x;
         float cursorPosX = ImGui.getCursorPosX();
+        boolean stickyInputBlocked = this.blockStickyHeaderInput();
+        DecompilerGhostTextRenderer.setInteractionBlocked(stickyInputBlocked);
 
         if (!this.searchBarFocused) cursor.handleInputs(mousePosX, mousePosY);
 
@@ -440,14 +464,16 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                     textPositioned = false;
                 }
 
-                if (this.autoscrollTo != null && text.getComponent() == this.autoscrollTo.findComponent(decompiledClass)) {
+                if (this.autoscrollTo != null && this.autoscrollTo.isNavigationPending()
+                        && text.getComponent() == this.autoscrollTo.findComponent(decompiledClass)) {
                     DecompilerCoordinates coordinates = new DecompilerCoordinates(line, textOffset);
                     cursor.navigateTo(coordinates);
                     this.navigationHighlight = new DecompilerHighlight(line);
-                    this.autoscrollTo = null;
+                    this.autoscrollTo.markNavigated();
+                    if (!decompiledClass.isProgressive()) this.autoscrollTo = null;
                 }
 
-                if (this.hoveredComponent == null && ImGui.isItemHovered()) {
+                if (!stickyInputBlocked && this.hoveredComponent == null && ImGui.isItemHovered()) {
                     this.hoveredComponent = text.getComponent();
                 }
 
@@ -456,7 +482,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             }
 
             float cursorPosY = ImGui.getCursorPosY();
-            final boolean hovered = ImGui.isWindowHovered() && mousePosY >= cursorPosY && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
+            final boolean hovered = !stickyInputBlocked && ImGui.isWindowHovered()
+                    && mousePosY >= cursorPosY
+                    && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
 
             if (hovered)
                 this.cursor.handleHoveredLineInputs(cursorScreenPosX, lineNumberSpacing, mousePosX, line);
@@ -469,28 +497,36 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
             ImGui.newLine();
         }
+        DecompilerGhostTextRenderer.setInteractionBlocked(false);
 
         this.drawSearchResults();
         this.cursor.drawSelectionBox();
         this.drawSelectionMatches(decompiledClass);
+        boolean stickyHovered = this.drawStickyHeaders(decompiledClass, lineNumberSpacing, textSize);
 
-        boolean rightClick = ImGui.isWindowHovered() && ImGui.isMouseClicked(ImGuiMouseButton.Right);
-        boolean leftClick = !rightClick && ImGui.isWindowHovered() && ImGui.isMouseClicked(ImGuiMouseButton.Left);
+        boolean rightClick = !stickyHovered && ImGui.isWindowHovered()
+                && ImGui.isMouseClicked(ImGuiMouseButton.Right);
+        boolean leftClick = !stickyHovered && !rightClick && ImGui.isWindowHovered()
+                && ImGui.isMouseClicked(ImGuiMouseButton.Left);
 
         if (this.hoveredComponent != null) {
             List<ColoredString> tooltip = this.hoveredComponent.createTooltip();
+            ClassInput previewClass = this.hoveredComponent.getPreviewClass();
             MethodInput previewMethod = this.hoveredComponent.getPreviewMethod();
             FieldInput previewField = this.hoveredComponent.getPreviewField();
             DecompilerComponent.VariablePreview previewVariable = this.hoveredComponent.getPreviewVariable();
 
-            if (tooltip != null || previewMethod != null || previewField != null || previewVariable != null) {
+            if (tooltip != null || previewClass != null || previewMethod != null
+                    || previewField != null || previewVariable != null) {
                 ImGui.beginTooltip();
                 DecompilerPreviewRenderer previewRenderer = new DecompilerPreviewRenderer(trinity);
 
                 if (tooltip != null) {
                     previewRenderer.drawDetails(tooltip);
                 }
-                if (previewMethod != null) {
+                if (previewClass != null) {
+                    previewRenderer.drawClassPreview(previewClass, tooltip != null);
+                } else if (previewMethod != null) {
                     previewRenderer.drawMethodPreview(previewMethod, tooltip != null);
                 } else if (previewField != null) {
                     previewRenderer.drawFieldPreview(previewField, tooltip != null);
@@ -556,9 +592,119 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         } else if (bindings.DECOMPILER_VIEW_XREFS.isPressed()) {
             if (target.getXrefBuilderProvider() != null) {
                 target.getXrefBuilderProvider().viewXrefs(trinity);
+            } else if (target.getSearchAllOccurrences() != null) {
+                target.getSearchAllOccurrences().run();
             }
         } else if (bindings.DECOMPILER_VIEW_MEMBER.isPressed()) {
             if (input != null) Main.getDisplayManager().openDecompilerView(input);
+        }
+    }
+
+    private boolean blockStickyHeaderInput() {
+        if (this.stickyHeaderHeight <= 0.F) return false;
+
+        float left = ImGui.getWindowPosX();
+        float top = ImGui.getWindowPosY();
+        float right = left + ImGui.getWindowWidth();
+        return ImGui.isWindowHovered()
+                && ImGui.isMouseHoveringRect(left, top, right, top + this.stickyHeaderHeight);
+    }
+
+    private boolean drawStickyHeaders(DecompiledClass decompiledClass, float lineNumberSpacing, ImVec2 textSize) {
+        DecompiledClass.StickyHeaders stickyHeaders = decompiledClass.getStickyHeaders();
+        float visibleTop = ImGui.getWindowPosY();
+        float lineHeight = textSize.y + ImGui.getStyle().getItemSpacingY();
+        List<DecompilerLine> visibleHeaders = new ArrayList<>(2);
+
+        DecompilerLine classLine = stickyHeaders.classLine();
+        boolean showClass = isLineAboveViewport(classLine, visibleTop, textSize.y);
+        float methodVisibleTop = visibleTop + (showClass ? lineHeight : 0.F);
+        DecompiledClass.StickyMethod currentMethod = null;
+        for (DecompiledClass.StickyMethod method : stickyHeaders.methods()) {
+            if (isLineAboveViewport(method.signatureLine(), methodVisibleTop, textSize.y)
+                    && isLineAtOrBelowViewport(method.endLine(), methodVisibleTop, lineHeight)) {
+                currentMethod = method;
+            }
+        }
+        if (showClass) visibleHeaders.add(classLine);
+        if (currentMethod != null) visibleHeaders.add(currentMethod.signatureLine());
+        if (visibleHeaders.isEmpty()) {
+            this.stickyHeaderHeight = 0.F;
+            return false;
+        }
+
+        float left = ImGui.getWindowPosX();
+        float right = left + ImGui.getWindowWidth();
+        float bottom = visibleTop + lineHeight * visibleHeaders.size();
+        this.stickyHeaderHeight = bottom - visibleTop;
+        ImDrawList drawList = ImGui.getWindowDrawList();
+        drawList.addRectFilled(left, visibleTop, right, bottom, ImGui.getColorU32(ImGuiCol.WindowBg));
+
+        float rowTop = visibleTop;
+        boolean classHovered = false;
+        boolean methodHovered = false;
+        boolean windowHovered = ImGui.isWindowHovered();
+        for (DecompilerLine line : visibleHeaders) {
+            boolean rowHovered = windowHovered
+                    && ImGui.isMouseHoveringRect(left, rowTop, right, rowTop + lineHeight);
+            Animation hoverAnimation = line == classLine ? this.stickyClassHover : this.stickyMethodHover;
+            hoverAnimation.run(rowHovered ? STICKY_HOVER_ALPHA : 0.F);
+            if (hoverAnimation.getValue() > 0.F) {
+                drawList.addRectFilled(left, rowTop, right, rowTop + lineHeight,
+                        CodeColorScheme.setAlpha(CodeColorScheme.TEXT,
+                                Math.round(hoverAnimation.getValue())));
+            }
+            if (rowHovered) {
+                ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
+                    this.cursor.navigateTo(new DecompilerCoordinates(line, line.getText().length()));
+                }
+            }
+            if (line == classLine) classHovered = rowHovered;
+            else methodHovered = rowHovered;
+            rowTop += lineHeight;
+        }
+        if (!showClass) this.stickyClassHover.run(0.F);
+        if (currentMethod == null) this.stickyMethodHover.run(0.F);
+
+        drawList.addLine(left, bottom, right, bottom, ImGui.getColorU32(ImGuiCol.Border));
+
+        float lineNumberX = left + ImGui.getStyle().getWindowPaddingX() - ImGui.getScrollX();
+        float textX = lineNumberX + lineNumberSpacing;
+        float textY = visibleTop + Math.max(0.F, (lineHeight - textSize.y) * 0.5F);
+        drawList.pushClipRect(left, visibleTop, right, bottom, true);
+        for (DecompilerLine line : visibleHeaders) {
+            drawList.addText(lineNumberX, textY, CodeColorScheme.LINE_NUMBER,
+                    String.valueOf(line.getLineNumber()));
+            drawStickyLine(drawList, line, textX, textY);
+            textY += lineHeight;
+        }
+        drawList.popClipRect();
+
+        boolean hovered = classHovered || methodHovered;
+        if (hovered) {
+            this.hoveredComponent = null;
+        }
+        return hovered;
+    }
+
+    private static boolean isLineAboveViewport(DecompilerLine line, float visibleTop, float textHeight) {
+        return line != null && line.pos != null && line.pos.y + textHeight < visibleTop;
+    }
+
+    private static boolean isLineAtOrBelowViewport(DecompilerLine line, float visibleTop, float lineHeight) {
+        return line != null && line.pos != null && line.pos.y + lineHeight >= visibleTop;
+    }
+
+    private static void drawStickyLine(ImDrawList drawList, DecompilerLine line, float startX, float y) {
+        float x = startX;
+        for (DecompilerLineText text : line.getComponents()) {
+            String value = text.getText();
+            if (value.isEmpty()) {
+                continue;
+            }
+            drawList.addText(x, y, text.getComponent().getColor(), value);
+            x += ImGui.calcTextSize(value).x;
         }
     }
 

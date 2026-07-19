@@ -10,8 +10,10 @@ import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.windows.impl.xref.SearchMaxDisplay;
 import me.f1nal.trinity.gui.viewport.FontManager;
+import me.f1nal.trinity.theme.AccentColor;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;
+import me.f1nal.trinity.theme.TrinityStyle;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,6 +28,7 @@ public class PreferencesFile extends AppDataFile {
     private boolean decompilerEnumClass = false;
     private boolean autoviewXref = false;
     private boolean assemblerHideMetadata = false;
+    private AccentColor accentColor = AccentColor.SAPPHIRE;
     private String currentTheme;
     private final Set<KeyBindingData> keyBindingData = new HashSet<>();
     private final Map<String, Boolean> memorizedCheckboxes = new HashMap<>();
@@ -65,6 +68,15 @@ public class PreferencesFile extends AppDataFile {
         return currentTheme;
     }
 
+    public AccentColor getAccentColor() {
+        return accentColor == null ? AccentColor.SAPPHIRE : accentColor;
+    }
+
+    public void setAccentColor(AccentColor accentColor) {
+        this.accentColor = accentColor == null ? AccentColor.SAPPHIRE : accentColor;
+        TrinityStyle.applyAccent(this.accentColor);
+    }
+
     public void setDecompilerEnumClass(boolean decompilerEnumClass) {
         this.decompilerEnumClass = decompilerEnumClass;
     }
@@ -83,8 +95,7 @@ public class PreferencesFile extends AppDataFile {
         ThemeManager themeManager = Main.getThemeManager();
         Theme theme = this.currentTheme == null ? null : themeManager.getTheme(this.currentTheme);
         if (theme == null) {
-            this.setCurrentTheme(themeManager.getDefaultTheme());
-            return;
+            theme = themeManager.getDefaultTheme();
         }
         themeManager.setCurrentTheme(theme);
     }

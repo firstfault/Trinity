@@ -4,7 +4,8 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.database.Database;
 import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.object.DatabasePackage;
-import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.CodiconIcons;
+import me.f1nal.trinity.gui.components.IconFamily;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.gui.components.filter.kind.IKindType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
@@ -19,6 +20,7 @@ import me.f1nal.trinity.util.SystemUtil;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewerNode {
@@ -48,7 +50,7 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
             parent.getPackages().add(this);
             this.addToHierarchy();
         }
-        this.browserViewerNode = new BrowserViewerNode(null,
+        this.browserViewerNode = new BrowserViewerNode(null, IconFamily.CODICON,
                 this.isArchive() ? () -> CodeColorScheme.ARCHIVE_REF : () -> CodeColorScheme.PACKAGE,
                 this::getDisplayName,
                 this::rename);
@@ -107,7 +109,8 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
     }
 
     private void updateBrowserViewerNode() {
-        this.browserViewerNode.setIcon(this.isArchive() ? FontAwesomeIcons.FileArchive : this.isOpen() ? FontAwesomeIcons.FolderOpen : FontAwesomeIcons.Folder);
+        this.browserViewerNode.setIcon(this.isArchive() ? CodiconIcons.ARCHIVE
+                : this.isOpen() ? CodiconIcons.FOLDER_OPENED : CodiconIcons.FOLDER);
     }
 
     private void addToHierarchy() {
@@ -224,6 +227,11 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
     @Override
     public boolean matches(String searchTerm) {
         return name.contains(searchTerm);
+    }
+
+    @Override
+    public boolean matchesIgnoreCase(String searchTerm) {
+        return name.toLowerCase(Locale.ROOT).contains(searchTerm.toLowerCase(Locale.ROOT));
     }
 
     public String getChildrenPath(String fileName) {

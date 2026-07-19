@@ -38,7 +38,7 @@ public class AssemblerHistoryFrame extends ClosableWindow {
             AssemblerHistory history = list[i];
 
             ImGui.treeNodeEx(this.assemblerFrame.getId("###HistorySelectable"), ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.SpanFullWidth | ImGuiTreeNodeFlags.NoTreePushOnOpen);
-            ImGui.sameLine();
+            ImGui.sameLine(0.F, 0.F);
             history.getBrowserViewerNode().setSuffix(history.getText());
             history.getBrowserViewerNode().draw();
         }

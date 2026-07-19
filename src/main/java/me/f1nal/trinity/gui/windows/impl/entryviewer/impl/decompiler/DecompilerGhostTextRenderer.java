@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 public class DecompilerGhostTextRenderer implements Runnable {
+    private static boolean interactionBlocked;
     private final List<String> text = new ArrayList<>(2);
     private final Trinity trinity;
     private final Input<?> input;
@@ -48,6 +49,10 @@ public class DecompilerGhostTextRenderer implements Runnable {
         }
     }
 
+    static void setInteractionBlocked(boolean blocked) {
+        interactionBlocked = blocked;
+    }
+
     @Override
     public void run() {
         float cursorPosX = ImGui.getCursorPosX();
@@ -64,8 +69,7 @@ public class DecompilerGhostTextRenderer implements Runnable {
             ImVec2 rectMin = ImGui.getCursorScreenPos();
             ImVec2 textSize = font.calcTextSizeA(fontSize, Float.MAX_VALUE, -1.F, line);
             ImGui.dummy(textSize.x, textSize.y);
-            ImVec2 mousePos = ImGui.getMousePos();
-            boolean hovered = ImGui.isWindowHovered() && mousePos.x >= rectMin.x && mousePos.y >= rectMin.y && mousePos.x <= rectMin.x + textSize.x && mousePos.y <= rectMin.y + textSize.y;
+            boolean hovered = !interactionBlocked && ImGui.isItemHovered();
             ImGui.getWindowDrawList().addText(font, Math.round(fontSize), rectMin.x, rectMin.y - globalScale, hovered ? CodeColorScheme.TEXT : CodeColorScheme.DISABLED, line);
             if (hovered) {
                 ImGui.setMouseCursor(ImGuiMouseCursor.Hand);

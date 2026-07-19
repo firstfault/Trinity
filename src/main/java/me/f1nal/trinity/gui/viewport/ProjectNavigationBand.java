@@ -3,13 +3,7 @@ package me.f1nal.trinity.gui.viewport;
 import com.google.common.eventbus.Subscribe;
 import imgui.ImColor;
 import imgui.ImDrawList;
-import imgui.ImFont;
 import imgui.ImGui;
-import imgui.ImVec2;
-import imgui.ImGuiViewport;
-import imgui.flag.ImGuiStyleVar;
-import imgui.flag.ImGuiWindowFlags;
-import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.events.EventClassModified;
@@ -20,6 +14,8 @@ import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.util.ByteUtil;
+import me.f1nal.trinity.util.animation.Animation;
+import me.f1nal.trinity.util.animation.Easing;
 import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Type;
@@ -42,19 +38,19 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class ProjectNavigationBand implements IEventListener {
-    public static final float HEIGHT = 14.F;
     private static final float BAND_HEIGHT = 14.F;
-    private static final float LABEL_PADDING = 3.F;
-    private static final int LABEL_COLOR = ImColor.rgba(245, 245, 245, 210);
+    private static final int SEGMENT_ALPHA = 82;
+    private static final int HOVERED_SEGMENT_ALPHA = 118;
     private static final int BYTECODE_COLOR = ImColor.rgb(66, 126, 180);
     private static final int LIBRARY_COLOR = ImColor.rgb(155, 91, 166);
     private static final int DATA_COLOR = ImColor.rgb(82, 151, 103);
     private static final int CONSTANT_COLOR = ImColor.rgb(210, 146, 60);
     private static final int EMPTY_COLOR = ImColor.rgb(48, 48, 48);
-    private static final int BORDER_COLOR = ImColor.rgba(105, 105, 105, 180);
+    private static final int BORDER_COLOR = ImColor.rgba(105, 105, 105, 70);
 
     private final Trinity trinity;
     private List<Segment> segments = List.of();
+    private final Map<String, Animation> segmentOpacity = new HashMap<>();
     private long totalSize;
     private volatile boolean dirty = true;
     private Segment tooltip;
@@ -64,46 +60,30 @@ public final class ProjectNavigationBand implements IEventListener {
         trinity.getEventManager().registerListener(this);
     }
 
-    public void draw() {
+    public void draw(float width) {
         if (dirty) {
             recalculate();
         }
 
         this.tooltip = null;
-
-        ImGuiViewport viewport = ImGui.getMainViewport();
-        ImGui.setNextWindowPos(viewport.getWorkPosX(), viewport.getWorkPosY());
-        ImGui.setNextWindowSize(viewport.getWorkSizeX(), HEIGHT);
-        ImGui.setNextWindowViewport(viewport.getID());
-        ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 0.F, 0.F);
-        ImGui.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.F);
-        ImGui.pushStyleVar(ImGuiStyleVar.WindowRounding, 0.F);
-        int flags = ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse
-                | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoScrollbar
-                | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoSavedSettings
-                | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoFocusOnAppearing
-                | ImGuiWindowFlags.NoNavFocus;
-        if (ImGui.begin("Project Navigation Band###TrinityProjectNavigationBand", flags)) {
-            drawBand();
-        }
-        ImGui.end();
-        ImGui.popStyleVar(3);
+        drawBand(Math.max(1.F, width));
         if (this.tooltip != null) drawTooltip(tooltip.name(), tooltip.size());
     }
 
-    private void drawBand() {
+    private void drawBand(float width) {
         float x = ImGui.getCursorScreenPosX();
-        float y = ImGui.getCursorScreenPosY();
-        float width = Math.max(1.F, ImGui.getContentRegionAvailX());
+        float itemY = ImGui.getCursorScreenPosY();
+        float itemHeight = ImGui.getFrameHeight();
+        float y = itemY + Math.max(0.F, (itemHeight - BAND_HEIGHT) * 0.5F);
         ImDrawList drawList = ImGui.getWindowDrawList();
-        drawList.addRectFilled(x, y, x + width, y + BAND_HEIGHT, EMPTY_COLOR);
+        ImGui.invisibleButton("###ProjectNavigationBand", width, itemHeight);
+        boolean hovered = ImGui.isItemHovered();
+        float mouseX = ImGui.getMousePosX();
+        drawList.addRectFilled(x, y, x + width, y + BAND_HEIGHT,
+                withAlpha(EMPTY_COLOR, SEGMENT_ALPHA), 2.F);
 
         if (totalSize == 0L) {
-            ImGui.setCursorScreenPos(x, y);
-            ImGui.invisibleButton("###EmptyProjectNavigationBand", width, BAND_HEIGHT);
-            if (ImGui.isItemHovered()) {
-                drawTooltip("Project contents", 0L);
-            }
+            if (hovered) this.tooltip = new Segment("Project contents", 0L, EMPTY_COLOR);
         } else {
             int visibleSegments = 0;
             for (Segment segment : segments) {
@@ -121,36 +101,19 @@ public final class ProjectNavigationBand implements IEventListener {
                 drawnSegments++;
                 float segmentWidth = 1.F + proportionalWidth * ((float) segment.size() / (float) totalSize);
                 float segmentEnd = drawnSegments == visibleSegments ? x + width : segmentStart + segmentWidth;
-                ImGui.setCursorScreenPos(segmentStart, y);
-                ImGui.invisibleButton("###ProjectNavigationBand" + segment.id(), segmentEnd - segmentStart, BAND_HEIGHT);
-                boolean hovered = ImGui.isItemHovered();
+                boolean segmentHovered = hovered && mouseX >= segmentStart && mouseX < segmentEnd;
+                Animation opacity = this.segmentOpacity.computeIfAbsent(segment.name(), ignored ->
+                        new Animation(Easing.EASE_IN_OUT_QUAD, 120L, SEGMENT_ALPHA));
+                opacity.run(segmentHovered ? HOVERED_SEGMENT_ALPHA : SEGMENT_ALPHA);
                 drawList.addRectFilled(segmentStart, y, segmentEnd, y + BAND_HEIGHT,
-                        hovered ? brighten(segment.color()) : segment.color());
-                drawSegmentLabel(drawList, segment, segmentStart, segmentEnd, y);
-                if (hovered) {
+                        withAlpha(segment.color(), Math.round(opacity.getValue())));
+                if (segmentHovered) {
                     this.tooltip = segment;
                 }
                 segmentStart = segmentEnd;
             }
         }
-        drawList.addRect(x, y, x + width, y + BAND_HEIGHT, BORDER_COLOR);
-    }
-
-    private static void drawSegmentLabel(ImDrawList drawList, Segment segment, float startX, float endX, float y) {
-        FontManager fontManager = Main.getDisplayManager().getFontManager();
-        ImFont font = fontManager.getNavigationBandFont();
-        if (font == null) {
-            return;
-        }
-        float fontSize = fontManager.getNavigationBandFontSize();
-        ImVec2 textSize = font.calcTextSizeA(fontSize, Float.MAX_VALUE, 0.F, segment.label());
-        if (endX - startX < textSize.x + LABEL_PADDING * 2.F) {
-            return;
-        }
-        float textY = y + Math.max(0.F, (BAND_HEIGHT - textSize.y) * 0.5F);
-        drawList.pushClipRect(startX, y, endX, y + BAND_HEIGHT, true);
-        drawList.addText(font, Math.round(fontSize), startX + LABEL_PADDING, textY, LABEL_COLOR, segment.label());
-        drawList.popClipRect();
+        drawList.addRect(x, y, x + width, y + BAND_HEIGHT, BORDER_COLOR, 2.F);
     }
 
     private void recalculate() {
@@ -182,10 +145,10 @@ public final class ProjectNavigationBand implements IEventListener {
 
         long bytecode = Math.max(0L, serializedClasses - constants);
         this.segments = List.of(
-                new Segment("Bytecode", "BYTECODE", "Executable bytecode", bytecode, BYTECODE_COLOR),
-                new Segment("Libraries", "LIBRARY", "Native libraries", libraries, LIBRARY_COLOR),
-                new Segment("Data", "DATA", "Data resources", data, DATA_COLOR),
-                new Segment("Constants", "CONSTANT", "Constants", constants, CONSTANT_COLOR));
+                new Segment("Executable bytecode", bytecode, BYTECODE_COLOR),
+                new Segment("Native libraries", libraries, LIBRARY_COLOR),
+                new Segment("Data resources", data, DATA_COLOR),
+                new Segment("Constants", constants, CONSTANT_COLOR));
         this.totalSize = bytecode + libraries + data + constants;
         this.dirty = false;
     }
@@ -316,12 +279,9 @@ public final class ProjectNavigationBand implements IEventListener {
         constants.putIfAbsent(key, Math.max(0L, size));
     }
 
-    private static int brighten(int color) {
-        int red = Math.min(255, (color & 0xFF) + 28);
-        int green = Math.min(255, ((color >>> 8) & 0xFF) + 28);
-        int blue = Math.min(255, ((color >>> 16) & 0xFF) + 28);
-        int alpha = (color >>> 24) & 0xFF;
-        return ImColor.rgba(red, green, blue, alpha);
+    private static int withAlpha(int color, int alpha) {
+        return ImColor.rgba(color & 0xFF, (color >>> 8) & 0xFF,
+                (color >>> 16) & 0xFF, alpha);
     }
 
     private static void drawTooltip(String name, long size) {
@@ -352,6 +312,6 @@ public final class ProjectNavigationBand implements IEventListener {
         dirty = true;
     }
 
-    private record Segment(String id, String label, String name, long size, int color) {
+    private record Segment(String name, long size, int color) {
     }
 }

@@ -26,9 +26,11 @@ public final class DecompiledClass {
     private final List<DecompilerComponent> componentList;
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> methodComponents;
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> fieldComponents;
+    private final Map<Integer, ClassPreview> classPreviewCache = new HashMap<>();
     private final Map<MethodPreviewKey, MethodPreview> methodPreviewCache = new HashMap<>();
     private final Map<MemberDetails, List<DecompilerLineText>> fieldPreviewCache = new HashMap<>();
     private final Map<VariablePreviewKey, List<DecompilerLineText>> variablePreviewCache = new HashMap<>();
+    private StickyHeaders stickyHeaders;
     private final Set<MemberDetails> progressiveMethods = ConcurrentHashMap.newKeySet();
     private final Queue<MethodOutput> pendingMethodOutputs = new ConcurrentLinkedQueue<>();
     private final Queue<MemberReplacement> pendingMemberReplacements = new ConcurrentLinkedQueue<>();
@@ -337,9 +339,109 @@ public final class DecompiledClass {
 
     public void resetLines() {
         this.addLines(this.componentList);
+        this.classPreviewCache.clear();
         this.methodPreviewCache.clear();
         this.fieldPreviewCache.clear();
         this.variablePreviewCache.clear();
+        this.stickyHeaders = null;
+    }
+
+    public StickyHeaders getStickyHeaders() {
+        if (this.stickyHeaders == null) {
+            this.stickyHeaders = createStickyHeaders();
+        }
+        return this.stickyHeaders;
+    }
+
+    private StickyHeaders createStickyHeaders() {
+        Map<DecompilerComponent, DecompilerLine> firstComponentLines = new IdentityHashMap<>();
+        Map<DecompilerComponent, DecompilerLine> lastComponentLines = new IdentityHashMap<>();
+        for (DecompilerLine line : lines) {
+            for (DecompilerLineText text : line.getComponents()) {
+                firstComponentLines.putIfAbsent(text.getComponent(), line);
+                lastComponentLines.put(text.getComponent(), line);
+            }
+        }
+
+        String className = classInput.getNode().name;
+        DecompilerLine classLine = lines.stream()
+                .filter(line -> line.getComponents().stream().anyMatch(text ->
+                        className.equals(text.getComponent().memberKey)))
+                .findFirst()
+                .orElse(null);
+
+        List<StickyMethod> methods = new ArrayList<>();
+        for (Map.Entry<MemberDetails, DecompilerMemberReader.MemberComponents> entry : methodComponents.entrySet()) {
+            int startComponentIndex = componentList.indexOf(entry.getValue().start());
+            int endComponentIndex = componentList.indexOf(entry.getValue().end());
+            if (startComponentIndex < 0 || endComponentIndex < startComponentIndex) {
+                continue;
+            }
+
+            DecompilerLine startLine = firstComponentLines.get(entry.getValue().start());
+            DecompilerLine endLine = null;
+            for (int i = endComponentIndex; i >= startComponentIndex && endLine == null; i--) {
+                endLine = lastComponentLines.get(componentList.get(i));
+            }
+            if (startLine == null || endLine == null) continue;
+
+            String memberKey = entry.getKey().toString();
+            int startIndex = lines.indexOf(startLine);
+            int endIndex = lines.indexOf(endLine);
+            DecompilerLine signatureLine = null;
+            for (int i = startIndex; i <= endIndex; i++) {
+                DecompilerLine line = lines.get(i);
+                if (line.getComponents().stream().anyMatch(text ->
+                        memberKey.equals(text.getComponent().memberKey))) {
+                    signatureLine = line;
+                    break;
+                }
+            }
+            if (signatureLine != null) {
+                methods.add(new StickyMethod(signatureLine, endLine));
+            }
+        }
+        methods.sort(Comparator.comparingInt(method -> lines.indexOf(method.signatureLine())));
+        return new StickyHeaders(classLine, List.copyOf(methods));
+    }
+
+    public ClassPreview getClassPreview(int maximumLines) {
+        if (maximumLines <= 0) {
+            return ClassPreview.EMPTY;
+        }
+        return classPreviewCache.computeIfAbsent(maximumLines, this::createClassPreview);
+    }
+
+    private ClassPreview createClassPreview(int maximumLines) {
+        String className = classInput.getNode().name;
+        int signatureLine = -1;
+        for (int i = 0; i < lines.size(); i++) {
+            if (lines.get(i).getComponents().stream().anyMatch(text ->
+                    className.equals(text.getComponent().memberKey))) {
+                signatureLine = i;
+                break;
+            }
+        }
+        if (signatureLine == -1) {
+            return ClassPreview.EMPTY;
+        }
+
+        List<List<DecompilerLineText>> previewLines = new ArrayList<>();
+        for (int i = signatureLine; i < lines.size(); i++) {
+            List<DecompilerLineText> previewLine = lines.get(i).getComponents().stream()
+                    .filter(text -> !text.getText().isEmpty())
+                    .toList();
+            if (!previewLine.isEmpty()) {
+                previewLines.add(previewLine);
+            }
+        }
+        if (previewLines.isEmpty()) {
+            return ClassPreview.EMPTY;
+        }
+
+        int lastLine = Math.min(maximumLines, previewLines.size());
+        return new ClassPreview(List.copyOf(previewLines.subList(0, lastLine)),
+                lastLine < previewLines.size());
     }
 
     public MethodPreview getMethodPreview(MethodInput methodInput, int maximumLines) {
@@ -550,6 +652,16 @@ public final class DecompiledClass {
     }
 
     private record VariablePreviewKey(MemberDetails method, int variableIndex) {
+    }
+
+    public record ClassPreview(List<List<DecompilerLineText>> lines, boolean hasMoreLines) {
+        private static final ClassPreview EMPTY = new ClassPreview(List.of(), false);
+    }
+
+    public record StickyHeaders(DecompilerLine classLine, List<StickyMethod> methods) {
+    }
+
+    public record StickyMethod(DecompilerLine signatureLine, DecompilerLine endLine) {
     }
 
     public record MethodPreview(List<List<DecompilerLineText>> lines, boolean skippedLeading,

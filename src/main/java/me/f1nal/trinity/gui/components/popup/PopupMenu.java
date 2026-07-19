@@ -1,8 +1,6 @@
 package me.f1nal.trinity.gui.components.popup;
 
-import imgui.ImColor;
 import imgui.ImGui;
-import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiStyleVar;
 import me.f1nal.trinity.gui.components.ComponentId;
@@ -23,10 +21,8 @@ public class PopupMenu {
     public static void style(boolean start) {
         if (start) {
             ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 4.F, 4.F);
-            ImGui.pushStyleColor(ImGuiCol.HeaderHovered, ImColor.rgba(78, 76, 76, 100));
         } else {
             ImGui.popStyleVar();
-            ImGui.popStyleColor();
         }
     }
 

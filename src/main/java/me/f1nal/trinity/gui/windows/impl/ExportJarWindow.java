@@ -39,7 +39,7 @@ public class ExportJarWindow extends StaticWindow {
         ImGui.sameLine();
         ImGui.progressBar(this.progress);
 
-        ImGui.beginChild("ExportJarConsoleChld", 0, 0);
+        ImGui.beginChild("ExportJarConsoleChld", 0.F, 0.F);
         console.draw();
         ImGui.endChild();
     }

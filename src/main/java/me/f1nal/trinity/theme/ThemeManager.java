@@ -20,7 +20,7 @@ public class ThemeManager {
     private Theme defaultTheme;
 
     public ThemeManager() {
-        this.registerBuiltInTheme("Gerry Dark");
+        this.registerBuiltInTheme("Fawn");
     }
 
     private void registerBuiltInTheme(String name) {
@@ -48,6 +48,7 @@ public class ThemeManager {
         for (ThemeColor color : this.currentTheme.getColors()) {
             color.getCodeColor().setColor(CodeColorScheme.getRgb(color.getRgba()));
         }
+        TrinityStyle.refresh(Main.getPreferences().getAccentColor());
         Main.getAppDataManager().getPreferences().setCurrentTheme(currentTheme);
     }
 

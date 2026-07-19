@@ -23,14 +23,14 @@ public class ClassStructureWindow extends StaticWindow {
     private ClassStructure classStructure;
     private ListFilterComponent<ClassStructureNode> filterComponent;
     private final KindFilter<ClassStructureNode> kindFilter = new KindFilter<>(StructureKind.values());
-    private final SearchBarFilter<ClassStructureNode> searchBarFilter = new SearchBarFilter<>();
+    private final SearchBarFilter<ClassStructureNode> searchBarFilter = new SearchBarFilter<>(true);
     private final PopupMenuBar popupMenuBar = new PopupMenuBar(PopupItemBuilder.create());
 
     public ClassStructureWindow(Trinity trinity) {
         super("Class Structure", 600, 400, trinity);
         this.kindFilter.setExclude(new IKindType[]{StructureKind.CLASSES});
         this.windowFlags |= ImGuiWindowFlags.MenuBar;
-        this.windowFlags |= ImGuiWindowFlags.HorizontalScrollbar;
+        this.windowFlags |= ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
     }
 
     public void setClassStructure(ClassStructure classStructure) {
@@ -77,7 +77,11 @@ public class ClassStructureWindow extends StaticWindow {
         ImVec2 extraPadding = ImGui.getStyle().getTouchExtraPadding();
         ImGui.getStyle().setTouchExtraPadding(extraPadding.x, 4.F);
 
-        this.drawNode(structure.getRootNode());
+        if (ImGui.beginChild(getId("StructureTree"), 0.F, 0.F,
+                false, ImGuiWindowFlags.HorizontalScrollbar)) {
+            this.drawNode(structure.getRootNode());
+        }
+        ImGui.endChild();
 
         ImGui.popStyleColor(2);
         ImGui.getStyle().setTouchExtraPadding(extraPadding.x, extraPadding.y);
@@ -91,7 +95,7 @@ public class ClassStructureWindow extends StaticWindow {
         if (node.getBrowserViewerNode().isDefaultOpen()) flags |= ImGuiTreeNodeFlags.DefaultOpen;
 
         boolean tree = ImGui.treeNodeEx("###" + node.getStrId(), flags);
-        ImGui.sameLine();
+        ImGui.sameLine(0.F, 0.F);
         node.getBrowserViewerNode().draw();
 
         if (tree) {

@@ -10,18 +10,23 @@ import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWImage;
+import org.lwjgl.glfw.GLFWNativeWin32;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.JNI;
+import org.lwjgl.system.Library;
+import org.lwjgl.system.SharedLibrary;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Locale;
 import java.util.Objects;
 
 public abstract class ImGuiWindow {
@@ -83,6 +88,7 @@ public abstract class ImGuiWindow {
         if (handle == MemoryUtil.NULL) {
             throw new RuntimeException("Failed to create the GLFW window");
         }
+        this.enableWindowsDarkTitleBar();
         this.onWindowCreated();
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -119,6 +125,26 @@ public abstract class ImGuiWindow {
 
     /** Called after GLFW creates the native window and before it is shown. */
     protected void onWindowCreated() {
+    }
+
+    private void enableWindowsDarkTitleBar() {
+        if (!System.getProperty("os.name", "").toLowerCase(Locale.ROOT).startsWith("windows")) return;
+
+        try (SharedLibrary dwmapi = Library.loadNative(ImGuiWindow.class, "org.lwjgl", "dwmapi");
+             MemoryStack stack = MemoryStack.stackPush()) {
+            long setWindowAttribute = dwmapi.getFunctionAddress("DwmSetWindowAttribute");
+            long nativeWindow = GLFWNativeWin32.glfwGetWin32Window(handle);
+            if (setWindowAttribute == MemoryUtil.NULL || nativeWindow == MemoryUtil.NULL) return;
+
+            IntBuffer enabled = stack.ints(1);
+            long enabledAddress = MemoryUtil.memAddress(enabled);
+            int result = JNI.callPPI(nativeWindow, 20, enabledAddress, Integer.BYTES, setWindowAttribute);
+            if (result < 0) {
+                JNI.callPPI(nativeWindow, 19, enabledAddress, Integer.BYTES, setWindowAttribute);
+            }
+        } catch (Throwable throwable) {
+            System.err.println("Unable to enable the Windows dark title bar: " + throwable.getMessage());
+        }
     }
 
     protected final void setWindowIcon(String resourcePath) {

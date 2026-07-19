@@ -35,6 +35,7 @@ import me.f1nal.trinity.gui.viewport.ProjectNavigationBand;
 import me.f1nal.trinity.gui.viewport.dnd.DragAndDropHandler;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.theme.TrinityStyle;
 import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
 import org.lwjgl.glfw.GLFW;
@@ -118,23 +119,8 @@ public final class DisplayManager extends ImGuiApplication {
         io.setIniFilename(new File(Main.getAppDataManager().getDirectory(), "gui.ini").getAbsolutePath());
         io.setConfigFlags(io.getConfigFlags() | ImGuiConfigFlags.DockingEnable);
         fontManager.setupFonts();
-        ImGuiStyle style = ImGui.getStyle();
-        style.setWindowMenuButtonPosition(ImGuiDir.Right);
-        style.setColor(ImGuiCol.WindowBg, 0.12f, 0.12f, 0.12f, 1.00f);
-        style.setColor(ImGuiCol.FrameBg, 0.21f, 0.21f, 0.21f, 0.54f);
-        style.setColor(ImGuiCol.TitleBgActive, 0.24f, 0.24f, 0.24f, 1.00f);
-        style.setColor(ImGuiCol.Button, 0.68f, 0.68f, 0.68f, 0.40f);
-        style.setColor(ImGuiCol.ButtonHovered, 0.66f, 0.66f, 0.66f, 1.00f);
-        style.setColor(ImGuiCol.DockingEmptyBg, 25, 25, 25, 255);
-        style.setColor(ImGuiCol.PopupBg, 30, 30, 30, 255);
-        style.setColor(ImGuiCol.Border, 89, 89, 89, 140);
-        style.setColor(ImGuiCol.Text, 185, 185, 185, 255);
-        style.setColor(ImGuiCol.TableRowBgAlt, 0,0,0,0);
         CodeColorScheme.enableColorListeners();
-
-        style.setTabRounding(0.F);
-        style.setIndentSpacing(6.F);
-        style.setScrollbarSize(10.F);
+        TrinityStyle.initialize(Main.getPreferences().getAccentColor());
         io.setGetClipboardTextFn(new ImStrSupplier() {
             @Override
             public String get() {
@@ -170,10 +156,7 @@ public final class DisplayManager extends ImGuiApplication {
         font.pushFont();
 
         Main.executeScheduledTasks();
-        this.mainMenuBar.draw();
-        if (this.projectNavigationBand != null) {
-            this.projectNavigationBand.draw();
-        }
+        this.mainMenuBar.draw(this.projectNavigationBand);
         this.setupDockspace();
         if (this.trinity == null && this.windowManager.getPopups().isEmpty()) this.homepage();
         this.popupMenu.draw();
@@ -187,9 +170,8 @@ public final class DisplayManager extends ImGuiApplication {
     private void setupDockspace() {
         ImGui.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.F);
         ImGuiViewport viewport = ImGui.getMainViewport();
-        float navigationBandHeight = this.projectNavigationBand == null ? 0.F : ProjectNavigationBand.HEIGHT;
-        ImGui.setNextWindowPos(viewport.getWorkPosX(), viewport.getWorkPosY() + navigationBandHeight);
-        ImGui.setNextWindowSize(viewport.getWorkSizeX(), Math.max(1.F, viewport.getWorkSizeY() - navigationBandHeight));
+        ImGui.setNextWindowPos(viewport.getWorkPosX(), viewport.getWorkPosY());
+        ImGui.setNextWindowSize(viewport.getWorkSizeX(), viewport.getWorkSizeY());
         ImGui.setNextWindowViewport(viewport.getID());
         ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 0.F, 0.F);
         ImGui.begin("DockSpace", ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoNavFocus);

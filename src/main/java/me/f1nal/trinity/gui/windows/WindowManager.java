@@ -1,6 +1,9 @@
 package me.f1nal.trinity.gui.windows;
 
+import imgui.ImColor;
 import imgui.ImGui;
+import imgui.ImGuiViewport;
+import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Trinity;
@@ -10,6 +13,8 @@ import me.f1nal.trinity.gui.windows.api.AbstractWindow;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.gui.windows.api.PopupWindow;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
+import me.f1nal.trinity.util.animation.Animation;
+import me.f1nal.trinity.util.animation.Easing;
 
 import java.lang.reflect.Constructor;
 import java.util.*;
@@ -17,6 +22,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class WindowManager {
+    private static final float DIALOG_DIM_ALPHA = 32.F;
     private final DisplayManager displayManager;
     /**
      * List of all open {@link ClosableWindow}.
@@ -33,6 +39,7 @@ public class WindowManager {
     private final InputManager inputHandler = new InputManager();
     private ClosableWindow focusRequested;
     private int focusFramesRemaining;
+    private final Animation dialogDimAnimation = new Animation(Easing.EASE_IN_OUT_QUAD, 220L);
 
     public WindowManager(DisplayManager displayManager) {
         this.displayManager = displayManager;
@@ -40,15 +47,39 @@ public class WindowManager {
 
     public void draw() {
         ClosableWindow[] windows = closableWindows.toArray(new ClosableWindow[0]);
+        StaticWindow[] staticWindows = staticWindowMap.values().toArray(new StaticWindow[0]);
+        List<AbstractWindow> dialogs = new ArrayList<>();
+        Arrays.stream(windows).filter(window -> window.isVisible() && window.isDialog()).forEach(dialogs::add);
+        Arrays.stream(staticWindows).filter(window -> window.isVisible() && window.isDialog()).forEach(dialogs::add);
+        boolean dialogVisible = !dialogs.isEmpty();
+        this.dialogDimAnimation.run(dialogVisible ? DIALOG_DIM_ALPHA : 0.F);
+
         for (ClosableWindow frame : windows) {
-            frame.render();
+            if (!frame.isDialog()) frame.render();
         }
 
-        for (StaticWindow staticWindow : staticWindowMap.values()) {
-            staticWindow.render();
+        for (StaticWindow staticWindow : staticWindows) {
+            if (!staticWindow.isDialog()) staticWindow.render();
         }
 
-        this.drawPopups();
+        if (dialogVisible) {
+            ImGui.pushStyleColor(ImGuiCol.ModalWindowDimBg,
+                    ImColor.rgba(0, 0, 0, Math.round(this.dialogDimAnimation.getValue())));
+            AbstractWindow popupHost = dialogs.get(dialogs.size() - 1);
+            popupHost.setChildWindowRenderer(this::drawPopups);
+            for (ClosableWindow frame : windows) {
+                if (frame.isDialog()) frame.render();
+            }
+            for (StaticWindow staticWindow : staticWindows) {
+                if (staticWindow.isDialog()) staticWindow.render();
+            }
+            popupHost.setChildWindowRenderer(null);
+            ImGui.popStyleColor();
+        } else {
+            this.drawPopups();
+        }
+
+        if (!dialogVisible) this.drawDialogFadeOut();
 
         ClosableWindow requested = this.focusRequested;
         if (requested != null) {
@@ -63,6 +94,17 @@ public class WindowManager {
                 }
             }
         }
+    }
+
+    private void drawDialogFadeOut() {
+        int alpha = Math.round(this.dialogDimAnimation.getValue());
+        if (alpha <= 0) return;
+
+        ImGuiViewport viewport = ImGui.getMainViewport();
+        ImGui.getForegroundDrawList(viewport).addRectFilled(
+                viewport.getPosX(), viewport.getPosY(),
+                viewport.getPosX() + viewport.getSizeX(), viewport.getPosY() + viewport.getSizeY(),
+                ImColor.rgba(0, 0, 0, alpha));
     }
 
     private List<AbstractWindow> getAllWindows() {
@@ -102,17 +144,17 @@ public class WindowManager {
             }
             if (ImGui.beginPopupModal(popup.getPopupId(), ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings)) {
                 popup.renderPopup();
+                if (popup == last && ImGui.isKeyPressed(ImGuiKey.Escape, false) && popup.canCloseOnEscapeNow()) {
+                    popup.close();
+                }
+                if (!this.popups.contains(popup)) {
+                    ImGui.closeCurrentPopup();
+                }
                 ++pops;
             }
         }
 
         while (pops-- != 0) ImGui.endPopup();
-
-        if (ImGui.isKeyPressed(ImGuiKey.Escape)) {
-            if (last.canCloseOnEscapeNow()) {
-                last.close();
-            }
-        }
     }
 
     public void addClosableWindow(ClosableWindow window) {

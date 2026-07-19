@@ -4,6 +4,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.OutputMember;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
+import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.MemberDetails;
@@ -39,10 +40,12 @@ public class DecompilerComponent {
      */
     private Runnable customRenderer;
     private Input<?> viewMember;
+    private ClassInput previewClass;
     private MethodInput previewMethod;
     private FieldInput previewField;
     private VariablePreview previewVariable;
     private IXrefBuilderProvider xrefBuilderProvider;
+    private Runnable searchAllOccurrences;
     // Temporary
     public Input<?> input;
     public String memberKey;
@@ -79,6 +82,14 @@ public class DecompilerComponent {
 
     public Input<?> getActionInput() {
         return this.viewMember != null ? this.viewMember : this.input;
+    }
+
+    public void setPreviewClass(ClassInput previewClass) {
+        this.previewClass = previewClass;
+    }
+
+    public ClassInput getPreviewClass() {
+        return previewClass;
     }
 
     public void setPreviewMethod(MethodInput previewMethod) {
@@ -153,6 +164,14 @@ public class DecompilerComponent {
 
     public IXrefBuilderProvider getXrefBuilderProvider() {
         return xrefBuilderProvider;
+    }
+
+    public void setSearchAllOccurrences(Runnable searchAllOccurrences) {
+        this.searchAllOccurrences = searchAllOccurrences;
+    }
+
+    public Runnable getSearchAllOccurrences() {
+        return searchAllOccurrences;
     }
 
     public void stopRenaming(@Nullable String newName) {

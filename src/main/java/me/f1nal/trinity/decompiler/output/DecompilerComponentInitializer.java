@@ -84,6 +84,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
         if (target != null && target.getInput() != null) {
             component.input = target.getInput();
+            component.setPreviewClass(target.getInput());
             component.addInputControls(target.getInput());
         } else {
             IXrefBuilderProvider provider = xrefMap -> new XrefBuilderClassRef(xrefMap, member.getClassName());
@@ -150,6 +151,14 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         var settings = new Object() {
             NumberDisplayType displayType = Main.getPreferences().getDefaultNumberDisplayType().getInstance();
         };
+        Runnable searchAllOccurrences = () -> {
+            Trinity trinity = Main.getTrinity();
+            ConstantSearchType constantSearchType = settings.displayType.getConstantSearchType(trinity, number);
+            List<ConstantViewCache> constantViewList = new ArrayList<>();
+            constantSearchType.populate(constantViewList);
+            Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
+        };
+        component.setSearchAllOccurrences(searchAllOccurrences);
 
         component.addPopupBuilder(builder -> {
             builder.menuItem("Copy", () -> SystemUtil.copyToClipboard(component.getText()));
@@ -161,13 +170,8 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
                 });
             }
             builder.separator();
-            builder.menuItem("Search All Occurrences...", () -> {
-                Trinity trinity = Main.getTrinity();
-                ConstantSearchType constantSearchType = settings.displayType.getConstantSearchType(trinity, number);
-                List<ConstantViewCache> constantViewList = new ArrayList<>();
-                constantSearchType.populate(constantViewList);
-                Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
-            });
+            builder.menuItem("Search All Occurrences...",
+                    Main.getKeyBindManager().DECOMPILER_VIEW_XREFS.getKeyName(), searchAllOccurrences);
         });
 
         component.setIdentifier(constant, number);
@@ -321,18 +325,21 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     @Override
     public void visitString(StringOutputMember string) {
         final String unquotedText = string.getData();
+        Runnable searchAllOccurrences = () -> {
+            Trinity trinity = Main.getTrinity();
+            ConstantSearchTypeString constantSearchType = new ConstantSearchTypeString(trinity);
+            constantSearchType.getSearchTerm().set(unquotedText);
+            constantSearchType.getExact().set(true);
+            List<ConstantViewCache> constantViewList = new ArrayList<>();
+            constantSearchType.populate(constantViewList);
+            Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
+        };
+        component.setSearchAllOccurrences(searchAllOccurrences);
 
         component.addPopupBuilder(builder -> builder.menuItem("Copy", () -> SystemUtil.copyToClipboard(unquotedText))
 
-                .menuItem("Search All Occurrences...", () -> {
-                    Trinity trinity = Main.getTrinity();
-                    ConstantSearchTypeString constantSearchType = new ConstantSearchTypeString(trinity);
-                    constantSearchType.getSearchTerm().set(unquotedText);
-                    constantSearchType.getExact().set(true);
-                    List<ConstantViewCache> constantViewList = new ArrayList<>();
-                    constantSearchType.populate(constantViewList);
-                    Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
-                }));
+                .menuItem("Search All Occurrences...",
+                        Main.getKeyBindManager().DECOMPILER_VIEW_XREFS.getKeyName(), searchAllOccurrences));
         component.setIdentifier(string, originalText.hashCode());
         component.setColorFunction(() -> CodeColorScheme.STRING);
         component.setTooltip(() -> constantTooltip("String", unquotedText,

@@ -67,6 +67,7 @@ public class KindFilter<T extends IKind> extends Filter<T> {
         }
 
         boolean refresh = false;
+        boolean first = true;
         ImGui.pushStyleVar(ImGuiStyleVar.FrameRounding, 1.F);
         ImGui.pushStyleColor(ImGuiCol.FrameBg, CodeColorScheme.HIGHLIGHT_BACKGROUND);
         for (Map.Entry<IKindType, KindState<T>> entry : kindMap.entrySet()) {
@@ -75,6 +76,19 @@ public class KindFilter<T extends IKind> extends Filter<T> {
 
             if (state.count == 0) continue;
 
+            String countText = "(" + state.count + ")";
+            if (!first) {
+                float spacing = ImGui.getStyle().getItemSpacingX();
+                float groupWidth = ImGui.getFrameHeight()
+                        + ImGui.getStyle().getItemInnerSpacingX()
+                        + ImGui.calcTextSize(kind.getName()).x
+                        + 4.F + ImGui.calcTextSize(countText).x;
+                float contentRight = ImGui.getWindowPosX() + ImGui.getWindowContentRegionMax().x;
+                if (ImGui.getItemRectMaxX() + spacing + groupWidth <= contentRight) {
+                    ImGui.sameLine(0.F, spacing);
+                }
+            }
+
             ImGui.pushStyleColor(ImGuiCol.CheckMark, kind.getColor());
             if (GuiUtil.smallCheckbox(kind.getName(), state.enabled)) {
                 state.enabled = !state.enabled;
@@ -82,13 +96,12 @@ public class KindFilter<T extends IKind> extends Filter<T> {
             }
             ImGui.popStyleColor();
             ImGui.sameLine(0.F, 4.F);
-            ImGui.textDisabled("(" + state.count + ")");
-            ImGui.sameLine();
+            ImGui.textDisabled(countText);
+            first = false;
         }
 
         ImGui.popStyleVar();
         ImGui.popStyleColor();
-        ImGui.newLine();
         return refresh;
     }
 

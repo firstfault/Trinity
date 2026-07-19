@@ -26,6 +26,7 @@ public class ThemeEditorFrame extends StaticWindow {
 
     public ThemeEditorFrame(Trinity trinity) {
         super("Theme Editor", 0, 0, trinity);
+        this.setDialog(true);
         this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize;
         this.windowFlags |= ImGuiWindowFlags.MenuBar;
         this.themeManager = Main.getThemeManager();
@@ -49,7 +50,7 @@ public class ThemeEditorFrame extends StaticWindow {
             ImGui.endListBox();
         }
         ImGui.sameLine();
-        if (ImGui.beginChild("ThemeManagerChild", 300, 300)) {
+        if (ImGui.beginChild("ThemeManagerChild", 300.F, 300.F)) {
             this.drawThemeEditor();
         }
         ImGui.endChild();
@@ -181,6 +182,7 @@ public class ThemeEditorFrame extends StaticWindow {
             if (!this.isModifyingTheme(theme)) this.modifiedTheme = new ModifiedThemeState(theme);
             if (themeManager.getCurrentTheme() == theme) {
                 color.getCodeColor().setColor(CodeColorScheme.getRgb(color.getRgba()));
+                TrinityStyle.refresh(Main.getPreferences().getAccentColor());
             }
         }
     }

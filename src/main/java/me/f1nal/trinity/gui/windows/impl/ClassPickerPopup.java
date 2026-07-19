@@ -27,7 +27,7 @@ public class ClassPickerPopup extends PopupWindow {
     protected void renderFrame() {
         String search = searchBar.drawAndGet();
         ClassTarget input = null;
-        ImGui.beginChild("class search child" + getPopupId(), 430, 200);
+        ImGui.beginChild("class search child" + getPopupId(), 430.F, 200.F);
         if (!ImGui.beginTable("class search table" + getPopupId(), 1, ImGuiTableFlags.Borders | ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.Sortable)) {
             return;
         }

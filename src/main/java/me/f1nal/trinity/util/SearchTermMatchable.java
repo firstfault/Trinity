@@ -7,6 +7,10 @@ import java.util.List;
 public interface SearchTermMatchable {
     boolean matches(String searchTerm);
 
+    default boolean matchesIgnoreCase(String searchTerm) {
+        return this.matches(searchTerm);
+    }
+
     static <T extends SearchTermMatchable> List<T> match(String searchTerm, Collection<T> list) {
         List<T> copy = new ArrayList<>(list);
         copy.removeIf(matchable -> !searchTerm.isEmpty() && !matchable.matches(searchTerm));

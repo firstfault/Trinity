@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.windows.impl;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiDataType;
+import imgui.flag.ImGuiColorEditFlags;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiSliderFlags;
 import imgui.flag.ImGuiWindowFlags;
@@ -17,6 +18,7 @@ import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.xref.SearchMaxDisplay;
 import me.f1nal.trinity.keybindings.Bindable;
 import me.f1nal.trinity.keybindings.KeyBindManager;
+import me.f1nal.trinity.theme.AccentColor;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;
 import me.f1nal.trinity.util.GuiUtil;
@@ -33,7 +35,8 @@ public class PreferencesFrame extends StaticWindow {
     public PreferencesFrame(Trinity trinity) {
         super("Preferences", 450, 250, trinity);
         this.preferencesFile = Main.getPreferences();
-        this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoDocking;
+        this.setDialog(true);
+        this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize;
         this.numberDisplayTypeComboBox = new EnumComboBox<>("Number Display Type", NumberDisplayTypeEnum.values(), preferencesFile.getDefaultNumberDisplayType());
         this.searchMaxDisplayComboBox = new EnumComboBox<>("Search Element Limit", SearchMaxDisplay.values(), preferencesFile.getSearchMaxDisplay());
     }
@@ -43,7 +46,9 @@ public class PreferencesFrame extends StaticWindow {
         if (ImGui.beginTabBar("preferences tab" + id)) {
             if (ImGui.beginTabItem("General")) {
                 ThemeManager themeManager = Main.getThemeManager();
-                if (ImGui.beginCombo("Theme", themeManager.getCurrentTheme().getName())) {
+                ImGui.text("Theme");
+                ImGui.setNextItemWidth(-1.F);
+                if (ImGui.beginCombo("###PreferencesTheme", themeManager.getCurrentTheme().getName())) {
                     for (Theme theme : themeManager.getThemes()) {
                         if (ImGui.selectable(theme.getName(), themeManager.getCurrentTheme() == theme)) {
                             themeManager.setCurrentTheme(theme);
@@ -52,6 +57,9 @@ public class PreferencesFrame extends StaticWindow {
                     ImGui.endCombo();
                 }
 
+                this.drawAccentColor();
+                ImGui.spacing();
+                ImGui.separatorText("Interface font");
                 this.preferencesFile.getDefaultFont().drawControls();
                 ImGui.endTabItem();
             }
@@ -94,6 +102,28 @@ public class PreferencesFrame extends StaticWindow {
 
             ImGui.endTabBar();
         }
+    }
+
+    private void drawAccentColor() {
+        AccentColor selected = preferencesFile.getAccentColor();
+        ImGui.text("Accent Color");
+        ImGui.colorButton("###PreferencesAccentPreview", selected.getRgba(),
+                ImGuiColorEditFlags.NoTooltip, 20.F, 20.F);
+        ImGui.sameLine();
+        ImGui.setNextItemWidth(-1.F);
+        if (!ImGui.beginCombo("###PreferencesAccentColor", selected.getName())) return;
+
+        for (AccentColor accentColor : AccentColor.values()) {
+            ImGui.colorButton("###PreferencesAccentSwatch." + accentColor.name(), accentColor.getRgba(),
+                    ImGuiColorEditFlags.NoTooltip, 14.F, 14.F);
+            ImGui.sameLine();
+            boolean current = selected == accentColor;
+            if (ImGui.selectable(accentColor.getName(), current)) {
+                preferencesFile.setAccentColor(accentColor);
+            }
+            if (current) ImGui.setItemDefaultFocus();
+        }
+        ImGui.endCombo();
     }
 
     private void tooltip(String tooltip) {

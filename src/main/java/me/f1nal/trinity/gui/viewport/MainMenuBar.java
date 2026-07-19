@@ -1,6 +1,8 @@
 package me.f1nal.trinity.gui.viewport;
 
 import imgui.ImGui;
+import imgui.flag.ImGuiCol;
+import imgui.flag.ImGuiColorEditFlags;
 import imgui.flag.ImGuiStyleVar;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.appdata.RecentDatabaseEntry;
@@ -8,7 +10,9 @@ import me.f1nal.trinity.database.DatabaseLoader;
 import me.f1nal.trinity.execution.loading.AsynchronousLoad;
 import me.f1nal.trinity.execution.loading.ProgressiveLoadTask;
 import me.f1nal.trinity.gui.DisplayManager;
+import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.IconFamily;
 import me.f1nal.trinity.gui.components.general.FileSelectorComponent;
 import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
@@ -25,8 +29,10 @@ import me.f1nal.trinity.gui.windows.impl.refactor.GlobalRenameWindow;
 import me.f1nal.trinity.gui.windows.impl.themes.ThemeEditorFrame;
 import me.f1nal.trinity.gui.windows.impl.xref.search.XrefSearchFrame;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.theme.AccentColor;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;
+import me.f1nal.trinity.util.GuiUtil;
 
 import java.awt.*;
 import java.io.File;
@@ -37,6 +43,8 @@ import java.util.Map;
 
 // TODO: Refactor via PopupMenuBar
 public class MainMenuBar {
+    private static final float NAVIGATION_BAND_SPACE_RATIO = 0.4F;
+    private static final float NAVIGATION_BAND_MIN_WIDTH = 40.F;
     private final DisplayManager displayManager;
     private static final Map<Class<? extends StaticWindow>, String> windowsToolbar = new LinkedHashMap<>();
     private FileSelectorComponent databaseOpenFileSelector;
@@ -48,7 +56,7 @@ public class MainMenuBar {
         windowsToolbar.put(ClassStructureWindow.class, "Class Structure");
     }
 
-    public void draw() {
+    public void draw(ProjectNavigationBand navigationBand) {
         ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 4.F, 4.F);
         ImGui.beginMainMenuBar();
 
@@ -67,6 +75,21 @@ public class MainMenuBar {
                 for (Theme theme : themeManager.getThemes()) {
                     if (ImGui.menuItem(theme.getName(), "", themeManager.getCurrentTheme() == theme)) {
                         themeManager.setCurrentTheme(theme);
+                    }
+                }
+                ImGui.endMenu();
+            }
+            if (ImGui.beginMenu("Accent...")) {
+                AccentColor selectedAccent = Main.getPreferences().getAccentColor();
+                for (AccentColor accentColor : AccentColor.values()) {
+                    boolean swatchClicked = ImGui.colorButton(
+                            "###MainMenuAccent." + accentColor.name(), accentColor.getRgba(),
+                            ImGuiColorEditFlags.NoTooltip, 14.F, 14.F);
+                    ImGui.sameLine(0.F, 6.F);
+                    boolean itemClicked = ImGui.menuItem(accentColor.getName(), "", selectedAccent == accentColor);
+                    if (swatchClicked || itemClicked) {
+                        Main.getPreferences().setAccentColor(accentColor);
+                        if (swatchClicked) ImGui.closeCurrentPopup();
                     }
                 }
                 ImGui.endMenu();
@@ -124,6 +147,8 @@ public class MainMenuBar {
             ImGui.endMenu();
         }
 
+//        this.drawSaveButton();
+
         if (displayManager.getTrinity() != null) {
             AsynchronousLoad asynchronousLoad = displayManager.getTrinity().getExecution().getAsynchronousLoad();
 
@@ -147,8 +172,56 @@ public class MainMenuBar {
             }
         }
 
+        this.drawNavigationBand(navigationBand);
+
         ImGui.endMainMenuBar();
         ImGui.popStyleVar();
+    }
+
+    private void drawNavigationBand(ProjectNavigationBand navigationBand) {
+        if (navigationBand == null) return;
+
+        float spacing = ImGui.getStyle().getItemSpacingX();
+        float separatorWidth = spacing * 2.F + 1.F;
+        float rightPadding = ImGui.getStyle().getWindowPaddingX();
+        float emptySpace = ImGui.getWindowWidth() - ImGui.getCursorPosX() - rightPadding - separatorWidth;
+        float width = emptySpace * NAVIGATION_BAND_SPACE_RATIO;
+        if (width < NAVIGATION_BAND_MIN_WIDTH) return;
+
+        float bandStart = ImGui.getWindowWidth() - rightPadding - width;
+        ImGui.sameLine(bandStart - separatorWidth, 0.F);
+        ImGui.separator();
+        ImGui.sameLine(bandStart, 0.F);
+        navigationBand.draw(width);
+    }
+
+    private void drawSaveButton() {
+        ImGui.separator();
+
+        boolean disabled = displayManager.getTrinity() == null;
+        ImGui.beginDisabled(disabled);
+        ImGui.pushStyleColor(ImGuiCol.Button,
+                CodeColorScheme.setAlpha(CodeColorScheme.WIDGET_BACKGROUND, 255));
+        ImGui.pushStyleColor(ImGuiCol.ButtonHovered,
+                CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, 72));
+        ImGui.pushStyleColor(ImGuiCol.ButtonActive,
+                CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, 100));
+        float buttonSize = ImGui.getFrameHeight();
+        IconFamily.CODICON.pushFont();
+        boolean save = ImGui.button(CodiconIcons.SAVE + "###MainMenuSave", buttonSize, buttonSize);
+        IconFamily.CODICON.popFont();
+        ImGui.popStyleColor(3);
+        ImGui.endDisabled();
+        GuiUtil.tooltip("Save Project");
+
+        if (save) this.saveDatabase();
+    }
+
+    private void saveDatabase() {
+        if (displayManager.getTrinity() == null) return;
+        getWindowManager().addPopup(new SavingDatabasePopup(displayManager.getTrinity(), status -> {
+            DatabaseLoader.save.clear();
+        }));
     }
 
     private void fileMenu() {
@@ -180,11 +253,7 @@ public class MainMenuBar {
                 getWindowManager().addStaticWindow(ProjectSettingsWindow.class);
             }
 
-            if (ImGui.menuItem(FontAwesomeIcons.Save + " Save")) {
-                getWindowManager().addPopup(new SavingDatabasePopup(displayManager.getTrinity(), (status) -> {
-                    DatabaseLoader.save.clear();
-                }));
-            }
+            if (ImGui.menuItem(FontAwesomeIcons.Save + " Save")) this.saveDatabase();
 
             if (ImGui.menuItem(FontAwesomeIcons.TimesCircle + " Close")) {
                 displayManager.closeDatabase(() -> {

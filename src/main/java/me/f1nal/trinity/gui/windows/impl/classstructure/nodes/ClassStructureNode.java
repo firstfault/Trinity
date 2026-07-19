@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.windows.impl.classstructure.nodes;
 
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.components.ComponentId;
+import me.f1nal.trinity.gui.components.IconFamily;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.tree.GenericTreeNode;
@@ -9,6 +10,8 @@ import me.f1nal.trinity.gui.windows.impl.classstructure.StructureKind;
 import me.f1nal.trinity.gui.windows.impl.cp.BrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.IBrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+
+import java.util.Locale;
 
 public abstract class ClassStructureNode extends GenericTreeNode<ClassStructureNode> implements IBrowserViewerNode {
     private BrowserViewerNode browserViewerNode;
@@ -20,7 +23,8 @@ public abstract class ClassStructureNode extends GenericTreeNode<ClassStructureN
     }
 
     protected BrowserViewerNode createBrowserViewerNode() {
-        BrowserViewerNode node = new BrowserViewerNode(this.icon, () -> this.getKind().getColor(), this::getText, getRenameFunction());
+        BrowserViewerNode node = new BrowserViewerNode(this.icon, IconFamily.CODICON,
+                () -> this.getKind().getColor(), this::getText, getRenameFunction());
         node.addMouseClickHandler(clickType -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
                 PopupItemBuilder popup = PopupItemBuilder.create();
@@ -39,6 +43,11 @@ public abstract class ClassStructureNode extends GenericTreeNode<ClassStructureN
     @Override
     public boolean matches(String searchTerm) {
         return getText().contains(searchTerm);
+    }
+
+    @Override
+    public boolean matchesIgnoreCase(String searchTerm) {
+        return getText().toLowerCase(Locale.ROOT).contains(searchTerm.toLowerCase(Locale.ROOT));
     }
 
     protected void handleLeftClick() {

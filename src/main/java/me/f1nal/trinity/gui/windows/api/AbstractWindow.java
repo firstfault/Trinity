@@ -9,6 +9,8 @@ public abstract class AbstractWindow {
     protected String title;
     protected final float width, height;
     protected Trinity trinity;
+    private boolean dialog;
+    private Runnable childWindowRenderer;
     /**
      * If this window is currently visible.
      */
@@ -27,6 +29,16 @@ public abstract class AbstractWindow {
 
     protected abstract void renderFrame();
 
+    public final void setChildWindowRenderer(Runnable childWindowRenderer) {
+        this.childWindowRenderer = childWindowRenderer;
+    }
+
+    protected final void renderChildWindows() {
+        if (this.childWindowRenderer != null) {
+            this.childWindowRenderer.run();
+        }
+    }
+
     public void render() {
         ImGui.setNextWindowSize(width, height, ImGuiCond.FirstUseEver);
         ImGui.begin(getTitle());
@@ -44,6 +56,14 @@ public abstract class AbstractWindow {
 
     public final boolean isVisible() {
         return visible;
+    }
+
+    public final boolean isDialog() {
+        return dialog;
+    }
+
+    protected final void setDialog(boolean dialog) {
+        this.dialog = dialog;
     }
 
     public void setTitle(String title) {

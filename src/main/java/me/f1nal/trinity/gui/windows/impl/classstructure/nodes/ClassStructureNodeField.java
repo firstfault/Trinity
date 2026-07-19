@@ -2,12 +2,12 @@ package me.f1nal.trinity.gui.windows.impl.classstructure.nodes;
 
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.FieldInput;
-import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.windows.impl.classstructure.StructureKind;
 
 public class ClassStructureNodeField extends AbstractClassStructureNodeInput<FieldInput> {
     public ClassStructureNodeField(FieldInput fieldInput) {
-        super(FontAwesomeIcons.List, fieldInput);
+        super(CodiconIcons.SYMBOL_FIELD, fieldInput);
     }
 
     @Override

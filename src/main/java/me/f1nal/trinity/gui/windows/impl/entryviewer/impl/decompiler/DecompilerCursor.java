@@ -9,6 +9,8 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.viewport.FontManager;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.Stopwatch;
+import me.f1nal.trinity.util.animation.Animation;
+import me.f1nal.trinity.util.animation.Easing;
 
 import java.util.List;
 
@@ -17,6 +19,7 @@ public class DecompilerCursor {
      * Cursor blink interval.
      */
     private static final long BLINK_TIME = 555L;
+    private static final long SCROLL_ANIMATION_TIME = 320L;
 
     private final DecompilerWindow window;
     /**
@@ -35,6 +38,8 @@ public class DecompilerCursor {
      * If set to {@code true}, triggers a forced scroll to the cursor in the case it is not visible.
      */
     private boolean scroll;
+    private Animation scrollAnimation;
+    private float scrollDestination;
     /**
      * If we are currently dragging the mouse across the screen, causing a selection box.
      * @see DecompilerCursor#selectionEnd
@@ -221,6 +226,37 @@ public class DecompilerCursor {
         this.blink.reset();
     }
 
+    public void updateScrollAnimation() {
+        if (this.scrollAnimation == null) return;
+
+        boolean manualScroll = ImGui.isWindowHovered()
+                && (ImGui.getIO().getMouseWheel() != 0.F
+                || ImGui.isMouseClicked(ImGuiMouseButton.Left)
+                || ImGui.isMouseDragging(ImGuiMouseButton.Left));
+        if (manualScroll) {
+            this.scrollAnimation = null;
+            return;
+        }
+
+        this.scrollAnimation.run(this.scrollDestination);
+        ImGui.setScrollY(this.scrollAnimation.getValue());
+        if (this.scrollAnimation.isFinished()) {
+            ImGui.setScrollY(this.scrollDestination);
+            this.scrollAnimation = null;
+        }
+    }
+
+    private void animateScrollToCurrentItem() {
+        float itemCenterY = (ImGui.getItemRectMinY() + ImGui.getItemRectMaxY()) * 0.5F;
+        float viewportCenterY = ImGui.getWindowPosY() + ImGui.getWindowHeight() * 0.5F;
+        float target = ImGui.getScrollY() + itemCenterY - viewportCenterY;
+        this.scrollDestination = Math.max(0.F, Math.min(target, ImGui.getScrollMaxY()));
+
+        this.scrollAnimation = new Animation(Easing.EASE_OUT_CUBIC,
+                SCROLL_ANIMATION_TIME, ImGui.getScrollY());
+        this.scrollAnimation.run(this.scrollDestination);
+    }
+
     public void handleInputs(float mousePosX, float mousePosY) {
         if (!ImGui.isMouseDown(0)) {
             this.draggingSelection = false;
@@ -251,7 +287,7 @@ public class DecompilerCursor {
                 ImGui.setCursorPos(oldCursorPos.x, oldCursorPos.y);
                 if (!ImGui.isItemVisible()) {
                     ImGui.setScrollHereX();
-                    ImGui.setScrollHereY();
+                    this.animateScrollToCurrentItem();
                 }
                 this.scroll = false;
             }

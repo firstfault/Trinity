@@ -14,7 +14,7 @@
     <a href="https://github.com/firstfault/trinity/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/firstfault/trinity?style=flat-square&color=f4c542"></a>
   </p>
 
-  <sub>Custom Decompiler &middot; Easy Assembler &middot; Extensive Cross-referencing &middot; Instant Refactoring</sub>
+  <sub>Self-Maintained Decompiler &middot; Text Assembler &middot; Extensive Cross-referencing &middot; Instant Refactoring</sub>
 </div>
 
 ![Screenshot](screenshots/trinity.png)
@@ -24,7 +24,7 @@
 
 ### Decompiler
 
-Trinity approaches decompilation completely differently. Built on the decade-old battle-tested [Fernflower Decompiler](https://www.jetbrains.com/), it integrates directly with the decompiler engine instead of treating the generated Java as plain text. That semantic understanding powers accurate syntax coloring, instant highlighting, navigation, cross-references, editing, and renaming - even when the original bytecode is heavily obfuscated. Trinity's Fernflower fork also fixes numerous bugs and anti-decompilation edge cases.
+Trinity approaches decompilation differently. Built on the battle-tested [Fernflower](https://www.jetbrains.com/), it integrates directly with the decompiler engine instead of treating the generated Java as plain text. Numerous bugs and anti-decompilation exploits are fixed.
 
 ### Renaming
 
@@ -32,7 +32,7 @@ Rename variables, fields, methods, and classes in place. Trinity updates every k
 
 ### Cross-referencing
 
-Trinity's cross-reference search - Xref for short - is instant and exceptionally thorough. It follows references throughout the bytecode, including class literals, annotations, casts, method parameters, return types, field accesses, and invocations. If the JVM can reference it, Trinity is designed to find it.
+Trinity's cross-reference (Xref) search is instant and exceptionally thorough. It follows references throughout the bytecode, including class literals, annotations, casts, method parameters, return types, field accesses, and invocations.
 
 ### Constant search
 
@@ -40,15 +40,11 @@ Search constants across the entire project, not just the strings visible in deco
 
 ### Workspaces
 
-Trinity is not limited to opening one JAR at a time. Load one or several archives into a workspace, edit their classes and members, and save the complete project as a compressed Trinity database (`.tdb`) so your analysis is right where you left it.
-
-### Deobfuscation / Refactoring
-
-Built-in refactoring detects likely obfuscated identifiers and replaces names with consistent, readable placeholders. This gives you a clean foundation for understanding the program and applying meaningful names as you go.
+Load one or several files into a workspace, edit their classes and members, and save the complete project as a compressed Trinity database (`.tdb`), letting you resume your work right where you left it off.
 
 ### ...and more!
 
-Custom themes, a built-in theme editor, configurable key mappings, among many others. Give Trinity a try and see what else you uncover!
+Built-in refactoring / deobfuscation, custom themes, a built-in theme editor, configurable key mappings, among many others
 
 ## Building
 I haven't bothered with pre-built releases much - but this will come very soon. For now, I highly recommend running Trinity from source:

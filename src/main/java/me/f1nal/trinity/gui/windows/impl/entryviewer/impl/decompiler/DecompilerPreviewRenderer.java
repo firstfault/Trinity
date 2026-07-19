@@ -5,6 +5,7 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.decompiler.modules.decompiler.exps.VarExprent;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
+import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.MethodInput;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class DecompilerPreviewRenderer {
+    private static final int CLASS_PREVIEW_LINES = 7;
     private static final int METHOD_PREVIEW_LINES = 7;
     private static final float MAX_LINE_WIDTH = 550.F;
 
@@ -57,7 +59,11 @@ public final class DecompilerPreviewRenderer {
     }
 
     public void drawInputPreview(Input<?> input) {
-        if (input instanceof MethodInput methodInput) {
+        if (input instanceof ClassInput classInput) {
+            drawDetails(List.of(new ColoredString(classInput.getClassTarget().getDisplayOrRealName(),
+                    CodeColorScheme.CLASS_REF)));
+            drawClassPreview(classInput, true);
+        } else if (input instanceof MethodInput methodInput) {
             drawDetails(methodSignature(methodInput));
             drawMethodPreview(methodInput, true);
         } else if (input instanceof FieldInput fieldInput) {
@@ -65,6 +71,33 @@ public final class DecompilerPreviewRenderer {
             drawFieldPreview(fieldInput, true);
         } else {
             ImGui.textUnformatted(input.toString());
+        }
+    }
+
+    public void drawClassPreview(ClassInput classInput, boolean hasDetails) {
+        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(classInput);
+        if (previewClass == null) {
+            return;
+        }
+
+        previewClass.applyPendingOutput();
+        DecompiledClass.ClassPreview preview = previewClass.getClassPreview(CLASS_PREVIEW_LINES);
+        if (preview.lines().isEmpty()) {
+            return;
+        }
+
+        if (hasDetails) {
+            ImGui.separator();
+        }
+        int classIndent = preview.lines().stream()
+                .mapToInt(DecompilerPreviewRenderer::getLeadingWhitespace)
+                .min()
+                .orElse(0);
+        for (List<DecompilerLineText> line : preview.lines()) {
+            drawDecompilerLine(line, classIndent);
+        }
+        if (preview.hasMoreLines()) {
+            ImGui.textColored(CodeColorScheme.DISABLED, "...");
         }
     }
 

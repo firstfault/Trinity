@@ -11,21 +11,13 @@ public class ProjectBrowserTreeNodeEntry extends ProjectBrowserTreeNode<ArchiveE
     
     @Override
     public void draw(ProjectBrowserFrame projectBrowserFrame) {
-        ImGui.tableNextRow();
-        ImGui.tableNextColumn();
-
         int flags = ImGuiTreeNodeFlags.SpanFullWidth;
         if (this.isLeaf()) {
             flags |= ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen;
         }
         boolean open = ImGui.treeNodeEx("###Entry" + node.getRealName(), flags);
-        ImGui.sameLine();
+        ImGui.sameLine(0.F, 0.F);
         node.getBrowserViewerNode().draw();
-
-        ImGui.tableNextColumn();
-        this.drawSize(node.getSize(), node.getSizeInBytes());
-//        ImGui.tableNextColumn();
-//        ImGui.textUnformatted(node.getArchiveEntryTypeName());
 
         if (open && !this.isLeaf()) {
             for (ProjectBrowserTreeNode<?> child : this.getChildren()) {

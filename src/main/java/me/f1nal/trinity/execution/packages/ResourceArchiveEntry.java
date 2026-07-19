@@ -1,7 +1,7 @@
 package me.f1nal.trinity.execution.packages;
 
 import me.f1nal.trinity.Main;
-import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.components.filter.kind.IKindType;
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
@@ -53,7 +53,7 @@ public class ResourceArchiveEntry extends ArchiveEntry {
 
     @Override
     protected String getIcon() {
-        return FontAwesomeIcons.File;
+        return CodiconIcons.FILE;
     }
 
     @Override

@@ -4,6 +4,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.events.EventPackageStructureReload;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.IconFamily;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.BrowserViewerNode;
@@ -15,6 +16,7 @@ import me.f1nal.trinity.util.SystemUtil;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.Objects;
 
 public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler {
@@ -28,7 +30,9 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         this.sizeInBytes = sizeInBytes;
         this.size = ByteUtil.getHumanReadableByteCountSI(sizeInBytes);
         this.viewerTypes = Arrays.stream(ArchiveEntryViewerType.values()).filter(type -> type.getValid().test(this)).toArray(ArchiveEntryViewerType[]::new);
-        this.browserViewerNode = new BrowserViewerNode(getIcon(), () -> this.getKind() == null ? this.getIconColor() : this.getKind().getColor(), this::getDisplaySimpleName, this.getRenameHandler());
+        this.browserViewerNode = new BrowserViewerNode(getIcon(), IconFamily.CODICON,
+                () -> this.getKind() == null ? this.getIconColor() : this.getKind().getColor(),
+                this::getDisplaySimpleName, this.getRenameHandler());
         this.browserViewerNode.addMouseClickHandler(clickType -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
                 Main.getDisplayManager().getPopupMenu().show(this.createPopup(PopupItemBuilder.create()));
@@ -137,7 +141,12 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
 
     @Override
     public boolean matches(String searchTerm) {
-        return getDisplayOrRealName().contains(searchTerm);
+        return getDisplaySimpleName().contains(searchTerm);
+    }
+
+    @Override
+    public boolean matchesIgnoreCase(String searchTerm) {
+        return getDisplaySimpleName().toLowerCase(Locale.ROOT).contains(searchTerm.toLowerCase(Locale.ROOT));
     }
 
     @Override

@@ -70,13 +70,22 @@ public abstract class ClosableWindow extends AbstractWindow {
             }
             if (this.menuBar != null) this.menuBar.draw();
             renderFrame();
-            if (closeableByEscape && ImGui.isWindowFocused() && ImGui.isKeyDown(ImGuiKey.Escape)) {
+            if ((closeableByEscape || this.isDialog()) && ImGui.isWindowFocused()
+                    && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
                 this.close();
             }
+            this.renderChildWindows();
         } else {
             focusGained = false;
         }
-        ImGui.end();
+        if (this.isDialog()) {
+            if (begin) {
+                if (!this.openState.get() || !this.isVisible()) ImGui.closeCurrentPopup();
+                ImGui.endPopup();
+            }
+        } else {
+            ImGui.end();
+        }
         if (!this.openState.get()) {
             this.openState.set(true);
             this.close();
@@ -110,7 +119,12 @@ public abstract class ClosableWindow extends AbstractWindow {
     }
 
     protected boolean beginWindow() {
-        return ImGui.begin(this.getImGuiWindowName(), this.openState, windowFlags);
+        int flags = this.windowFlags | (this.isDialog() ? ImGuiWindowFlags.NoDocking : 0);
+        if (!this.isDialog()) return ImGui.begin(this.getImGuiWindowName(), this.openState, flags);
+
+        String name = this.getImGuiWindowName();
+        if (!ImGui.isPopupOpen(name)) ImGui.openPopup(name);
+        return ImGui.beginPopupModal(name, this.openState, flags);
     }
 
     public String getImGuiWindowName() {

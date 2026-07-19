@@ -9,13 +9,23 @@ import java.util.function.Predicate;
 
 public class SearchBarFilter<T extends SearchTermMatchable> extends Filter<T> {
     private final SearchBar searchBar;
+    private final boolean showCaseSensitivityToggle;
 
     public SearchBarFilter(SearchBar searchBar) {
+        this(searchBar, false);
+    }
+
+    public SearchBarFilter(SearchBar searchBar, boolean showCaseSensitivityToggle) {
         this.searchBar = searchBar;
+        this.showCaseSensitivityToggle = showCaseSensitivityToggle;
     }
 
     public SearchBarFilter() {
         this(new SearchBar());
+    }
+
+    public SearchBarFilter(boolean showCaseSensitivityToggle) {
+        this(new SearchBar(), showCaseSensitivityToggle);
     }
 
     public SearchBar getSearchBar() {
@@ -29,11 +39,16 @@ public class SearchBarFilter<T extends SearchTermMatchable> extends Filter<T> {
     @Override
     public Predicate<T> filter() {
         final String search = searchBar.getSearchText().get();
-        return search.isEmpty() ? (text) -> true : (text) -> text.matches(search);
+        if (search.isEmpty()) return text -> true;
+        return searchBar.isCaseSensitive()
+                ? text -> text.matches(search)
+                : text -> text.matchesIgnoreCase(search);
     }
 
     @Override
     public boolean draw() {
-        return searchBar.draw();
+        return this.showCaseSensitivityToggle
+                ? searchBar.drawWithCaseSensitivityToggle()
+                : searchBar.draw();
     }
 }

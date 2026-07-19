@@ -5,6 +5,7 @@ import imgui.*;
 import imgui.gl3.ImGuiImplGl3;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.FontEnum;
+import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.FontSettings;
 
@@ -14,24 +15,23 @@ import java.util.Map;
 
 public class FontManager {
     private Map<String, byte[]> resourceCache;
-    private final FontSettings navigationBandFont = new FontSettings(FontEnum.SMALLEST_PIXEL, 12.F, "Navigation Band");
+    private ImFont codiconFont;
 
     public void setupFonts() {
         this.resourceCache = new HashMap<>();
 
         this.buildFonts(Main.getPreferences().getDefaultFont());
         this.buildFonts(Main.getPreferences().getDecompilerFont());
-        this.buildFonts(this.navigationBandFont);
+        ImFontConfig codiconConfig = new ImFontConfig();
+        codiconConfig.setPixelSnapH(true);
+        this.codiconFont = ImGui.getIO().getFonts().addFontFromMemoryTTF(loadFromResources("codicon.ttf"),
+                Main.getPreferences().getDefaultFont().getSize(), codiconConfig, CodiconIcons.ICON_RANGE);
 
         this.resourceCache = null;
     }
 
-    public ImFont getNavigationBandFont() {
-        return navigationBandFont.getImFont();
-    }
-
-    public float getNavigationBandFontSize() {
-        return navigationBandFont.getBuiltSize();
+    public ImFont getCodiconFont() {
+        return codiconFont;
     }
 
     private void buildFonts(FontSettings fontSettings) {

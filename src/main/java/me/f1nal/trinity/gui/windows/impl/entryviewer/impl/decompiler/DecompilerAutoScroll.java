@@ -12,6 +12,7 @@ public class DecompilerAutoScroll {
     private final AbstractInsnNode instruction;
     private DecompilerComponent component;
     private boolean found;
+    private boolean navigationPending = true;
 
     public DecompilerAutoScroll(Input<?> input, AbstractInsnNode instruction) {
         this.input = input;
@@ -38,6 +39,20 @@ public class DecompilerAutoScroll {
 
     public DecompilerComponent getComponent() {
         return component;
+    }
+
+    public boolean isNavigationPending() {
+        return navigationPending;
+    }
+
+    public void markNavigated() {
+        this.navigationPending = false;
+    }
+
+    public void invalidate() {
+        this.component = null;
+        this.found = false;
+        this.navigationPending = true;
     }
 
     private DecompilerComponent findTargetComponent(DecompiledClass decompiledClass) {

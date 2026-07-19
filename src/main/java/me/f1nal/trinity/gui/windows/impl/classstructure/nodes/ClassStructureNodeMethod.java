@@ -2,14 +2,14 @@ package me.f1nal.trinity.gui.windows.impl.classstructure.nodes;
 
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.MethodInput;
-import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.windows.impl.classstructure.StructureKind;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import org.objectweb.asm.Type;
 
 public class ClassStructureNodeMethod extends AbstractClassStructureNodeInput<MethodInput> {
     public ClassStructureNodeMethod(MethodInput methodInput) {
-        super(FontAwesomeIcons.Code, methodInput);
+        super(CodiconIcons.SYMBOL_METHOD, methodInput);
     }
 
     @Override

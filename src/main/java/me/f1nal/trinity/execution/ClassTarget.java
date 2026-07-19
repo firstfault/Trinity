@@ -10,7 +10,7 @@ import me.f1nal.trinity.execution.packages.ArchiveEntry;
 import me.f1nal.trinity.execution.xref.ClassXref;
 import me.f1nal.trinity.execution.xref.XrefKind;
 import me.f1nal.trinity.execution.xref.XrefMap;
-import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
@@ -96,7 +96,12 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     @Override
     protected String getIcon() {
-        return FontAwesomeIcons.FileCode;
+        return switch (this.getKind()) {
+            case INTERFACES -> CodiconIcons.SYMBOL_INTERFACE;
+            case ENUM -> CodiconIcons.SYMBOL_ENUM;
+            case ANNOTATION -> CodiconIcons.MENTION;
+            default -> CodiconIcons.SYMBOL_CLASS;
+        };
     }
 
     @Override
@@ -109,6 +114,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     public void setInput(ClassInput input) {
         this.input = input;
+        this.resetKind();
     }
 
     public String getRealName() {
@@ -187,6 +193,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     public void resetKind() {
         kind = null;
+        this.getBrowserViewerNode().setIcon(this.getIcon());
     }
 
     @Override
