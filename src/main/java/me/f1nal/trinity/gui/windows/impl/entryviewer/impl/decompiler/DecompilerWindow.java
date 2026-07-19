@@ -39,6 +39,7 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
@@ -80,6 +81,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
      */
     public final DecompilerCursor cursor = new DecompilerCursor(this);
     private DecompilerAutoScroll autoscrollTo;
+    private DecompilerHighlight navigationHighlight;
     private final Stopwatch focusTime = new Stopwatch();
     private static Stopwatch viewMember = new Stopwatch();
 
@@ -410,6 +412,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         for (DecompilerLine line : decompiledClass.getLines()) {
             final float cursorScreenPosX = ImGui.getCursorScreenPosX();
 
+            this.drawNavigationHighlight(line, cursorScreenPosX, textSize);
+
             int textOffset = 0, sameLines = 0;
             ImGui.setCursorPosX(cursorPosX + lineNumberSpacing);
             line.pos = ImGui.getCursorScreenPos().minus(2.5F, 0.F);
@@ -425,8 +429,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 }
 
                 if (this.autoscrollTo != null && text.getComponent() == this.autoscrollTo.findComponent(decompiledClass)) {
-                    cursor.setCoordinates(new DecompilerCoordinates(line, textOffset));
-                    cursor.setScrollToCursor();
+                    DecompilerCoordinates coordinates = new DecompilerCoordinates(line, textOffset);
+                    cursor.navigateTo(coordinates);
+                    this.navigationHighlight = new DecompilerHighlight(line);
                     this.autoscrollTo = null;
                 }
 
@@ -509,6 +514,23 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (cursor.hasTextSelection() && ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_C)) {
             this.copyToClipboard();
         }
+    }
+
+    private void drawNavigationHighlight(DecompilerLine line, float startX, ImVec2 textSize) {
+        DecompilerHighlight highlight = this.navigationHighlight;
+        if (highlight == null || highlight.getLine() != line) {
+            return;
+        }
+        if (highlight.isFinished()) {
+            this.navigationHighlight = null;
+            return;
+        }
+
+        float startY = ImGui.getCursorScreenPos().y - 2.F;
+        float endX = ImGui.getWindowPosX() + ImGui.getWindowContentRegionMax().x;
+        float endY = startY + textSize.y + 4.F;
+        ImGui.getWindowDrawList().addRectFilled(startX, startY, endX, endY, highlight.getFillColor());
+        ImGui.getWindowDrawList().addRect(startX, startY, endX, endY, highlight.getBorderColor());
     }
 
     private void drawMethodPreview(MethodInput methodInput, boolean hasDetails) {
@@ -626,7 +648,11 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     public void setDecompileTarget(Input<?> input) {
-        this.autoscrollTo = new DecompilerAutoScroll(this, input);
+        this.setDecompileTarget(input, null);
+    }
+
+    public void setDecompileTarget(Input<?> input, AbstractInsnNode instruction) {
+        this.autoscrollTo = new DecompilerAutoScroll(input, instruction);
         this.setDecompileTarget(input.getOwningClass());
     }
 

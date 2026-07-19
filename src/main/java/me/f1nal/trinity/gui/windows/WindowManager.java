@@ -31,6 +31,8 @@ public class WindowManager {
      */
     private final Map<Class<? extends StaticWindow>, StaticWindow> staticWindowMap = new HashMap<>();
     private final InputManager inputHandler = new InputManager();
+    private ClosableWindow focusRequested;
+    private int focusFramesRemaining;
 
     public WindowManager(DisplayManager displayManager) {
         this.displayManager = displayManager;
@@ -47,6 +49,20 @@ public class WindowManager {
         }
 
         this.drawPopups();
+
+        ClosableWindow requested = this.focusRequested;
+        if (requested != null) {
+            if (!requested.isVisible()) {
+                this.focusRequested = null;
+            } else if (requested.hasRendered()) {
+                ImGui.setWindowFocus(requested.getImGuiWindowName());
+                if (ImGui.isMouseDown(0)) {
+                    this.focusFramesRemaining = 2;
+                } else if (--this.focusFramesRemaining <= 0) {
+                    this.focusRequested = null;
+                }
+            }
+        }
     }
 
     private List<AbstractWindow> getAllWindows() {
@@ -100,6 +116,10 @@ public class WindowManager {
     }
 
     public void addClosableWindow(ClosableWindow window) {
+        if (window.isCloseRequested()) {
+            return;
+        }
+
         final ClosableWindow windowAlreadyOpened = getClosableWindows().stream().filter(openWindow -> openWindow.isAlreadyOpen(window)).findFirst().orElse(null);
 
         if (windowAlreadyOpened != null) {
@@ -109,6 +129,11 @@ public class WindowManager {
 
         this.closableWindows.add(window);
         window.setVisible(true);
+    }
+
+    public void requestFocus(ClosableWindow window) {
+        this.focusRequested = window;
+        this.focusFramesRemaining = 2;
     }
 
     public void addPopup(PopupWindow popup) {

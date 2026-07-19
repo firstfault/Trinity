@@ -1,7 +1,7 @@
 package me.f1nal.trinity.execution.xref;
 
 import me.f1nal.trinity.execution.MethodInput;
-import me.f1nal.trinity.execution.xref.where.XrefWhereMethod;
+import me.f1nal.trinity.execution.xref.where.XrefWhereMethodInsn;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
@@ -31,7 +31,7 @@ public class MemberXref extends AbstractXref {
      * @param instruction The instruction responsible for the reference.
      */
     public MemberXref(MethodInput methodInput, AbstractInsnNode instruction) {
-        super(new XrefWhereMethod(methodInput), instruction instanceof FieldInsnNode ? XrefKind.FIELD : XrefKind.INVOKE);
+        super(new XrefWhereMethodInsn(methodInput, instruction), instruction instanceof FieldInsnNode ? XrefKind.FIELD : XrefKind.INVOKE);
         this.methodInput = methodInput;
         this.instruction = instruction;
         this.access = getAccess(instruction);

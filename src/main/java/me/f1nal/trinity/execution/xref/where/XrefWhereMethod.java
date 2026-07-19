@@ -12,6 +12,10 @@ public class XrefWhereMethod extends XrefWhere {
         this.methodInput = methodInput;
     }
 
+    protected MethodInput getMethodInput() {
+        return methodInput;
+    }
+
     @Override
     public PopupItemBuilder menuItem() {
         return PopupItemBuilder.create().menuItem("Go to method", this::followInDecompiler);

@@ -15,7 +15,6 @@ import me.f1nal.trinity.util.ByteUtil;
 
 public abstract class ArchiveEntryViewerWindow<T extends ArchiveEntry> extends ClosableWindow {
     private final T archiveEntry;
-    private boolean bringToFocus;
     private boolean docked;
 
     public ArchiveEntryViewerWindow(Trinity trinity, T archiveEntry) {
@@ -31,8 +30,7 @@ public abstract class ArchiveEntryViewerWindow<T extends ArchiveEntry> extends C
     @Override
     public void setVisible(boolean visible) {
         if (visible) {
-            // TODO: Window flag?
-            this.bringToFocus = true;
+            Main.getWindowManager().requestFocus(this);
         }
         super.setVisible(visible);
     }
@@ -60,10 +58,6 @@ public abstract class ArchiveEntryViewerWindow<T extends ArchiveEntry> extends C
     @Override
     public void render() {
         if (this.isVisible()) {
-            if (this.bringToFocus) {
-                ImGui.setNextWindowFocus();
-                this.bringToFocus = false;
-            }
             if (!docked) {
                 ImGui.setNextWindowDockID(123);
                 docked = true;

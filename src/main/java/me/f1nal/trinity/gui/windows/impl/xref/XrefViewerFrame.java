@@ -43,10 +43,9 @@ public class XrefViewerFrame extends ClosableWindow {
 
     private void followFirstXref() {
         if (Main.getPreferences().isAutoviewXref()) {
-            // FIXME: Broken with wnd mgr
             this.close();
             for (AbstractXref xref : this.xrefViewList) {
-                xref.getWhere().followInDecompiler();
+                Main.runLater(xref.getWhere()::followInDecompiler);
                 break;
             }
         }

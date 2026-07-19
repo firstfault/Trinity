@@ -40,6 +40,7 @@ import me.f1nal.trinity.util.SystemUtil;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWDropCallback;
 import org.lwjgl.glfw.GLFWWindowCloseCallback;
+import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.io.File;
 import java.util.*;
@@ -263,9 +264,13 @@ public final class DisplayManager extends ImGuiApplication {
     }
 
     public void openDecompilerView(Input<?> input) {
+        this.openDecompilerView(input, null);
+    }
+
+    public void openDecompilerView(Input<?> input, AbstractInsnNode instruction) {
         ArchiveEntryViewerWindow<?> viewerWindow = ArchiveEntryViewerType.DECOMPILER.getWindow(input.getOwningClass().getClassTarget());
         this.windowManager.addClosableWindow(viewerWindow);
-        ((DecompilerWindow) Objects.requireNonNull(viewerWindow)).setDecompileTarget(input);
+        ((DecompilerWindow) Objects.requireNonNull(viewerWindow)).setDecompileTarget(input, instruction);
     }
 
     public PopupMenu getPopupMenu() {

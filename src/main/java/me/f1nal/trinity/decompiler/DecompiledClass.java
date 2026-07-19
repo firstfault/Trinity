@@ -8,6 +8,9 @@ import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerLine;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerLineText;
+import org.objectweb.asm.tree.AbstractInsnNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 
 import java.io.IOException;
 import java.util.*;
@@ -251,6 +254,61 @@ public final class DecompiledClass {
 
     public boolean isProgressive() {
         return progressive;
+    }
+
+    public DecompilerComponent findInstructionComponent(MethodInput methodInput, AbstractInsnNode targetInstruction) {
+        MemberDetails targetMember = getInstructionMember(targetInstruction);
+        if (targetMember == null) {
+            return null;
+        }
+
+        int occurrence = 0;
+        boolean targetFound = false;
+        for (AbstractInsnNode instruction : methodInput.getInstructions()) {
+            if (!targetMember.equals(getInstructionMember(instruction))) {
+                continue;
+            }
+            if (instruction == targetInstruction) {
+                targetFound = true;
+                break;
+            }
+            occurrence++;
+        }
+        if (!targetFound) {
+            return null;
+        }
+
+        DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(methodInput.getDetails());
+        if (boundaries == null) {
+            return null;
+        }
+        int startIndex = componentList.indexOf(boundaries.start());
+        int endIndex = componentList.indexOf(boundaries.end());
+        if (startIndex < 0 || endIndex < startIndex) {
+            return null;
+        }
+
+        String targetKey = targetMember.toString();
+        for (int i = startIndex; i <= endIndex; i++) {
+            DecompilerComponent component = componentList.get(i);
+            if (!targetKey.equals(component.memberKey)) {
+                continue;
+            }
+            if (occurrence-- == 0) {
+                return component;
+            }
+        }
+        return null;
+    }
+
+    private static MemberDetails getInstructionMember(AbstractInsnNode instruction) {
+        if (instruction instanceof MethodInsnNode method) {
+            return new MemberDetails(method.owner, method.name, method.desc);
+        }
+        if (instruction instanceof FieldInsnNode field) {
+            return new MemberDetails(field.owner, field.name, field.desc);
+        }
+        return null;
     }
 
     public void setComponentHighlighted(DecompilerComponent component) {

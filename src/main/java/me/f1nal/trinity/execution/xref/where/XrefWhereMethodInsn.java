@@ -1,5 +1,6 @@
 package me.f1nal.trinity.execution.xref.where;
 
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.execution.MethodInput;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
@@ -13,5 +14,10 @@ public class XrefWhereMethodInsn extends XrefWhereMethod {
 
     public AbstractInsnNode getInsnNode() {
         return insnNode;
+    }
+
+    @Override
+    public void followInDecompiler() {
+        Main.getDisplayManager().openDecompilerView(this.getMethodInput(), this.insnNode);
     }
 }

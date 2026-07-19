@@ -2,20 +2,34 @@ package me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler;
 
 import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.execution.Input;
+import me.f1nal.trinity.execution.MethodInput;
+import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.util.List;
 
 public class DecompilerAutoScroll {
     private final Input<?> input;
+    private final AbstractInsnNode instruction;
     private DecompilerComponent component;
     private boolean found;
 
-    public DecompilerAutoScroll(DecompilerWindow window, Input<?> input) {
+    public DecompilerAutoScroll(Input<?> input, AbstractInsnNode instruction) {
         this.input = input;
+        this.instruction = instruction;
     }
 
     public DecompilerComponent findComponent(DecompiledClass decompiledClass) {
         if (!this.found) {
+            if (this.instruction != null && this.input instanceof MethodInput methodInput) {
+                if (decompiledClass.isProgressive()) {
+                    return null;
+                }
+                this.component = decompiledClass.findInstructionComponent(methodInput, this.instruction);
+                if (this.component != null) {
+                    this.found = true;
+                    return this.component;
+                }
+            }
             this.component = this.findTargetComponent(decompiledClass);
             this.found = true;
         }

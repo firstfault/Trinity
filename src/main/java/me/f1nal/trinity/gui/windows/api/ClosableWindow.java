@@ -21,6 +21,8 @@ public abstract class ClosableWindow extends AbstractWindow {
     private boolean sizeSet;
     protected int windowFlags;
     private boolean focusGained = false;
+    private boolean closeRequested;
+    private boolean rendered;
     private PopupMenuBar menuBar;
 
     protected ClosableWindow(String title, float width, float height, Trinity trinity) {
@@ -60,6 +62,7 @@ public abstract class ClosableWindow extends AbstractWindow {
             this.sizeSet = true;
         }
         boolean begin = this.beginWindow();
+        this.rendered = true;
 
         if (begin) {
             if (!focusGained) {
@@ -83,6 +86,9 @@ public abstract class ClosableWindow extends AbstractWindow {
 
     @Override
     public void setVisible(boolean visible) {
+        if (visible) {
+            this.closeRequested = false;
+        }
         super.setVisible(visible);
 
         if (!visible) {
@@ -90,12 +96,30 @@ public abstract class ClosableWindow extends AbstractWindow {
         }
     }
 
+    @Override
+    public void close() {
+        this.closeRequested = true;
+        super.close();
+    }
+
+    public boolean isCloseRequested() {
+        return closeRequested;
+    }
+
     public boolean isFocusGained() {
         return focusGained;
     }
 
     protected boolean beginWindow() {
-        return ImGui.begin(this.getTitle() + "###" + getClass().getName() + id, this.openState, windowFlags);
+        return ImGui.begin(this.getImGuiWindowName(), this.openState, windowFlags);
+    }
+
+    public String getImGuiWindowName() {
+        return this.getTitle() + "###" + getClass().getName() + id;
+    }
+
+    public boolean hasRendered() {
+        return rendered;
     }
 
     protected void onFocusGain() {

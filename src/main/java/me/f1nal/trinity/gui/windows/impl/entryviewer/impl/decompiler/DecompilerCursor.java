@@ -76,6 +76,13 @@ public class DecompilerCursor {
         this.window.getDecompiledClass().setComponentHighlighted(coordinates.getComponent());
     }
 
+    public void navigateTo(DecompilerCoordinates coordinates) {
+        this.selectionEnd = null;
+        this.draggingSelection = false;
+        this.setCoordinates(coordinates);
+        this.setScrollToCursor();
+    }
+
     private DecompilerCoordinates getCoordinates(DecompilerLine line, float mousePosX, float startX) {
         final String text = line.getText();
 

@@ -1,37 +1,43 @@
 package me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler;
 
 import imgui.ImColor;
-import me.f1nal.trinity.util.animation.Animation;
-import me.f1nal.trinity.util.animation.Easing;
 
 public class DecompilerHighlight {
-    private final DecompilerComponent textComponent;
-    private final Animation animation = new Animation(Easing.LINEAR, 1550L, 1.F);
-    private boolean scrolled;
+    private static final long DURATION = 700L;
+    private static final long FADE_IN_DURATION = 90L;
+    private final DecompilerLine line;
+    private final long startTime = System.currentTimeMillis();
 
-    public DecompilerHighlight(DecompilerComponent textComponent) {
-        this.textComponent = textComponent;
+    public DecompilerHighlight(DecompilerLine line) {
+        this.line = line;
     }
 
-    public void setScrolled(boolean scrolled) {
-        this.scrolled = scrolled;
-    }
-
-    public boolean isScrolled() {
-        return scrolled;
-    }
-
-    public DecompilerComponent getTextComponent() {
-        return textComponent;
+    public DecompilerLine getLine() {
+        return line;
     }
 
     public boolean isFinished() {
-        return this.animation.isFinished();
+        return getElapsed() >= DURATION;
     }
 
-    public int getColor() {
-        animation.run(0.F);
-        int white = (int) (150.F * animation.getValue());
-        return ImColor.rgba(white, white, white, (int) (120.F * animation.getValue()));
+    public int getFillColor() {
+        return ImColor.rgba(105, 105, 105, Math.round(62.F * getOpacity()));
+    }
+
+    public int getBorderColor() {
+        return ImColor.rgba(165, 165, 165, Math.round(170.F * getOpacity()));
+    }
+
+    private float getOpacity() {
+        long elapsed = getElapsed();
+        if (elapsed < FADE_IN_DURATION) {
+            float progress = (float) elapsed / FADE_IN_DURATION;
+            return 1.F - (1.F - progress) * (1.F - progress);
+        }
+        return Math.max(0.F, 1.F - (float) (elapsed - FADE_IN_DURATION) / (DURATION - FADE_IN_DURATION));
+    }
+
+    private long getElapsed() {
+        return System.currentTimeMillis() - startTime;
     }
 }
