@@ -235,6 +235,8 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
     private void initializeMethod(MethodOutputMember method, MemberDetails memberDetails, @Nullable MethodInput methodInput) {
         if (methodInput != null) {
+            component.setPreviewMethod(methodInput);
+
             // super()/this() calls aren't named
             if (!this.originalText.equals("super") && !this.originalText.equals("this")) {
                 if (methodInput.isInit()) {

@@ -31,6 +31,7 @@ import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.gui.viewport.FontManager;
 import me.f1nal.trinity.gui.viewport.MainMenuBar;
 import me.f1nal.trinity.gui.viewport.NotificationRenderer;
+import me.f1nal.trinity.gui.viewport.ProjectNavigationBand;
 import me.f1nal.trinity.gui.viewport.dnd.DragAndDropHandler;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.theme.CodeColorScheme;
@@ -50,6 +51,7 @@ public final class DisplayManager extends ImGuiApplication {
      */
     private final String windowTitle;
     private final MainMenuBar mainMenuBar = new MainMenuBar(this);
+    private ProjectNavigationBand projectNavigationBand;
     private Trinity trinity;
     private final NotificationRenderer notificationRenderer = new NotificationRenderer();
     private final DragAndDropHandler dragAndDropHandler = new DragAndDropHandler();
@@ -77,6 +79,7 @@ public final class DisplayManager extends ImGuiApplication {
         }
 
         this.trinity = trinity;
+        this.projectNavigationBand = trinity == null ? null : new ProjectNavigationBand(trinity);
 
         if (this.trinity != null) {
             this.trinity.getEventManager().setRegistered(true);
@@ -160,10 +163,13 @@ public final class DisplayManager extends ImGuiApplication {
         FontSettings font = Main.getPreferences().getDefaultFont();
         font.pushFont();
 
-        this.setupDockspace();
-        if (this.trinity == null && this.windowManager.getPopups().isEmpty()) this.homepage();
         Main.executeScheduledTasks();
         this.mainMenuBar.draw();
+        if (this.projectNavigationBand != null) {
+            this.projectNavigationBand.draw();
+        }
+        this.setupDockspace();
+        if (this.trinity == null && this.windowManager.getPopups().isEmpty()) this.homepage();
         this.popupMenu.draw();
         this.windowManager.draw();
         this.notificationRenderer.draw();
@@ -175,8 +181,9 @@ public final class DisplayManager extends ImGuiApplication {
     private void setupDockspace() {
         ImGui.pushStyleVar(ImGuiStyleVar.WindowBorderSize, 0.F);
         ImGuiViewport viewport = ImGui.getMainViewport();
-        ImGui.setNextWindowPos(viewport.getWorkPosX(), viewport.getWorkPosY());
-        ImGui.setNextWindowSize(viewport.getWorkSizeX(), viewport.getWorkSizeY());
+        float navigationBandHeight = this.projectNavigationBand == null ? 0.F : ProjectNavigationBand.HEIGHT;
+        ImGui.setNextWindowPos(viewport.getWorkPosX(), viewport.getWorkPosY() + navigationBandHeight);
+        ImGui.setNextWindowSize(viewport.getWorkSizeX(), Math.max(1.F, viewport.getWorkSizeY() - navigationBandHeight));
         ImGui.setNextWindowViewport(viewport.getID());
         ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 0.F, 0.F);
         ImGui.begin("DockSpace", ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoNavFocus);

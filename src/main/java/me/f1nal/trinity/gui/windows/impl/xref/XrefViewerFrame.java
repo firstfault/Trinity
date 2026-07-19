@@ -1,5 +1,6 @@
 package me.f1nal.trinity.gui.windows.impl.xref;
 
+import imgui.ImGui;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.xref.AbstractXref;
@@ -60,7 +61,7 @@ public class XrefViewerFrame extends ClosableWindow {
     protected void renderFrame() {
         this.listFilterComponent.draw();
         this.xrefTable.setElementList(this.listFilterComponent.getFilteredList());
-        this.xrefTable.draw();
+        this.xrefTable.draw(Math.max(1.F, ImGui.getContentRegionAvailY()));
     }
 
     @Override

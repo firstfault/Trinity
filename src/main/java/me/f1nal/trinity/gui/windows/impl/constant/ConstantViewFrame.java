@@ -1,5 +1,6 @@
 package me.f1nal.trinity.gui.windows.impl.constant;
 
+import imgui.ImGui;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.xref.XrefKind;
 import me.f1nal.trinity.gui.components.filter.ListFilterComponent;
@@ -28,6 +29,6 @@ public class ConstantViewFrame extends ClosableWindow {
     protected void renderFrame() {
         this.listFilterComponent.draw();
         this.table.setElementList(this.listFilterComponent.getFilteredList());
-        this.table.draw();
+        this.table.draw(Math.max(1.F, ImGui.getContentRegionAvailY()));
     }
 }

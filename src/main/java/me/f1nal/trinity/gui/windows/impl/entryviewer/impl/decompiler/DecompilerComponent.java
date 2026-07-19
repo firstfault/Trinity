@@ -6,6 +6,7 @@ import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.MemberDetails;
+import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.theme.CodeColorScheme;
@@ -36,6 +37,7 @@ public class DecompilerComponent {
      */
     private Runnable customRenderer;
     private Input<?> viewMember;
+    private MethodInput previewMethod;
     // Temporary
     public Input<?> input;
     public String memberKey;
@@ -68,6 +70,14 @@ public class DecompilerComponent {
 
     public Input<?> getViewMember() {
         return viewMember;
+    }
+
+    public void setPreviewMethod(MethodInput previewMethod) {
+        this.previewMethod = previewMethod;
+    }
+
+    public MethodInput getPreviewMethod() {
+        return previewMethod;
     }
 
     public void setIdentifier(OutputMember type, Object identifier) {

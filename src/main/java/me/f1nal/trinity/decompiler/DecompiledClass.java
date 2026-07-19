@@ -22,6 +22,7 @@ public final class DecompiledClass {
     private final List<DecompilerComponent> componentList;
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> methodComponents;
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> fieldComponents;
+    private final Map<MethodPreviewKey, MethodPreview> methodPreviewCache = new HashMap<>();
     private final Set<MemberDetails> progressiveMethods = ConcurrentHashMap.newKeySet();
     private final Queue<MethodOutput> pendingMethodOutputs = new ConcurrentLinkedQueue<>();
     private final Queue<MemberReplacement> pendingMemberReplacements = new ConcurrentLinkedQueue<>();
@@ -275,6 +276,59 @@ public final class DecompiledClass {
 
     public void resetLines() {
         this.addLines(this.componentList);
+        this.methodPreviewCache.clear();
+    }
+
+    public MethodPreview getMethodPreview(MethodInput methodInput, int maximumLines) {
+        if (maximumLines <= 0) {
+            return MethodPreview.EMPTY;
+        }
+        MemberDetails details = methodInput.getDetails();
+        return methodPreviewCache.computeIfAbsent(new MethodPreviewKey(details, maximumLines),
+                key -> createMethodPreview(key.details(), key.maximumLines()));
+    }
+
+    private MethodPreview createMethodPreview(MemberDetails details, int maximumLines) {
+        DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(details);
+        if (boundaries == null) {
+            return MethodPreview.EMPTY;
+        }
+
+        int startIndex = componentList.indexOf(boundaries.start());
+        int endIndex = componentList.indexOf(boundaries.end());
+        if (startIndex < 0 || endIndex < startIndex) {
+            return MethodPreview.EMPTY;
+        }
+
+        Set<DecompilerComponent> methodComponentSet = Collections.newSetFromMap(new IdentityHashMap<>());
+        methodComponentSet.addAll(componentList.subList(startIndex, endIndex + 1));
+
+        List<List<DecompilerLineText>> methodLines = new ArrayList<>();
+        int signatureLine = -1;
+        for (DecompilerLine line : lines) {
+            List<DecompilerLineText> previewLine = line.getComponents().stream()
+                    .filter(text -> methodComponentSet.contains(text.getComponent()))
+                    .filter(text -> !text.getText().isEmpty())
+                    .toList();
+            if (previewLine.isEmpty()) {
+                continue;
+            }
+            if (signatureLine == -1 && previewLine.stream()
+                    .anyMatch(text -> details.toString().equals(text.getComponent().memberKey))) {
+                signatureLine = methodLines.size();
+            }
+            methodLines.add(previewLine);
+        }
+
+        if (methodLines.isEmpty()) {
+            return MethodPreview.EMPTY;
+        }
+
+        boolean skippedLeading = signatureLine >= maximumLines;
+        int firstLine = skippedLeading ? Math.max(0, signatureLine - 2) : 0;
+        int lastLine = Math.min(methodLines.size(), firstLine + maximumLines);
+        return new MethodPreview(List.copyOf(methodLines.subList(firstLine, lastLine)),
+                skippedLeading, lastLine < methodLines.size());
     }
 
     private DecompilerLine newLine() {
@@ -358,5 +412,13 @@ public final class DecompiledClass {
 
     private record MemberReplacement(MemberDetails previousDetails, MemberDetails currentDetails,
                                      Object memberNode, boolean method, DecompiledClass refreshedClass) {
+    }
+
+    private record MethodPreviewKey(MemberDetails details, int maximumLines) {
+    }
+
+    public record MethodPreview(List<List<DecompilerLineText>> lines, boolean skippedLeading,
+                                boolean hasMoreLines) {
+        private static final MethodPreview EMPTY = new MethodPreview(List.of(), false, false);
     }
 }

@@ -22,7 +22,16 @@ public class TableComponent<T> {
     }
 
     public void draw() {
-        if (!ImGui.beginTable(this.id, this.columns.size(), ImGuiTableFlags.Borders | ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable)) {
+        this.draw(0.F);
+    }
+
+    public void draw(float height) {
+        int flags = ImGuiTableFlags.Borders | ImGuiTableFlags.SizingStretchProp
+                | ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable;
+        if (height > 0.F) {
+            flags |= ImGuiTableFlags.ScrollY;
+        }
+        if (!ImGui.beginTable(this.id, this.columns.size(), flags, 0.F, height)) {
             return;
         }
 
@@ -30,6 +39,9 @@ public class TableComponent<T> {
             ImGui.tableSetupColumn(column.getHeader(), column.getFlags());
         }
 
+        if (height > 0.F) {
+            ImGui.tableSetupScrollFreeze(0, 1);
+        }
         ImGui.tableHeadersRow();
         for (int j = 0, size = Math.min(this.elementList.size(), Main.getPreferences().getSearchMaxDisplay().getMax()); j < size; j++) {
             T element = this.elementList.get(j);

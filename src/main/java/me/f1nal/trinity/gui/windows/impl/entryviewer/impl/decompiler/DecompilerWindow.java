@@ -24,6 +24,7 @@ import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.Input;
+import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.FontSettings;
@@ -49,6 +50,7 @@ import java.util.regex.PatternSyntaxException;
 
 public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> implements IEventListener, IDatabaseSavable<DatabaseDecompiler> {
     private static final int MIN_LINE_NUMBER_DIGITS = 4;
+    private static final int METHOD_PREVIEW_LINES = 7;
     private ClassInput selectedClass;
     /**
      * Notifies the selected class must be refreshed.
@@ -458,11 +460,17 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
         if (this.hoveredComponent != null) {
             List<ColoredString> tooltip = this.hoveredComponent.createTooltip();
+            MethodInput previewMethod = this.hoveredComponent.getPreviewMethod();
 
-            if (tooltip != null) {
+            if (tooltip != null || previewMethod != null) {
                 ImGui.beginTooltip();
 
-                ColoredString.drawText(tooltip);
+                if (tooltip != null) {
+                    ColoredString.drawText(tooltip);
+                }
+                if (previewMethod != null) {
+                    this.drawMethodPreview(previewMethod, tooltip != null);
+                }
 
                 ImGui.endTooltip();
             }
@@ -496,6 +504,38 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
         if (cursor.hasTextSelection() && ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_C)) {
             this.copyToClipboard();
+        }
+    }
+
+    private void drawMethodPreview(MethodInput methodInput, boolean hasDetails) {
+        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(methodInput.getOwningClass());
+        if (previewClass == null) {
+            return;
+        }
+
+        previewClass.applyPendingOutput();
+        DecompiledClass.MethodPreview preview = previewClass.getMethodPreview(methodInput, METHOD_PREVIEW_LINES);
+        if (preview.lines().isEmpty()) {
+            return;
+        }
+
+        if (hasDetails) {
+            ImGui.separator();
+        }
+        if (preview.skippedLeading()) {
+            ImGui.textColored(CodeColorScheme.DISABLED, "...");
+        }
+        for (List<DecompilerLineText> line : preview.lines()) {
+            for (int i = 0; i < line.size(); i++) {
+                DecompilerLineText text = line.get(i);
+                if (i > 0) {
+                    ImGui.sameLine(0.F, 0.F);
+                }
+                ImGui.textColored(text.getComponent().getColor(), text.getText());
+            }
+        }
+        if (preview.hasMoreLines()) {
+            ImGui.textColored(CodeColorScheme.DISABLED, "...");
         }
     }
 

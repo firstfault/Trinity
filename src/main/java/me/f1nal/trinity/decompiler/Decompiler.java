@@ -201,6 +201,25 @@ public final class Decompiler implements IEventListener {
         return decompileCache.get(classInput);
     }
 
+    /**
+     * Returns the cached output for a class, starting an asynchronous decompilation only when the
+     * class has not been seen before. This is used by lightweight consumers such as method
+     * previews, which must never invalidate or redo an existing decompilation.
+     */
+    public synchronized @Nullable DecompiledClass getOrDecompile(ClassInput classInput) {
+        DecompiledClass cached = decompileCache.get(classInput);
+        if (cached != null || decompileStack.contains(classInput)) {
+            return cached;
+        }
+
+        try {
+            decompile(classInput, null);
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+        return decompileCache.get(classInput);
+    }
+
     public void invalidateCache(ClassInput owningClass) {
         decompileCache.remove(owningClass);
         decompileGenerations.remove(owningClass);
