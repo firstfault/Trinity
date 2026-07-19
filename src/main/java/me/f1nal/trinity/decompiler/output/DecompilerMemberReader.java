@@ -30,7 +30,8 @@ public class DecompilerMemberReader {
     private final DecompiledClass decompiledClass;
     private DecompiledMethod currentMethod;
     private final List<DecompilerComponent> componentList = new ArrayList<>();
-    private final Map<MemberDetails, MethodComponents> methodComponents = new LinkedHashMap<>();
+    private final Map<MemberDetails, MemberComponents> methodComponents = new LinkedHashMap<>();
+    private final Map<MemberDetails, MemberComponents> fieldComponents = new LinkedHashMap<>();
     private List<AbstractInsnNode> instructionsLinkedToComponent;
     private List<AbstractInsnNode> lastInstructionsLinkedToComponent;
     private final Set<DecompiledMethod> methodsWithBytecodeMarkers = new HashSet<>();
@@ -172,7 +173,9 @@ public class DecompilerMemberReader {
     private void decode(String rawOutput) throws IOException {
         int index = 0;
         MemberDetails activeMethod = null;
+        MemberDetails activeField = null;
         Map<MemberDetails, DecompilerComponent> methodStarts = new HashMap<>();
+        Map<MemberDetails, DecompilerComponent> fieldStarts = new HashMap<>();
 
         while (true) {
             final int start = rawOutput.indexOf(TAG_START, index);
@@ -199,10 +202,16 @@ public class DecompilerMemberReader {
             }
             MethodStartEndOutputMember methodBoundary = outputMember instanceof MethodStartEndOutputMember
                     ? (MethodStartEndOutputMember) outputMember : null;
+            FieldStartEndOutputMember fieldBoundary = outputMember instanceof FieldStartEndOutputMember
+                    ? (FieldStartEndOutputMember) outputMember : null;
             MemberDetails boundaryMethod = null;
+            MemberDetails boundaryField = null;
             if (methodBoundary != null) {
                 boundaryMethod = methodBoundary.isStart() ? new MemberDetails(methodBoundary) : activeMethod;
                 this.processMethodStartEnd(methodBoundary);
+            }
+            if (fieldBoundary != null) {
+                boundaryField = fieldBoundary.isStart() ? new MemberDetails(fieldBoundary) : activeField;
             }
 
             DecompilerComponent component = new DecompilerComponent(componentText);
@@ -217,9 +226,21 @@ public class DecompilerMemberReader {
                 } else {
                     DecompilerComponent startComponent = methodStarts.remove(boundaryMethod);
                     if (startComponent != null) {
-                        methodComponents.put(boundaryMethod, new MethodComponents(startComponent, component));
+                        methodComponents.put(boundaryMethod, new MemberComponents(startComponent, component));
                     }
                     activeMethod = null;
+                }
+            }
+            if (fieldBoundary != null && boundaryField != null) {
+                if (fieldBoundary.isStart()) {
+                    activeField = boundaryField;
+                    fieldStarts.put(boundaryField, component);
+                } else {
+                    DecompilerComponent startComponent = fieldStarts.remove(boundaryField);
+                    if (startComponent != null) {
+                        fieldComponents.put(boundaryField, new MemberComponents(startComponent, component));
+                    }
+                    activeField = null;
                 }
             }
 
@@ -260,11 +281,15 @@ public class DecompilerMemberReader {
         return componentList;
     }
 
-    public Map<MemberDetails, MethodComponents> getMethodComponents() {
+    public Map<MemberDetails, MemberComponents> getMethodComponents() {
         return methodComponents;
     }
 
-    public record MethodComponents(DecompilerComponent start, DecompilerComponent end) {
+    public Map<MemberDetails, MemberComponents> getFieldComponents() {
+        return fieldComponents;
+    }
+
+    public record MemberComponents(DecompilerComponent start, DecompilerComponent end) {
     }
 
     private String sanityCheckEncoded(OutputMember currentOutputMember, String targetString) {

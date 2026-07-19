@@ -8,6 +8,7 @@ public interface OutputMemberVisitor {
     void visitComment(CommentOutputMember comment);
     void visitNumber(NumberOutputMember constant);
     void visitFieldDeclaration(FieldDeclarationOutputMember fieldDeclaration);
+    void visitFieldStartEnd(FieldStartEndOutputMember fieldStartEnd);
     void visitField(FieldOutputMember field);
     void visitKeyword(KeywordOutputMember keyword);
     void visitInvocation(InvocationOutputMember invocation);

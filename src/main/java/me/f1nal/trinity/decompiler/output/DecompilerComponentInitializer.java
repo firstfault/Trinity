@@ -223,6 +223,10 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     }
 
     @Override
+    public void visitFieldStartEnd(FieldStartEndOutputMember fieldStartEnd) {
+    }
+
+    @Override
     public void visitMethod(MethodOutputMember method) {
         MemberDetails memberDetails = new MemberDetails(method);
         @Nullable MethodInput methodInput = trinity.getExecution().getMethod(memberDetails);

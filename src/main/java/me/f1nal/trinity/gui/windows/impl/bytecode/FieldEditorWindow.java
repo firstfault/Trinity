@@ -5,9 +5,11 @@ import imgui.type.ImInt;
 import imgui.type.ImString;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.events.EventClassModified;
+import me.f1nal.trinity.events.EventMemberModified;
 import me.f1nal.trinity.execution.AccessFlags;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.FieldInput;
+import me.f1nal.trinity.execution.MemberDetails;
 import org.objectweb.asm.tree.FieldNode;
 
 public final class FieldEditorWindow extends AbstractBytecodeEditorWindow {
@@ -127,10 +129,15 @@ public final class FieldEditorWindow extends AbstractBytecodeEditorWindow {
 
         if (input == null) {
             owner.addField(node);
-        } else if (!originalName.equals(newName) || !originalDescriptor.equals(newDescriptor)) {
-            owner.reindexField(input);
+            trinity.getEventManager().postEvent(new EventClassModified(owner));
+        } else {
+            MemberDetails previousDetails = input.getDetails();
+            FieldInput savedInput = input;
+            if (!originalName.equals(newName) || !originalDescriptor.equals(newDescriptor)) {
+                savedInput = owner.reindexField(input);
+            }
+            trinity.getEventManager().postEvent(new EventMemberModified(savedInput, previousDetails));
         }
-        trinity.getEventManager().postEvent(new EventClassModified(owner));
     }
 
     private Object parseConstant(String fieldDescriptor) {

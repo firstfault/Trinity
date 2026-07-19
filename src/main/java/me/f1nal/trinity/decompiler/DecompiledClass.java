@@ -20,8 +20,11 @@ public final class DecompiledClass {
     private final ClassInput classInput;
     private final Map<MethodInput, DecompiledMethod> decompiledMethodMap = new HashMap<>();
     private final List<DecompilerComponent> componentList;
-    private final Map<MemberDetails, DecompilerMemberReader.MethodComponents> progressiveMethods;
+    private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> methodComponents;
+    private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> fieldComponents;
+    private final Set<MemberDetails> progressiveMethods = ConcurrentHashMap.newKeySet();
     private final Queue<MethodOutput> pendingMethodOutputs = new ConcurrentLinkedQueue<>();
+    private final Queue<MemberReplacement> pendingMemberReplacements = new ConcurrentLinkedQueue<>();
     private final Set<MemberDetails> queuedMethodOutputs = ConcurrentHashMap.newKeySet();
     private volatile DecompiledClass completedClass;
     private volatile boolean progressive;
@@ -41,7 +44,8 @@ public final class DecompiledClass {
 
         final DecompilerMemberReader reader = new DecompilerMemberReader(this, rawOutput);
         this.componentList = new ArrayList<>(reader.getComponentList());
-        this.progressiveMethods = new ConcurrentHashMap<>();
+        this.methodComponents = new HashMap<>(reader.getMethodComponents());
+        this.fieldComponents = new HashMap<>(reader.getFieldComponents());
 
         this.resetLines();
         this.setComponentHighlighted(null);
@@ -53,7 +57,9 @@ public final class DecompiledClass {
 
         DecompilerMemberReader reader = new DecompilerMemberReader(this, source.rawOutput());
         this.componentList = new ArrayList<>(reader.getComponentList());
-        this.progressiveMethods = new ConcurrentHashMap<>(reader.getMethodComponents());
+        this.methodComponents = new HashMap<>(reader.getMethodComponents());
+        this.fieldComponents = new HashMap<>(reader.getFieldComponents());
+        this.progressiveMethods.addAll(this.methodComponents.keySet());
         this.progressive = true;
 
         this.resetLines();
@@ -65,9 +71,15 @@ public final class DecompiledClass {
     }
 
     public void queueMethodOutput(MemberDetails method, String rawOutput) {
-        if (progressive && progressiveMethods.containsKey(method) && queuedMethodOutputs.add(method)) {
+        if (progressive && progressiveMethods.contains(method) && queuedMethodOutputs.add(method)) {
             pendingMethodOutputs.add(new MethodOutput(method, rawOutput));
         }
+    }
+
+    public void queueMemberReplacement(MemberDetails previousDetails, MemberDetails currentDetails,
+                                       Object memberNode, boolean method, DecompiledClass refreshedClass) {
+        pendingMemberReplacements.add(new MemberReplacement(
+                previousDetails, currentDetails, memberNode, method, refreshedClass));
     }
 
     public void finishProgressive(DecompiledClass completedClass) {
@@ -76,23 +88,28 @@ public final class DecompiledClass {
 
     public void failProgressive() {
         pendingMethodOutputs.clear();
+        pendingMemberReplacements.clear();
         queuedMethodOutputs.clear();
+        progressiveMethods.clear();
         progressive = false;
     }
 
     /**
-     * Applies at most one completed method per frame so large classes become
-     * visible progressively without stalling the render thread.
+     * Applies at most one completed method or member refresh per frame so source updates do not stall
+     * the render thread.
      */
-    public boolean applyPendingMethodOutput() {
-        if (!progressive) {
-            return false;
+    public boolean applyPendingOutput() {
+        MemberReplacement replacement = pendingMemberReplacements.poll();
+        if (replacement != null) {
+            return replaceMember(replacement);
         }
 
-        MethodOutput methodOutput = pendingMethodOutputs.poll();
-        if (methodOutput != null) {
-            replaceMethod(methodOutput);
-            return true;
+        if (progressive) {
+            MethodOutput methodOutput = pendingMethodOutputs.poll();
+            if (methodOutput != null) {
+                replaceMethod(methodOutput);
+                return true;
+            }
         }
 
         DecompiledClass completed = completedClass;
@@ -101,6 +118,10 @@ public final class DecompiledClass {
             componentList.addAll(completed.componentList);
             decompiledMethodMap.clear();
             decompiledMethodMap.putAll(completed.decompiledMethodMap);
+            methodComponents.clear();
+            methodComponents.putAll(completed.methodComponents);
+            fieldComponents.clear();
+            fieldComponents.putAll(completed.fieldComponents);
             progressiveMethods.clear();
             completedClass = null;
             progressive = false;
@@ -113,35 +134,117 @@ public final class DecompiledClass {
 
     private void replaceMethod(MethodOutput methodOutput) {
         queuedMethodOutputs.remove(methodOutput.method());
-        DecompilerMemberReader.MethodComponents methodComponents = progressiveMethods.get(methodOutput.method());
-        if (methodComponents == null) {
+        progressiveMethods.remove(methodOutput.method());
+        DecompilerMemberReader.MemberComponents components = methodComponents.get(methodOutput.method());
+        if (components == null) {
             return;
         }
 
-        int startIndex = componentList.indexOf(methodComponents.start());
-        int endIndex = componentList.indexOf(methodComponents.end());
+        int startIndex = componentList.indexOf(components.start());
+        int endIndex = componentList.indexOf(components.end());
         if (startIndex == -1 || endIndex < startIndex) {
             return;
         }
 
-        progressiveMethods.remove(methodOutput.method());
         List<DecompilerComponent> placeholderComponents = new ArrayList<>(
                 componentList.subList(startIndex, endIndex + 1));
+        Map<MethodInput, DecompiledMethod> previousMethods = removeDecompiledMethods(methodOutput.method());
         componentList.subList(startIndex, endIndex + 1).clear();
+        methodComponents.remove(methodOutput.method());
 
         if (!methodOutput.rawOutput().isEmpty()) {
             try {
                 DecompilerMemberReader reader = new DecompilerMemberReader(this, methodOutput.rawOutput());
                 componentList.addAll(startIndex, reader.getComponentList());
+                methodComponents.putAll(reader.getMethodComponents());
             } catch (IOException exception) {
                 exception.printStackTrace();
                 componentList.addAll(startIndex, placeholderComponents);
-                progressiveMethods.put(methodOutput.method(), methodComponents);
+                methodComponents.put(methodOutput.method(), components);
+                decompiledMethodMap.putAll(previousMethods);
             }
         }
 
         resetLines();
         setComponentHighlighted(null);
+    }
+
+    private boolean replaceMember(MemberReplacement replacement) {
+        Map<MemberDetails, DecompilerMemberReader.MemberComponents> targetComponents =
+                replacement.method() ? methodComponents : fieldComponents;
+        Map<MemberDetails, DecompilerMemberReader.MemberComponents> sourceComponents =
+                replacement.method() ? replacement.refreshedClass().methodComponents
+                        : replacement.refreshedClass().fieldComponents;
+        Map.Entry<MemberDetails, DecompilerMemberReader.MemberComponents> targetEntry =
+                findTargetComponents(targetComponents, replacement.previousDetails(), replacement.memberNode());
+        DecompilerMemberReader.MemberComponents target = targetEntry == null ? null : targetEntry.getValue();
+        DecompilerMemberReader.MemberComponents source = sourceComponents.get(replacement.currentDetails());
+        if (target == null || source == null) {
+            return false;
+        }
+
+        int targetStart = componentList.indexOf(target.start());
+        int targetEnd = componentList.indexOf(target.end());
+        int sourceStart = replacement.refreshedClass().componentList.indexOf(source.start());
+        int sourceEnd = replacement.refreshedClass().componentList.indexOf(source.end());
+        if (targetStart == -1 || targetEnd < targetStart || sourceStart == -1 || sourceEnd < sourceStart) {
+            return false;
+        }
+
+        List<DecompilerComponent> refreshedComponents = new ArrayList<>(
+                replacement.refreshedClass().componentList.subList(sourceStart, sourceEnd + 1));
+        componentList.subList(targetStart, targetEnd + 1).clear();
+        componentList.addAll(targetStart, refreshedComponents);
+        targetComponents.remove(targetEntry.getKey());
+        targetComponents.put(replacement.currentDetails(), source);
+
+        if (replacement.method()) {
+            removeDecompiledMethods(targetEntry.getKey());
+            replacement.refreshedClass().decompiledMethodMap.forEach((input, method) -> {
+                if (input.getDetails().equals(replacement.currentDetails())) {
+                    decompiledMethodMap.put(input, method);
+                }
+            });
+        }
+
+        resetLines();
+        setComponentHighlighted(null);
+        return true;
+    }
+
+    private Map.Entry<MemberDetails, DecompilerMemberReader.MemberComponents> findTargetComponents(
+            Map<MemberDetails, DecompilerMemberReader.MemberComponents> components,
+            MemberDetails previousDetails, Object memberNode) {
+        DecompilerMemberReader.MemberComponents direct = components.get(previousDetails);
+        if (direct != null) {
+            return Map.entry(previousDetails, direct);
+        }
+        for (Map.Entry<MemberDetails, DecompilerMemberReader.MemberComponents> entry : components.entrySet()) {
+            int start = componentList.indexOf(entry.getValue().start());
+            int end = componentList.indexOf(entry.getValue().end());
+            if (start < 0 || end < start) {
+                continue;
+            }
+            for (int i = start; i <= end; i++) {
+                DecompilerComponent component = componentList.get(i);
+                if (component.input != null && component.input.getNode() == memberNode) {
+                    return entry;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Map<MethodInput, DecompiledMethod> removeDecompiledMethods(MemberDetails details) {
+        Map<MethodInput, DecompiledMethod> removed = new HashMap<>();
+        decompiledMethodMap.entrySet().removeIf(entry -> {
+            if (entry.getKey().getDetails().equals(details)) {
+                removed.put(entry.getKey(), entry.getValue());
+                return true;
+            }
+            return false;
+        });
+        return removed;
     }
 
     public boolean isProgressive() {
@@ -251,5 +354,9 @@ public final class DecompiledClass {
     }
 
     private record MethodOutput(MemberDetails method, String rawOutput) {
+    }
+
+    private record MemberReplacement(MemberDetails previousDetails, MemberDetails currentDetails,
+                                     Object memberNode, boolean method, DecompiledClass refreshedClass) {
     }
 }

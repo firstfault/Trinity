@@ -11,6 +11,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventClassesLoaded;
+import me.f1nal.trinity.events.EventMemberModified;
 import me.f1nal.trinity.events.EventPackageStructureReload;
 import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
@@ -52,6 +53,11 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
 
     @Subscribe
     public void onClassModified(EventClassModified event) {
+        this.refreshFilterComponent();
+    }
+
+    @Subscribe
+    public void onMemberModified(EventMemberModified event) {
         this.refreshFilterComponent();
     }
 

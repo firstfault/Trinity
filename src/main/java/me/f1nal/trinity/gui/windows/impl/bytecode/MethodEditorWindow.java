@@ -5,8 +5,10 @@ import imgui.type.ImInt;
 import imgui.type.ImString;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.events.EventClassModified;
+import me.f1nal.trinity.events.EventMemberModified;
 import me.f1nal.trinity.execution.AccessFlags;
 import me.f1nal.trinity.execution.ClassInput;
+import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import org.objectweb.asm.Opcodes;
@@ -296,11 +298,16 @@ public final class MethodEditorWindow extends AbstractBytecodeEditorWindow {
 
         if (input == null) {
             owner.addMethod(node);
-        } else if (!originalName.equals(newName) || !originalDescriptor.equals(newDescriptor)
-                || originallyStatic != ((node.access & Opcodes.ACC_STATIC) != 0)) {
-            owner.reindexMethod(input);
+            trinity.getEventManager().postEvent(new EventClassModified(owner));
+        } else {
+            MemberDetails previousDetails = input.getDetails();
+            MethodInput savedInput = input;
+            if (!originalName.equals(newName) || !originalDescriptor.equals(newDescriptor)
+                    || originallyStatic != ((node.access & Opcodes.ACC_STATIC) != 0)) {
+                savedInput = owner.reindexMethod(input);
+            }
+            trinity.getEventManager().postEvent(new EventMemberModified(savedInput, previousDetails));
         }
-        trinity.getEventManager().postEvent(new EventClassModified(owner));
     }
 
     private List<ParameterNode> buildParameters() {

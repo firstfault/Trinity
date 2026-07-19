@@ -18,6 +18,7 @@ import me.f1nal.trinity.database.object.DatabaseDecompiler;
 import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.events.EventClassModified;
+import me.f1nal.trinity.events.EventMemberModified;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.execution.ClassInput;
@@ -171,6 +172,13 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
     }
 
+    @Subscribe
+    public void onMemberModified(EventMemberModified event) {
+        if (event.getClassInput() == this.selectedClass) {
+            this.updateClassStructure();
+        }
+    }
+
     public void forceRefreshDecompiler() {
         this.forceRefresh = true;
     }
@@ -193,7 +201,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
 
         DecompiledClass decompiledClass = this.getDecompiledClass();
-        if (decompiledClass != null && decompiledClass.applyPendingMethodOutput()) {
+        if (decompiledClass != null && decompiledClass.applyPendingOutput()) {
             this.searchDirty = true;
         }
         if (decompiledClass != null && this.resetLines) {

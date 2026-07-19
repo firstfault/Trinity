@@ -3,6 +3,7 @@ package me.f1nal.trinity.decompiler;
 import me.f1nal.trinity.decompiler.output.impl.ClassOutputMember;
 import me.f1nal.trinity.decompiler.output.impl.FieldDeclarationOutputMember;
 import me.f1nal.trinity.decompiler.output.impl.FieldOutputMember;
+import me.f1nal.trinity.decompiler.output.impl.FieldStartEndOutputMember;
 import me.f1nal.trinity.decompiler.output.impl.KindOutputMember;
 import me.f1nal.trinity.decompiler.output.impl.MethodOutputMember;
 import me.f1nal.trinity.decompiler.output.impl.MethodStartEndOutputMember;
@@ -131,6 +132,8 @@ final class ProgressiveDecompilerSource {
     }
 
     private static void appendField(StringBuilder output, ClassInput owner, FieldNode field) {
+        output.append(OutputMemberSerializer.serializeTags(new FieldStartEndOutputMember(
+                0, owner.getRealName(), field.desc, field.name)));
         FieldInput fieldInput = owner.getField(field.name, field.desc);
         output.append("    ");
         output.append(OutputMemberSerializer.serializeTags(
@@ -151,6 +154,7 @@ final class ProgressiveDecompilerSource {
             appendConstant(output, field);
         }
         output.append(";\n");
+        output.append(OutputMemberSerializer.serializeTags(new FieldStartEndOutputMember(0)));
     }
 
     private static void appendMethod(StringBuilder output, ClassInput owner, MethodNode method, MethodInput methodInput) {
