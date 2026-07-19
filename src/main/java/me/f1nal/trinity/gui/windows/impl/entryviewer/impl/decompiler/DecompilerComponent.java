@@ -10,6 +10,7 @@ import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 import javax.annotation.Nullable;
@@ -41,6 +42,7 @@ public class DecompilerComponent {
     private MethodInput previewMethod;
     private FieldInput previewField;
     private VariablePreview previewVariable;
+    private IXrefBuilderProvider xrefBuilderProvider;
     // Temporary
     public Input<?> input;
     public String memberKey;
@@ -73,6 +75,10 @@ public class DecompilerComponent {
 
     public Input<?> getViewMember() {
         return viewMember;
+    }
+
+    public Input<?> getActionInput() {
+        return this.viewMember != null ? this.viewMember : this.input;
     }
 
     public void setPreviewMethod(MethodInput previewMethod) {
@@ -130,14 +136,23 @@ public class DecompilerComponent {
     public void setRenameHandler(RenameHandler renameHandler) {
         this.renameHandler = renameHandler;
         this.addPopupBuilder(builder -> {
-            builder.menuItem("Rename", this::beginRenaming);
+            builder.menuItem("Rename", Main.getKeyBindManager().DECOMPILER_RENAME.getKeyName(), this::beginRenaming);
         });
     }
 
     public void addInputControls(Input<?> input) {
         this.setViewMember(input);
+        this.setXrefBuilderProvider(input);
         this.setRenameHandler(input);
         this.addPopupBuilder(input::populatePopup);
+    }
+
+    public void setXrefBuilderProvider(IXrefBuilderProvider xrefBuilderProvider) {
+        this.xrefBuilderProvider = xrefBuilderProvider;
+    }
+
+    public IXrefBuilderProvider getXrefBuilderProvider() {
+        return xrefBuilderProvider;
     }
 
     public void stopRenaming(@Nullable String newName) {

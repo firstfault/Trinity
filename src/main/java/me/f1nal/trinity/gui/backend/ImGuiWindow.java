@@ -9,6 +9,7 @@ import imgui.glfw.ImGuiImplGlfw;
 import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.glfw.GLFWWindowSizeCallback;
 import org.lwjgl.opengl.GL;
@@ -16,6 +17,10 @@ import org.lwjgl.opengl.GL32;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Objects;
 
@@ -78,6 +83,7 @@ public abstract class ImGuiWindow {
         if (handle == MemoryUtil.NULL) {
             throw new RuntimeException("Failed to create the GLFW window");
         }
+        this.onWindowCreated();
 
         try (MemoryStack stack = MemoryStack.stackPush()) {
             final IntBuffer pWidth = stack.mallocInt(1); // int*
@@ -109,6 +115,40 @@ public abstract class ImGuiWindow {
 //                runFrame();
 //            }
 //        });
+    }
+
+    /** Called after GLFW creates the native window and before it is shown. */
+    protected void onWindowCreated() {
+    }
+
+    protected final void setWindowIcon(String resourcePath) {
+        try (InputStream stream = ImGuiWindow.class.getClassLoader().getResourceAsStream(resourcePath)) {
+            if (stream == null) throw new IllegalArgumentException("Missing window icon resource: " + resourcePath);
+            BufferedImage image = ImageIO.read(stream);
+            if (image == null) throw new IllegalArgumentException("Unsupported window icon image: " + resourcePath);
+
+            ByteBuffer pixels = MemoryUtil.memAlloc(image.getWidth() * image.getHeight() * 4);
+            try {
+                for (int y = 0; y < image.getHeight(); y++) {
+                    for (int x = 0; x < image.getWidth(); x++) {
+                        int argb = image.getRGB(x, y);
+                        pixels.put((byte) (argb >> 16 & 0xFF));
+                        pixels.put((byte) (argb >> 8 & 0xFF));
+                        pixels.put((byte) (argb & 0xFF));
+                        pixels.put((byte) (argb >> 24 & 0xFF));
+                    }
+                }
+                pixels.flip();
+                try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
+                    icons.position(0).width(image.getWidth()).height(image.getHeight()).pixels(pixels);
+                    GLFW.glfwSetWindowIcon(handle, icons);
+                }
+            } finally {
+                MemoryUtil.memFree(pixels);
+            }
+        } catch (Exception exception) {
+            throw new IllegalStateException("Failed to set window icon from " + resourcePath, exception);
+        }
     }
 
     private void decideGlGlslVersions() {

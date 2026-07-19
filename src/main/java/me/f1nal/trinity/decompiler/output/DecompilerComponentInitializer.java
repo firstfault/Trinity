@@ -87,6 +87,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             component.addInputControls(target.getInput());
         } else {
             IXrefBuilderProvider provider = xrefMap -> new XrefBuilderClassRef(xrefMap, member.getClassName());
+            component.setXrefBuilderProvider(provider);
             component.addPopupBuilder(builder -> provider.addXrefViewerMenuItem(trinity, builder));
         }
 
@@ -184,11 +185,13 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         if (input != null) {
             component.setCustomRenderer(new DecompilerGhostTextRenderer(trinity, input));
             component.input = input;
+            component.setXrefBuilderProvider(input);
         }
     }
 
     private void addXrefMemberMenuItem(DecompilerComponent component, MemberDetails memberDetails) {
         IXrefBuilderProvider provider = xrefMap -> new XrefBuilderMemberRef(xrefMap, memberDetails);
+        component.setXrefBuilderProvider(provider);
         component.addPopupBuilder(builder -> provider.addXrefViewerMenuItem(trinity, builder));
     }
 
@@ -286,6 +289,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         if (input != null) {
             component.setCustomRenderer(new DecompilerGhostTextRenderer(trinity, input));
             component.input = input;
+            component.setXrefBuilderProvider(input);
         }
     }
 

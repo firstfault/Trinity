@@ -126,6 +126,10 @@ public class DecompilerCursor {
         this.window.getDecompiledClass().setComponentHighlighted(coordinates.getComponent());
     }
 
+    public DecompilerComponent getComponent() {
+        return this.coordinates == null ? null : this.coordinates.getComponent();
+    }
+
     public void navigateTo(DecompilerCoordinates coordinates) {
         this.selectionEnd = null;
         this.draggingSelection = false;

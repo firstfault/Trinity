@@ -9,8 +9,12 @@ import me.f1nal.trinity.gui.windows.impl.xref.XrefViewerFrame;
 public interface IXrefBuilderProvider {
     XrefBuilder createXrefBuilder(XrefMap xrefMap);
     default void addXrefViewerMenuItem(Trinity trinity, PopupItemBuilder builder) {
-        builder.menuItem("View Xrefs", () -> {
-            Main.getWindowManager().addClosableWindow(new XrefViewerFrame(this.createXrefBuilder(trinity.getExecution().getXrefMap()), trinity));
-        });
+        builder.menuItem("View Xrefs", Main.getKeyBindManager().DECOMPILER_VIEW_XREFS.getKeyName(),
+                () -> this.viewXrefs(trinity));
+    }
+
+    default void viewXrefs(Trinity trinity) {
+        Main.getWindowManager().addClosableWindow(new XrefViewerFrame(
+                this.createXrefBuilder(trinity.getExecution().getXrefMap()), trinity));
     }
 }

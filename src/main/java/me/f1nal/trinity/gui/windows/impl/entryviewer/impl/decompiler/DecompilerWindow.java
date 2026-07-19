@@ -34,7 +34,9 @@ import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructure;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
+import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
+import me.f1nal.trinity.keybindings.KeyBindManager;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.Stopwatch;
@@ -530,6 +532,34 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (cursor.hasTextSelection() && ImGui.isWindowFocused() && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(GLFW.GLFW_KEY_C)) {
             this.copyToClipboard();
         }
+
+        this.handleMemberKeyMappings();
+    }
+
+    private void handleMemberKeyMappings() {
+        if (!ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows) || ImGui.isAnyItemActive()) return;
+
+        DecompilerComponent target = this.hoveredComponent != null
+                ? this.hoveredComponent : this.cursor.getComponent();
+        if (target == null) return;
+
+        KeyBindManager bindings = Main.getKeyBindManager();
+        Input<?> input = target.getActionInput();
+        if (bindings.DECOMPILER_ASSEMBLE.isPressed()) {
+            if (input instanceof MethodInput method) method.openAssembler();
+        } else if (bindings.DECOMPILER_RENAME.isPressed()) {
+            if (target.getRenameHandler() != null) target.beginRenaming();
+        } else if (bindings.DECOMPILER_EDIT.isPressed()) {
+            if (input instanceof ClassInput || input instanceof MethodInput || input instanceof FieldInput) {
+                BytecodeEditorLauncher.edit(input);
+            }
+        } else if (bindings.DECOMPILER_VIEW_XREFS.isPressed()) {
+            if (target.getXrefBuilderProvider() != null) {
+                target.getXrefBuilderProvider().viewXrefs(trinity);
+            }
+        } else if (bindings.DECOMPILER_VIEW_MEMBER.isPressed()) {
+            if (input != null) Main.getDisplayManager().openDecompilerView(input);
+        }
     }
 
     private void drawNavigationHighlight(DecompilerLine line, float startX, ImVec2 textSize) {
@@ -541,8 +571,11 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             this.navigationHighlight = null;
             return;
         }
+        if (line.pos == null) {
+            return;
+        }
 
-        float startY = ImGui.getCursorScreenPos().y - 2.F;
+        float startY = line.pos.y - 2.F;
         float endX = ImGui.getWindowPosX() + ImGui.getWindowContentRegionMax().x;
         float endY = startY + textSize.y + 4.F;
         ImGui.getWindowDrawList().addRectFilled(startX, startY, endX, endY, highlight.getFillColor());

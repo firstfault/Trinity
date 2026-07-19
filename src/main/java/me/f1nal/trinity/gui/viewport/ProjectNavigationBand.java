@@ -57,6 +57,7 @@ public final class ProjectNavigationBand implements IEventListener {
     private List<Segment> segments = List.of();
     private long totalSize;
     private volatile boolean dirty = true;
+    private Segment tooltip;
 
     public ProjectNavigationBand(Trinity trinity) {
         this.trinity = trinity;
@@ -67,6 +68,8 @@ public final class ProjectNavigationBand implements IEventListener {
         if (dirty) {
             recalculate();
         }
+
+        this.tooltip = null;
 
         ImGuiViewport viewport = ImGui.getMainViewport();
         ImGui.setNextWindowPos(viewport.getWorkPosX(), viewport.getWorkPosY());
@@ -85,6 +88,7 @@ public final class ProjectNavigationBand implements IEventListener {
         }
         ImGui.end();
         ImGui.popStyleVar(3);
+        if (this.tooltip != null) drawTooltip(tooltip.name(), tooltip.size());
     }
 
     private void drawBand() {
@@ -124,7 +128,7 @@ public final class ProjectNavigationBand implements IEventListener {
                         hovered ? brighten(segment.color()) : segment.color());
                 drawSegmentLabel(drawList, segment, segmentStart, segmentEnd, y);
                 if (hovered) {
-                    drawTooltip(segment.name(), segment.size());
+                    this.tooltip = segment;
                 }
                 segmentStart = segmentEnd;
             }

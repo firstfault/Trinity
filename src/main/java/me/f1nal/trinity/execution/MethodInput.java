@@ -75,9 +75,12 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
     public void populatePopup(PopupItemBuilder builder) {
         super.populatePopup(builder);
 
-        builder.menuItem("Assemble", () -> {
-            Main.getWindowManager().addClosableWindow(new AssemblerFrame(Main.getTrinity(), this, new Instruction2SourceMapping()));
-        });
+        builder.menuItem("Assemble", Main.getKeyBindManager().DECOMPILER_ASSEMBLE.getKeyName(), this::openAssembler);
+    }
+
+    public void openAssembler() {
+        Main.getWindowManager().addClosableWindow(new AssemblerFrame(
+                Main.getTrinity(), this, new Instruction2SourceMapping()));
     }
 
     @Override

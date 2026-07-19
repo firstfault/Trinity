@@ -72,6 +72,11 @@ public final class DisplayManager extends ImGuiApplication {
         }
     }
 
+    @Override
+    protected void onWindowCreated() {
+        this.setWindowIcon("img/icon_64.png");
+    }
+
     public void setDatabase(Trinity trinity) {
         Main.runLater(this.windowManager::resetAllWindows);
 
