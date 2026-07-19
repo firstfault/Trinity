@@ -23,7 +23,7 @@ final class ProjectBrowserTreeNodeMember extends ProjectBrowserTreeNode<ProjectB
         } else {
             ImGui.textDisabled("--");
         }
-        ImGui.tableNextColumn();
-        ImGui.textUnformatted(node.getInput() instanceof MethodInput ? "Method" : "Field");
+//        ImGui.tableNextColumn();
+//        ImGui.textUnformatted(node.getInput() instanceof MethodInput ? "Method" : "Field");
     }
 }

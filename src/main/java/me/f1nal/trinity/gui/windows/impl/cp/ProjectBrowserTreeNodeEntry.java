@@ -24,8 +24,8 @@ public class ProjectBrowserTreeNodeEntry extends ProjectBrowserTreeNode<ArchiveE
 
         ImGui.tableNextColumn();
         this.drawSize(node.getSize(), node.getSizeInBytes());
-        ImGui.tableNextColumn();
-        ImGui.textUnformatted(node.getArchiveEntryTypeName());
+//        ImGui.tableNextColumn();
+//        ImGui.textUnformatted(node.getArchiveEntryTypeName());
 
         if (open && !this.isLeaf()) {
             for (ProjectBrowserTreeNode<?> child : this.getChildren()) {

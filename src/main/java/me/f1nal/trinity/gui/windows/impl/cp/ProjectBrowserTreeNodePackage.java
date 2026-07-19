@@ -30,8 +30,8 @@ public class ProjectBrowserTreeNodePackage extends ProjectBrowserTreeNode<Packag
         } else {
             ImGui.textDisabled("--");
         }
-        ImGui.tableNextColumn();
-        ImGui.textUnformatted(node.isArchive() ? "Project" : "Folder");
+//        ImGui.tableNextColumn();
+//        ImGui.textUnformatted(node.isArchive() ? "Project" : "Folder");
 
         if (!searching && node.isOpen() != open) {
             node.setOpen(open);

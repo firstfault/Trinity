@@ -102,10 +102,9 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
         ImVec2 extraPadding = ImGui.getStyle().getTouchExtraPadding();
         ImGui.getStyle().setTouchExtraPadding(extraPadding.x, 4.F);
 
-        if (ImGui.beginTable(getId("ViewTable"), 3, ImGuiTableFlags.NoBordersInBodyUntilResize | ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable)) {
+        if (ImGui.beginTable(getId("ViewTable"), 2, ImGuiTableFlags.NoBordersInBodyUntilResize | ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.Sortable | ImGuiTableFlags.Resizable)) {
             ImGui.tableSetupColumn(" Name");
             ImGui.tableSetupColumn(" Size");
-            ImGui.tableSetupColumn(" Type");
             ImGui.tableHeadersRow();
             this.rootNode.draw(this);
             ImGui.endTable();
