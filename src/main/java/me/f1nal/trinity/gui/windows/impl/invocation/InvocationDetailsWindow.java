@@ -1,6 +1,7 @@
 package me.f1nal.trinity.gui.windows.impl.invocation;
 
 import imgui.ImGui;
+import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiTableFlags;
 import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Main;
@@ -9,6 +10,7 @@ import me.f1nal.trinity.decompiler.output.impl.InvocationOutputMember;
 import me.f1nal.trinity.execution.AccessFlags;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.MethodInput;
+import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.util.SystemUtil;
 import org.objectweb.asm.Type;
@@ -91,12 +93,23 @@ public class InvocationDetailsWindow extends ClosableWindow {
                 ImGui.tableNextRow();
                 ImGui.tableNextColumn();
                 ImGui.textDisabled(detail.label());
+                boolean copyRequested = ImGui.isItemClicked(ImGuiMouseButton.Right);
                 ImGui.tableNextColumn();
                 ImGui.textWrapped(detail.value());
+                copyRequested |= ImGui.isItemClicked(ImGuiMouseButton.Right);
+                if (copyRequested) {
+                    showCopyPopup(detail);
+                }
             }
             ImGui.endTable();
         }
         ImGui.spacing();
+    }
+
+    private void showCopyPopup(Detail detail) {
+        Main.getDisplayManager().showPopup(PopupItemBuilder.create()
+                .menuItem("Copy Name", () -> SystemUtil.copyToClipboard(detail.label()))
+                .menuItem("Copy Value", () -> SystemUtil.copyToClipboard(detail.value())));
     }
 
     private List<Detail> getCallSiteDetails() {
