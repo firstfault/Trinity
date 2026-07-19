@@ -193,6 +193,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         @Nullable FieldInput fieldInput = trinity.getExecution().getField(memberDetails);
 
         if (fieldInput != null) {
+            component.setPreviewField(fieldInput);
             component.setTextFunction(fieldInput.getDisplayName()::getName);
             component.addInputControls(fieldInput);
         } else {

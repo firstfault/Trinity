@@ -12,7 +12,8 @@ public class XrefWhereMethod extends XrefWhere {
         this.methodInput = methodInput;
     }
 
-    protected MethodInput getMethodInput() {
+    @Override
+    public MethodInput getInput() {
         return methodInput;
     }
 

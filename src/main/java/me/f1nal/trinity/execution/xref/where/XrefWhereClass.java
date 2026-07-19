@@ -17,6 +17,11 @@ public class XrefWhereClass extends XrefWhere {
     }
 
     @Override
+    public ClassInput getInput() {
+        return classInput;
+    }
+
+    @Override
     public PopupItemBuilder menuItem() {
         return PopupItemBuilder.create().menuItem("Go to class", this::followInDecompiler);
     }

@@ -5,6 +5,7 @@ import me.f1nal.trinity.decompiler.output.OutputMember;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.Input;
+import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
@@ -38,6 +39,7 @@ public class DecompilerComponent {
     private Runnable customRenderer;
     private Input<?> viewMember;
     private MethodInput previewMethod;
+    private FieldInput previewField;
     private VariablePreview previewVariable;
     // Temporary
     public Input<?> input;
@@ -79,6 +81,14 @@ public class DecompilerComponent {
 
     public MethodInput getPreviewMethod() {
         return previewMethod;
+    }
+
+    public void setPreviewField(FieldInput previewField) {
+        this.previewField = previewField;
+    }
+
+    public FieldInput getPreviewField() {
+        return previewField;
     }
 
     public void setPreviewVariable(MethodInput methodInput, int index, boolean declaration) {

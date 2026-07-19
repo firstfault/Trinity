@@ -18,6 +18,6 @@ public class XrefWhereMethodInsn extends XrefWhereMethod {
 
     @Override
     public void followInDecompiler() {
-        Main.getDisplayManager().openDecompilerView(this.getMethodInput(), this.insnNode);
+        Main.getDisplayManager().openDecompilerView(this.getInput(), this.insnNode);
     }
 }

@@ -13,6 +13,11 @@ public class XrefWhereField extends XrefWhere {
     }
 
     @Override
+    public FieldInput getInput() {
+        return fieldInput;
+    }
+
+    @Override
     public PopupItemBuilder menuItem() {
         return PopupItemBuilder.create().menuItem("Go to field", this::followInDecompiler);
     }

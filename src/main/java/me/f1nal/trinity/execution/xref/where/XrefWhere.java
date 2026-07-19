@@ -4,9 +4,12 @@ import imgui.ImGui;
 import imgui.ImVec2;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.execution.Input;
+import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.filter.kind.IKindType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerPreviewRenderer;
 import me.f1nal.trinity.util.GuiUtil;
 
 public abstract class XrefWhere {
@@ -24,10 +27,24 @@ public abstract class XrefWhere {
     public abstract String getText();
     public abstract void followInDecompiler();
 
+    public Input<?> getInput() {
+        return null;
+    }
+
     public void hover() {
+        FontSettings font = Main.getPreferences().getDecompilerFont();
+        font.pushFont();
         ImGui.beginTooltip();
-        ImGui.text(getText());
+        Input<?> input = getInput();
+        if (input == null) {
+            ImGui.text(getText());
+        } else {
+            DecompilerPreviewRenderer renderer = new DecompilerPreviewRenderer(Main.getTrinity());
+            renderer.drawInputPreview(input);
+            renderer.finish();
+        }
         ImGui.endTooltip();
+        font.popFont();
     }
 
     public void controls(PopupMenu popupMenu, Trinity trinity) {

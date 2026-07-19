@@ -3,6 +3,7 @@ package me.f1nal.trinity.decompiler;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.output.DecompilerMemberReader;
 import me.f1nal.trinity.execution.ClassInput;
+import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
@@ -26,6 +27,7 @@ public final class DecompiledClass {
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> methodComponents;
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> fieldComponents;
     private final Map<MethodPreviewKey, MethodPreview> methodPreviewCache = new HashMap<>();
+    private final Map<MemberDetails, List<DecompilerLineText>> fieldPreviewCache = new HashMap<>();
     private final Map<VariablePreviewKey, List<DecompilerLineText>> variablePreviewCache = new HashMap<>();
     private final Set<MemberDetails> progressiveMethods = ConcurrentHashMap.newKeySet();
     private final Queue<MethodOutput> pendingMethodOutputs = new ConcurrentLinkedQueue<>();
@@ -336,6 +338,7 @@ public final class DecompiledClass {
     public void resetLines() {
         this.addLines(this.componentList);
         this.methodPreviewCache.clear();
+        this.fieldPreviewCache.clear();
         this.variablePreviewCache.clear();
     }
 
@@ -389,6 +392,37 @@ public final class DecompiledClass {
         int lastLine = Math.min(methodLines.size(), firstLine + maximumLines);
         return new MethodPreview(List.copyOf(methodLines.subList(firstLine, lastLine)),
                 skippedLeading, lastLine < methodLines.size());
+    }
+
+    public List<DecompilerLineText> getFieldDeclarationPreview(FieldInput fieldInput) {
+        return fieldPreviewCache.computeIfAbsent(fieldInput.getDetails(), this::createFieldDeclarationPreview);
+    }
+
+    private List<DecompilerLineText> createFieldDeclarationPreview(MemberDetails details) {
+        DecompilerMemberReader.MemberComponents boundaries = fieldComponents.get(details);
+        if (boundaries == null) {
+            return List.of();
+        }
+        int startIndex = componentList.indexOf(boundaries.start());
+        int endIndex = componentList.indexOf(boundaries.end());
+        if (startIndex < 0 || endIndex < startIndex) {
+            return List.of();
+        }
+
+        Set<DecompilerComponent> fieldComponentSet = Collections.newSetFromMap(new IdentityHashMap<>());
+        fieldComponentSet.addAll(componentList.subList(startIndex, endIndex + 1));
+        for (DecompilerLine line : lines) {
+            boolean declarationLine = line.getComponents().stream().anyMatch(text ->
+                    fieldComponentSet.contains(text.getComponent())
+                            && details.toString().equals(text.getComponent().memberKey));
+            if (declarationLine) {
+                return line.getComponents().stream()
+                        .filter(text -> fieldComponentSet.contains(text.getComponent()))
+                        .filter(text -> !text.getText().isEmpty())
+                        .toList();
+            }
+        }
+        return List.of();
     }
 
     public List<DecompilerLineText> getVariableDeclarationPreview(MethodInput methodInput, int variableIndex) {
