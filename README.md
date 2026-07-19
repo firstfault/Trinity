@@ -24,31 +24,31 @@
 
 ### Decompiler
 
-Trinity took a completely different stance on decompilation. Built upon the 18 year old battle-tested [Fernflower Decompiler](https://www.jetbrains.com/), it hooks directly into the decompiler to provide you with syntax coloring, instant highlighting, referencing, editing, renaming, you name it. Obfuscated code is handled perfectly, since we directly use the decompilers understanding - not the Java syntax itself to determine what is what. On top of that, many anti-decompilation tricks and bugs were fixed. This makes obfuscated code unimaginably easy to both navigate and handle.
+Trinity approaches decompilation completely differently. Built on the decade-old battle-tested [Fernflower Decompiler](https://www.jetbrains.com/), it integrates directly with the decompiler engine instead of treating the generated Java as plain text. That semantic understanding powers accurate syntax coloring, instant highlighting, navigation, cross-references, editing, and renaming - even when the original bytecode is heavily obfuscated. Trinity's Fernflower fork also fixes numerous bugs and anti-decompilation edge cases.
 
 ### Renaming
 
-Offers instant rename of variables, fields, methods and classes is instant, updating every single usage everywhere at once - making obfuscated code very easy to understand.
+Rename variables, fields, methods, and classes in place. Trinity updates every known usage across the workspace immediately, so you can turn an unreadable codebase into something understandable as you investigate it.
 
 ### Cross-referencing
 
-The cross-reference search (or Xref, for short) is one of its kind, with completely instant results, it includes absolutely every single possible reference or constant in the bytecode, unlike any other public reverse engineering tool. Class constants, annotations, checkcasts, parameters, return types - <b>absolutely everything imaginable</b> is covered.
+Trinity's cross-reference search - Xref for short - is instant and exceptionally thorough. It follows references throughout the bytecode, including class literals, annotations, casts, method parameters, return types, field accesses, and invocations. If the JVM can reference it, Trinity is designed to find it.
 
 ### Constant search
 
-Just like the cross-reference search, nothing is left out. Absolutely every single constant in the class pool is searchable.
+Search constants across the entire project, not just the strings visible in decompiled source. Strings, numbers, class literals, annotation values, bootstrap arguments, and other class-pool constants are all discoverable.
 
 ### Workspaces
 
-Unlike any other tool, a JAR is not all that Trinity knows. Each JAR (or multiple, if you want!) is loaded into a workspace, savable and editable as a custom Trinity database file (.tdb). This makes adding/editing classes and other members trivial.
+Trinity is not limited to opening one JAR at a time. Load one or several archives into a workspace, edit their classes and members, and save the complete project as a compressed Trinity database (`.tdb`) so your analysis is right where you left it.
 
 ### Deobfuscation / Refactoring
 
-Built-in automatic visual refactoring of obfuscated names (with automatic detection for obfuscation!) lets you automatically take very long, hard to understand names into simple, human readable names - letting you rename it to the according matching name afterwards, without too much fuss.
+Built-in refactoring detects likely obfuscated identifiers and replaces names with consistent, readable placeholders. This gives you a clean foundation for understanding the program and applying meaningful names as you go.
 
 ### ...and more!
 
-Themes (with a built-in theme editor), key mappings, and many others. Give it a try and see what else is left to discover!
+Custom themes, a built-in theme editor, configurable key mappings, among many others. Give Trinity a try and see what else you uncover!
 
 ## Building
 I haven't bothered with pre-built releases much - but this will come very soon. For now, I highly recommend running Trinity from source:
