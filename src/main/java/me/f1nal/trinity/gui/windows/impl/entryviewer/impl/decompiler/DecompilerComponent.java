@@ -38,6 +38,7 @@ public class DecompilerComponent {
     private Runnable customRenderer;
     private Input<?> viewMember;
     private MethodInput previewMethod;
+    private VariablePreview previewVariable;
     // Temporary
     public Input<?> input;
     public String memberKey;
@@ -78,6 +79,14 @@ public class DecompilerComponent {
 
     public MethodInput getPreviewMethod() {
         return previewMethod;
+    }
+
+    public void setPreviewVariable(MethodInput methodInput, int index, boolean declaration) {
+        this.previewVariable = new VariablePreview(methodInput, index, declaration);
+    }
+
+    public VariablePreview getPreviewVariable() {
+        return previewVariable;
     }
 
     public void setIdentifier(OutputMember type, Object identifier) {
@@ -183,5 +192,8 @@ public class DecompilerComponent {
 
     public boolean isSameKind(DecompilerComponent component) {
         return this.identifier != null && Objects.equals(this.identifier, component.identifier);
+    }
+
+    public record VariablePreview(MethodInput methodInput, int index, boolean declaration) {
     }
 }

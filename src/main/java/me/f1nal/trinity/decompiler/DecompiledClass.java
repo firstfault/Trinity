@@ -23,6 +23,7 @@ public final class DecompiledClass {
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> methodComponents;
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> fieldComponents;
     private final Map<MethodPreviewKey, MethodPreview> methodPreviewCache = new HashMap<>();
+    private final Map<VariablePreviewKey, List<DecompilerLineText>> variablePreviewCache = new HashMap<>();
     private final Set<MemberDetails> progressiveMethods = ConcurrentHashMap.newKeySet();
     private final Queue<MethodOutput> pendingMethodOutputs = new ConcurrentLinkedQueue<>();
     private final Queue<MemberReplacement> pendingMemberReplacements = new ConcurrentLinkedQueue<>();
@@ -277,6 +278,7 @@ public final class DecompiledClass {
     public void resetLines() {
         this.addLines(this.componentList);
         this.methodPreviewCache.clear();
+        this.variablePreviewCache.clear();
     }
 
     public MethodPreview getMethodPreview(MethodInput methodInput, int maximumLines) {
@@ -329,6 +331,44 @@ public final class DecompiledClass {
         int lastLine = Math.min(methodLines.size(), firstLine + maximumLines);
         return new MethodPreview(List.copyOf(methodLines.subList(firstLine, lastLine)),
                 skippedLeading, lastLine < methodLines.size());
+    }
+
+    public List<DecompilerLineText> getVariableDeclarationPreview(MethodInput methodInput, int variableIndex) {
+        VariablePreviewKey key = new VariablePreviewKey(methodInput.getDetails(), variableIndex);
+        return variablePreviewCache.computeIfAbsent(key,
+                ignored -> createVariableDeclarationPreview(methodInput.getDetails(), variableIndex));
+    }
+
+    private List<DecompilerLineText> createVariableDeclarationPreview(MemberDetails method, int variableIndex) {
+        DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(method);
+        if (boundaries == null) {
+            return List.of();
+        }
+
+        int startIndex = componentList.indexOf(boundaries.start());
+        int endIndex = componentList.indexOf(boundaries.end());
+        if (startIndex < 0 || endIndex < startIndex) {
+            return List.of();
+        }
+
+        Set<DecompilerComponent> methodComponentSet = Collections.newSetFromMap(new IdentityHashMap<>());
+        methodComponentSet.addAll(componentList.subList(startIndex, endIndex + 1));
+        for (DecompilerLine line : lines) {
+            boolean declarationLine = line.getComponents().stream().anyMatch(text -> {
+                DecompilerComponent component = text.getComponent();
+                DecompilerComponent.VariablePreview variable = component.getPreviewVariable();
+                return methodComponentSet.contains(component) && variable != null && variable.declaration()
+                        && variable.index() == variableIndex
+                        && variable.methodInput().getDetails().equals(method);
+            });
+            if (declarationLine) {
+                return line.getComponents().stream()
+                        .filter(text -> methodComponentSet.contains(text.getComponent()))
+                        .filter(text -> !text.getText().isEmpty())
+                        .toList();
+            }
+        }
+        return List.of();
     }
 
     private DecompilerLine newLine() {
@@ -415,6 +455,9 @@ public final class DecompiledClass {
     }
 
     private record MethodPreviewKey(MemberDetails details, int maximumLines) {
+    }
+
+    private record VariablePreviewKey(MemberDetails method, int variableIndex) {
     }
 
     public record MethodPreview(List<List<DecompilerLineText>> lines, boolean skippedLeading,

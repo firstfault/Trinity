@@ -330,7 +330,12 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     @Override
     public void visitVariable(VariableOutputMember variableMember) {
         final int varIndex = variableMember.getVar();
-        final Variable variable = decompilingMethod == null ? null : decompilingMethod.getMethodInput().getVariableTable().getVariable(varIndex);
+        final MethodInput methodInput = decompilingMethod == null ? null : decompilingMethod.getMethodInput();
+        final Variable variable = methodInput == null ? null : methodInput.getVariableTable().getVariable(varIndex);
+
+        if (methodInput != null) {
+            component.setPreviewVariable(methodInput, varIndex, variableMember.isDefinition());
+        }
 
         if (variable != null) {
             if (variable.isEditable()) {

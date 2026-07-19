@@ -211,7 +211,7 @@ final class ProgressiveDecompilerSource {
             String parameterName = methodInput.getVariableTable().getVariable(localIndex).getName();
             int parameterIndex = localIndex;
             output.append(OutputMemberSerializer.tag(parameterName,
-                    length -> new VariableOutputMember(length, parameterIndex, typeValue(argumentType))));
+                    length -> new VariableOutputMember(length, parameterIndex, typeValue(argumentType), true)));
             localIndex += argumentType.getSize();
         }
         output.append(')');

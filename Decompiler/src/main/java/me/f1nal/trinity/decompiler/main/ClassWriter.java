@@ -859,7 +859,8 @@ public class ClassWriter {
 
             String parameterName = methodWrapper.varproc.getVarName(pair);
             if (parameterName == null) parameterName = "param" + index; // null iff decompiled with errors
-            buffer.append(OutputMemberSerializer.serializeTags(new VariableOutputMember(parameterName.length(), pair.var, paramType.getValue())));
+            buffer.append(OutputMemberSerializer.serializeTags(
+              new VariableOutputMember(parameterName.length(), pair.var, paramType.getValue(), true)));
             buffer.append(parameterName);
 
             paramCount++;

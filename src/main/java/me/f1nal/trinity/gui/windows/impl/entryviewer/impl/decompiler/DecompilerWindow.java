@@ -16,6 +16,7 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.object.DatabaseDecompiler;
 import me.f1nal.trinity.decompiler.DecompiledClass;
+import me.f1nal.trinity.decompiler.modules.decompiler.exps.VarExprent;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventMemberModified;
@@ -461,8 +462,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (this.hoveredComponent != null) {
             List<ColoredString> tooltip = this.hoveredComponent.createTooltip();
             MethodInput previewMethod = this.hoveredComponent.getPreviewMethod();
+            DecompilerComponent.VariablePreview previewVariable = this.hoveredComponent.getPreviewVariable();
 
-            if (tooltip != null || previewMethod != null) {
+            if (tooltip != null || previewMethod != null || previewVariable != null) {
                 ImGui.beginTooltip();
 
                 if (tooltip != null) {
@@ -470,6 +472,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 }
                 if (previewMethod != null) {
                     this.drawMethodPreview(previewMethod, tooltip != null);
+                } else if (previewVariable != null) {
+                    this.drawVariablePreview(decompiledClass, previewVariable, tooltip != null);
                 }
 
                 ImGui.endTooltip();
@@ -525,18 +529,80 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (preview.skippedLeading()) {
             ImGui.textColored(CodeColorScheme.DISABLED, "...");
         }
+        int classIndent = preview.lines().stream()
+                .mapToInt(this::getLeadingWhitespace)
+                .min()
+                .orElse(0);
         for (List<DecompilerLineText> line : preview.lines()) {
-            for (int i = 0; i < line.size(); i++) {
-                DecompilerLineText text = line.get(i);
-                if (i > 0) {
-                    ImGui.sameLine(0.F, 0.F);
-                }
-                ImGui.textColored(text.getComponent().getColor(), text.getText());
-            }
+            this.drawPreviewLine(line, classIndent);
         }
         if (preview.hasMoreLines()) {
             ImGui.textColored(CodeColorScheme.DISABLED, "...");
         }
+    }
+
+    private void drawVariablePreview(DecompiledClass decompiledClass,
+                                     DecompilerComponent.VariablePreview variable, boolean hasDetails) {
+        List<DecompilerLineText> declaration = decompiledClass.getVariableDeclarationPreview(
+                variable.methodInput(), variable.index());
+        boolean stackVariable = variable.index() >= VarExprent.STACK_BASE;
+        if (declaration.isEmpty() && !stackVariable) {
+            return;
+        }
+        if (hasDetails) {
+            ImGui.separator();
+        }
+        if (!declaration.isEmpty()) {
+            this.drawPreviewLine(declaration, Integer.MAX_VALUE);
+        }
+        if (stackVariable) {
+            if (!declaration.isEmpty()) {
+                ImGui.separator();
+            }
+            ImGui.textColored(CodeColorScheme.DISABLED,
+                    "Variable is not defined in bytecode - it was added by the decompiler to preview stack operations");
+        }
+    }
+
+    private void drawPreviewLine(List<DecompilerLineText> line, int leadingWhitespaceToTrim) {
+        boolean rendered = false;
+        int remainingWhitespace = leadingWhitespaceToTrim;
+        for (DecompilerLineText text : line) {
+            String value = text.getText();
+            if (!rendered && remainingWhitespace > 0) {
+                int trim = 0;
+                while (trim < value.length() && trim < remainingWhitespace
+                        && Character.isWhitespace(value.charAt(trim))) {
+                    trim++;
+                }
+                value = value.substring(trim);
+                remainingWhitespace -= trim;
+                if (value.isEmpty()) {
+                    continue;
+                }
+            }
+            if (rendered) {
+                ImGui.sameLine(0.F, 0.F);
+            }
+            ImGui.textColored(text.getComponent().getColor(), value);
+            rendered = true;
+        }
+    }
+
+    private int getLeadingWhitespace(List<DecompilerLineText> line) {
+        int whitespace = 0;
+        for (DecompilerLineText text : line) {
+            String value = text.getText();
+            int index = 0;
+            while (index < value.length() && Character.isWhitespace(value.charAt(index))) {
+                index++;
+            }
+            whitespace += index;
+            if (index < value.length()) {
+                break;
+            }
+        }
+        return whitespace;
     }
 
     private void drawSearchResults() {

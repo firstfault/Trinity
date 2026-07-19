@@ -108,7 +108,8 @@ public class VarExprent extends Exprent {
       }
 
       String varName = name == null ? ("var" + index + (this.version == 0 ? "" : "_" + this.version)) : name;
-      buffer.append(OutputMemberSerializer.tag(varName, l -> new VariableOutputMember(l, varVersion.var, getVarType().getValue())));
+      buffer.append(OutputMemberSerializer.tag(varName,
+        l -> new VariableOutputMember(l, varVersion.var, getVarType().getValue(), definition)));
     }
 
     return buffer;
