@@ -10,6 +10,7 @@ public enum FontEnum implements INameable {
     JETBRAINS_MONO("JetBrains Mono"),
     ZED_MONO("Zed Mono"),
     INTER("Inter"),
+    SMALLEST_PIXEL("Smallest Pixel"),
     ;
 
     private final String name;

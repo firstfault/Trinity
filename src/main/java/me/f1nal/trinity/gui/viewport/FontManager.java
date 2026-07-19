@@ -13,31 +13,25 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class FontManager {
-    private static final float NAVIGATION_BAND_FONT_SIZE = 7.F;
     private Map<String, byte[]> resourceCache;
-    private ImFont navigationBandFont;
+    private final FontSettings navigationBandFont = new FontSettings(FontEnum.SMALLEST_PIXEL, 12.F, "Navigation Band");
 
     public void setupFonts() {
         this.resourceCache = new HashMap<>();
 
         this.buildFonts(Main.getPreferences().getDefaultFont());
         this.buildFonts(Main.getPreferences().getDecompilerFont());
-        this.buildNavigationBandFont();
+        this.buildFonts(this.navigationBandFont);
 
         this.resourceCache = null;
     }
 
-    private void buildNavigationBandFont() {
-        ImFontConfig config = new ImFontConfig();
-        config.setOversampleH(1);
-        config.setOversampleV(1);
-        config.setPixelSnapH(true);
-        this.navigationBandFont = ImGui.getIO().getFonts().addFontFromMemoryTTF(
-                loadFromResources("smallest_pixel-7.ttf"), NAVIGATION_BAND_FONT_SIZE, config);
+    public ImFont getNavigationBandFont() {
+        return navigationBandFont.getImFont();
     }
 
-    public ImFont getNavigationBandFont() {
-        return navigationBandFont;
+    public float getNavigationBandFontSize() {
+        return navigationBandFont.getBuiltSize();
     }
 
     private void buildFonts(FontSettings fontSettings) {
@@ -59,6 +53,9 @@ public class FontManager {
         fontSettings.setIconFont(io.getFonts().addFontFromMemoryTTF(loadFromResources("fa-solid-900.ttf"), size, fontConfig, glyphRanges));
 
         fontSettings.registerFont(FontEnum.ZED_MONO, io.getFonts().addFontFromMemoryTTF(loadFromResources("zed-mono-regular.ttf"), size));
+        fontSettings.setIconFont(io.getFonts().addFontFromMemoryTTF(loadFromResources("fa-solid-900.ttf"), size, fontConfig, glyphRanges));
+
+        fontSettings.registerFont(FontEnum.SMALLEST_PIXEL, io.getFonts().addFontFromMemoryTTF(loadFromResources("smallest_pixel-7.ttf"), size));
         fontSettings.setIconFont(io.getFonts().addFontFromMemoryTTF(loadFromResources("fa-solid-900.ttf"), size, fontConfig, glyphRanges));
     }
 

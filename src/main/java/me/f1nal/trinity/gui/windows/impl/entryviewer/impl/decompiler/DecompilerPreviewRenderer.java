@@ -28,10 +28,34 @@ public final class DecompilerPreviewRenderer {
     }
 
     public void drawDetails(List<ColoredString> details) {
-        List<PreviewSegment> segments = details.stream()
-                .map(detail -> new PreviewSegment(detail.getText(), detail.getColor()))
-                .toList();
-        drawLine(segments, 0);
+        List<PreviewSegment> line = new ArrayList<>();
+        for (ColoredString detail : details) {
+            String text = detail.getText().replace("\r\n", "\n").replace('\r', '\n');
+            int lineStart = 0;
+            int newline;
+            while ((newline = text.indexOf('\n', lineStart)) != -1) {
+                if (newline > lineStart) {
+                    line.add(new PreviewSegment(text.substring(lineStart, newline), detail.getColor()));
+                }
+                drawDetailLine(line);
+                line.clear();
+                lineStart = newline + 1;
+            }
+            if (lineStart < text.length()) {
+                line.add(new PreviewSegment(text.substring(lineStart), detail.getColor()));
+            }
+        }
+        if (!line.isEmpty()) {
+            drawLine(line, 0);
+        }
+    }
+
+    private void drawDetailLine(List<PreviewSegment> line) {
+        if (line.isEmpty()) {
+            ImGui.newLine();
+        } else {
+            drawLine(line, 0);
+        }
     }
 
     public void drawInputPreview(Input<?> input) {

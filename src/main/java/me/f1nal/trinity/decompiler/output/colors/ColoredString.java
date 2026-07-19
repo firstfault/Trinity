@@ -28,16 +28,18 @@ public class ColoredString {
     }
 
     public static void drawText(List<ColoredString> text) {
-        for (int i = 0; i < text.size(); i++) {
-            ColoredString detail = text.get(i);
+        boolean lineStart = true;
+        for (ColoredString detail : text) {
             if (detail.getText().equals("\n")) {
                 ImGui.newLine();
+                lineStart = true;
                 continue;
             }
-            if (i != 0) {
+            if (!lineStart) {
                 ImGui.sameLine(0.F, 0.F);
             }
             ImGui.textColored(detail.getColor(), NameUtil.cleanNewlines(detail.getText()));
+            lineStart = false;
         }
     }
 

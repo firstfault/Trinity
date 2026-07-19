@@ -4,6 +4,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.DecompiledMethod;
 import me.f1nal.trinity.decompiler.modules.decompiler.exps.VarExprent;
+import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayType;
 import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
@@ -25,10 +26,12 @@ import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.util.ByteUtil;
 import me.f1nal.trinity.util.StringUtil;
 import me.f1nal.trinity.util.SystemUtil;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class DecompilerComponentInitializer implements OutputMemberVisitor {
@@ -170,7 +173,9 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         String suffix = constant.getSuffix() == '\0' ? "" : String.valueOf(constant.getSuffix());
         component.setTextFunction(() -> settings.displayType.getText(number) + suffix);
         component.setColorFunction(() -> CodeColorScheme.NUMBER);
-        component.setTooltip(() -> ColoredStringBuilder.create().text(component.getColor(), StringUtil.capitalizeFirstLetter(number.getClass().getSimpleName())).get());
+        component.setTooltip(() -> constantTooltip(
+                StringUtil.capitalizeFirstLetter(number.getClass().getSimpleName()), number,
+                getNumberSize(constant.getType()), component.getColor()));
     }
 
     @Override
@@ -326,6 +331,31 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
                 }));
         component.setIdentifier(string, originalText.hashCode());
         component.setColorFunction(() -> CodeColorScheme.STRING);
+        component.setTooltip(() -> constantTooltip("String", unquotedText,
+                unquotedText.getBytes(StandardCharsets.UTF_8).length, component.getColor()));
+    }
+
+    private List<ColoredString> constantTooltip(String type, Object value, long size, int color) {
+        int occurrences = trinity.getConstantStatisticsCache().getOccurrences(value);
+        return ColoredStringBuilder.create()
+                .text(color, String.valueOf(value))
+                .text(CodeColorScheme.DISABLED, " (")
+                .text(CodeColorScheme.TEXT, type)
+                .text(CodeColorScheme.DISABLED, ", ")
+                .text(CodeColorScheme.TEXT, ByteUtil.getHumanReadableByteCountSI(size).replace(" ", ""))
+                .text(CodeColorScheme.DISABLED, ")")
+                .newline()
+                .text(CodeColorScheme.DISABLED, "Occurrences: ")
+                .text(CodeColorScheme.TEXT, String.valueOf(occurrences))
+                .get();
+    }
+
+    private static int getNumberSize(NumberOutputMember.ConstType type) {
+        return switch (type) {
+            case CHAR, SHORT -> Short.BYTES;
+            case INTEGER, FLOAT -> Integer.BYTES;
+            case LONG, DOUBLE -> Long.BYTES;
+        };
     }
 
     @Override

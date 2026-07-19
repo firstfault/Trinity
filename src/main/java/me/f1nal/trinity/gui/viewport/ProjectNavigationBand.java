@@ -44,7 +44,6 @@ import java.util.Map;
 public final class ProjectNavigationBand implements IEventListener {
     public static final float HEIGHT = 14.F;
     private static final float BAND_HEIGHT = 14.F;
-    private static final float LABEL_FONT_SIZE = 7.F;
     private static final float LABEL_PADDING = 3.F;
     private static final int LABEL_COLOR = ImColor.rgba(245, 245, 245, 210);
     private static final int BYTECODE_COLOR = ImColor.rgb(66, 126, 180);
@@ -134,17 +133,19 @@ public final class ProjectNavigationBand implements IEventListener {
     }
 
     private static void drawSegmentLabel(ImDrawList drawList, Segment segment, float startX, float endX, float y) {
-        ImFont font = Main.getDisplayManager().getFontManager().getNavigationBandFont();
+        FontManager fontManager = Main.getDisplayManager().getFontManager();
+        ImFont font = fontManager.getNavigationBandFont();
         if (font == null) {
             return;
         }
-        ImVec2 textSize = font.calcTextSizeA(LABEL_FONT_SIZE, Float.MAX_VALUE, 0.F, segment.label());
+        float fontSize = fontManager.getNavigationBandFontSize();
+        ImVec2 textSize = font.calcTextSizeA(fontSize, Float.MAX_VALUE, 0.F, segment.label());
         if (endX - startX < textSize.x + LABEL_PADDING * 2.F) {
             return;
         }
         float textY = y + Math.max(0.F, (BAND_HEIGHT - textSize.y) * 0.5F);
         drawList.pushClipRect(startX, y, endX, y + BAND_HEIGHT, true);
-        drawList.addText(font, LABEL_FONT_SIZE, startX + LABEL_PADDING, textY, LABEL_COLOR, segment.label());
+        drawList.addText(font, fontSize, startX + LABEL_PADDING, textY, LABEL_COLOR, segment.label());
         drawList.popClipRect();
     }
 
