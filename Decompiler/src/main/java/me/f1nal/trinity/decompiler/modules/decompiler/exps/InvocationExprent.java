@@ -300,7 +300,7 @@ public class InvocationExprent extends Exprent {
         buf.append(OutputMemberSerializer.serializeTags(createInvocationOutputMember(name.length(), indent)));
         buf.append(name);
         if (invocationType == INVOKE_DYNAMIC) {
-          buf.append("<invokedynamic:x1>");
+          buf.append("/*<invokedynamic:x1>*/");
         }
         buf.append("(");
       }
