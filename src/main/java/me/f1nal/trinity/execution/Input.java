@@ -5,6 +5,7 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.access.AccessFlagsMaskProvider;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
+import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.gui.windows.impl.cp.IRenameHandler;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
@@ -43,6 +44,8 @@ public abstract class Input<N> implements AccessFlagsMaskProvider, RenameHandler
     public void populatePopup(PopupItemBuilder builder) {
         Trinity trinity = getOwningClass().getExecution().getTrinity();
 
+        String typeName = getType().name().charAt(0) + getType().name().substring(1).toLowerCase();
+        builder.menuItem("Edit " + typeName, () -> BytecodeEditorLauncher.edit(this));
         addXrefViewerMenuItem(trinity, builder);
         builder.menuItem("View Member", () -> Main.getDisplayManager().openDecompilerView(this));
 

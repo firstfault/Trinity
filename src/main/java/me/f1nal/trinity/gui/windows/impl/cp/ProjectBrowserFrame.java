@@ -15,6 +15,7 @@ import me.f1nal.trinity.events.EventPackageStructureReload;
 import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
 import me.f1nal.trinity.execution.packages.Package;
+import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.gui.components.filter.ListFilterComponent;
 import me.f1nal.trinity.gui.components.filter.SearchBarFilter;
 import me.f1nal.trinity.gui.components.filter.kind.KindFilter;
@@ -46,6 +47,11 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
 
     @Subscribe
     public void onPackageStructureReload(EventPackageStructureReload event) {
+        this.refreshFilterComponent();
+    }
+
+    @Subscribe
+    public void onClassModified(EventClassModified event) {
         this.refreshFilterComponent();
     }
 
@@ -140,7 +146,20 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
                 continue;
             }
 
-            node.addChild(new ProjectBrowserTreeNodeEntry(entry));
+            ProjectBrowserTreeNodeEntry entryNode = new ProjectBrowserTreeNodeEntry(entry);
+            /*if (entry instanceof ClassTarget classTarget && classTarget.getInput() != null) {
+                classTarget.getInput().getFieldMap().values().stream()
+                        .filter(field -> field.getOwningClass() == classTarget.getInput())
+                        .map(ProjectBrowserMemberNode::new)
+                        .map(ProjectBrowserTreeNodeMember::new)
+                        .forEach(entryNode::addChild);
+                classTarget.getInput().getMethodMap().values().stream()
+                        .filter(method -> method.getOwningClass() == classTarget.getInput())
+                        .map(ProjectBrowserMemberNode::new)
+                        .map(ProjectBrowserTreeNodeMember::new)
+                        .forEach(entryNode::addChild);
+            }*/
+            node.addChild(entryNode);
         }
     }
 

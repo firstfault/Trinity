@@ -3,7 +3,7 @@ package me.f1nal.trinity.remap;
 import java.util.Objects;
 
 public class DisplayName {
-    private final String originalName;
+    private String originalName;
     private String name;
     private RenameType type;
 
@@ -15,6 +15,14 @@ public class DisplayName {
 
     public String getOriginalName() {
         return originalName;
+    }
+
+    public void replaceOriginalName(String originalName) {
+        boolean followsOriginalName = this.type == RenameType.NONE;
+        this.originalName = Objects.requireNonNull(originalName);
+        if (followsOriginalName) {
+            this.name = originalName;
+        }
     }
 
     public String getName() {

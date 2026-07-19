@@ -11,6 +11,7 @@ import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.BrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.IBrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.SystemUtil;
@@ -58,6 +59,7 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
                             copy.menuItem("Full Path", () -> SystemUtil.copyToClipboard(this.getPrettyPath().replace('.', '/')))
                                     .menuItem("Name", () -> SystemUtil.copyToClipboard(this.getDisplayName()));
                         }).
+                        menuItem("Add Class", () -> BytecodeEditorLauncher.addClass(this)).
                         menu("Create...", (menu) -> {
                             menu.menuItem("Empty File", () -> {
                                 ArchiveEntry newFile = Main.getTrinity().getExecution().createResource(this, "New File", new byte[0]);

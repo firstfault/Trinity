@@ -6,6 +6,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.ClassPath;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
+import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
 import me.f1nal.trinity.execution.hierarchy.ObjectHierarchyLoadTask;
@@ -19,6 +20,7 @@ import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.tree.ClassNode;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -168,6 +170,55 @@ public final class Execution {
     public ClassTarget addClassTarget(ClassTarget classTarget) {
         this.classTargetMap.put(classTarget.getRealName(), classTarget);
         return classTarget;
+    }
+
+    public ClassInput createClass(Package pkg, ClassNode classNode) {
+        if (getClassTarget(classNode.name) != null) {
+            throw new IllegalArgumentException("Class already exists: " + classNode.name);
+        }
+        String expectedPackage = pkg.getPrettyPath().replace('.', '/');
+        int separator = classNode.name.lastIndexOf('/');
+        String actualPackage = separator == -1 ? "" : classNode.name.substring(0, separator);
+        if (!actualPackage.equals(expectedPackage)) {
+            throw new IllegalArgumentException("Class must be created inside package "
+                    + (expectedPackage.isEmpty() ? "<default>" : expectedPackage));
+        }
+        try {
+            DataPool.writeClassNode(classNode);
+        } catch (RuntimeException exception) {
+            throw new IllegalArgumentException("ASM rejected the new class: " + exception.getMessage(), exception);
+        }
+
+        ClassTarget classTarget = new ClassTarget(classNode.name, 0);
+        ClassInput classInput = new ClassInput(this, classNode, classTarget);
+        classTarget.setInput(classInput);
+        classNode.fields.forEach(field -> classInput.addInput(new FieldInput(field, classInput)));
+        classNode.methods.forEach(method -> classInput.addInput(new MethodInput(method, classInput)));
+        addClassTarget(classTarget);
+        classInputList.add(classInput);
+        classTarget.setPackage(rootPackage);
+        trinity.getEventManager().postEvent(new EventClassesLoaded());
+        return classInput;
+    }
+
+    public void reindexClass(ClassInput classInput, String newName) {
+        ClassTarget target = classInput.getClassTarget();
+        String oldName = target.getRealName();
+        if (oldName.equals(newName)) {
+            return;
+        }
+        ClassTarget conflict = getClassTarget(newName);
+        if (conflict != null && conflict != target) {
+            throw new IllegalArgumentException("Class already exists: " + newName);
+        }
+
+        classTargetMap.remove(oldName);
+        classInput.getNode().name = newName;
+        target.replaceRealName(newName);
+        classInput.reindexDeclaredMembers();
+        classTargetMap.put(newName, target);
+        target.setPackage(rootPackage);
+        trinity.getEventManager().postEvent(new EventClassesLoaded());
     }
 
     /**

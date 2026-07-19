@@ -14,8 +14,11 @@ public class ProjectBrowserTreeNodeEntry extends ProjectBrowserTreeNode<ArchiveE
         ImGui.tableNextRow();
         ImGui.tableNextColumn();
 
-        ImGui.treeNodeEx("", ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen |
-                ImGuiTreeNodeFlags.SpanFullWidth);
+        int flags = ImGuiTreeNodeFlags.SpanFullWidth;
+        if (this.isLeaf()) {
+            flags |= ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen;
+        }
+        boolean open = ImGui.treeNodeEx("###Entry" + node.getRealName(), flags);
         ImGui.sameLine();
         node.getBrowserViewerNode().draw();
 
@@ -23,5 +26,12 @@ public class ProjectBrowserTreeNodeEntry extends ProjectBrowserTreeNode<ArchiveE
         this.drawSize(node.getSize(), node.getSizeInBytes());
         ImGui.tableNextColumn();
         ImGui.textUnformatted(node.getArchiveEntryTypeName());
+
+        if (open && !this.isLeaf()) {
+            for (ProjectBrowserTreeNode<?> child : this.getChildren()) {
+                child.draw(projectBrowserFrame);
+            }
+            ImGui.treePop();
+        }
     }
 }

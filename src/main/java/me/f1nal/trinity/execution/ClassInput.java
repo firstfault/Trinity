@@ -3,6 +3,7 @@ package me.f1nal.trinity.execution;
 import me.f1nal.trinity.execution.hierarchy.ClassHierarchy;
 import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
+import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.remap.DisplayName;
 import me.f1nal.trinity.remap.IDisplayNameProvider;
@@ -11,6 +12,7 @@ import me.f1nal.trinity.util.NameUtil;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodNode;
 
 import java.util.*;
 import java.util.function.Function;
@@ -26,13 +28,11 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     private final Map<String, MethodInput> methodList = new LinkedHashMap<>();
     private final Map<String, FieldInput> fieldList = new LinkedHashMap<>();
     private final Map<MemberDetails, MemberInput<?>> memberList = new HashMap<>();
-    private final List<String> interfaces;
     private final ClassTarget classTarget;
     private final ClassHierarchy classHierarchy = new ClassHierarchy(this);
 
     public ClassInput(Execution execution, ClassNode classNode, ClassTarget classTarget) {
         super(classNode);
-        this.interfaces = Objects.requireNonNullElse(classNode.interfaces, Collections.emptyList());
         this.execution = execution;
         this.classTarget = classTarget;
     }
@@ -64,6 +64,105 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
         addInput(input.getDetails(), input);
     }
 
+    public MethodInput addMethod(MethodNode method) {
+        if (getNode().methods.stream().anyMatch(existing -> existing.name.equals(method.name) && existing.desc.equals(method.desc))) {
+            throw new IllegalArgumentException("Method already exists: " + method.name + method.desc);
+        }
+        if (!getNode().methods.contains(method)) {
+            getNode().methods.add(method);
+        }
+        MethodInput input = new MethodInput(method, this);
+        addInput(input);
+        return input;
+    }
+
+    public FieldInput addField(org.objectweb.asm.tree.FieldNode field) {
+        if (getNode().fields.stream().anyMatch(existing -> existing.name.equals(field.name) && existing.desc.equals(field.desc))) {
+            throw new IllegalArgumentException("Field already exists: " + field.name + " " + field.desc);
+        }
+        if (!getNode().fields.contains(field)) {
+            getNode().fields.add(field);
+        }
+        FieldInput input = new FieldInput(field, this);
+        addInput(input);
+        return input;
+    }
+
+    public MethodInput reindexMethod(MethodInput input) {
+        removeInput(input);
+        MethodInput replacement = new MethodInput(input.getNode(), this);
+        preserveDisplayName(input, replacement);
+        preserveMethodState(input, replacement);
+        addInput(replacement);
+        return replacement;
+    }
+
+    private static void preserveMethodState(MethodInput input, MethodInput replacement) {
+        input.getVariableTable().getVariableMap().forEach(variable -> {
+            Integer index = variable.findIndex();
+            if (index != null && variable.isEditable()) {
+                replacement.getVariableTable().getVariable(index).getNameProperty().set(variable.getName());
+            }
+        });
+        input.getLabelTable().getLabels().forEach(label -> {
+            org.objectweb.asm.Label original = label.findOriginal();
+            if (original != null) {
+                replacement.getLabelTable().getLabel(original).getNameProperty().set(label.getName());
+            }
+        });
+    }
+
+    public FieldInput reindexField(FieldInput input) {
+        removeInput(input);
+        FieldInput replacement = new FieldInput(input.getNode(), this);
+        preserveDisplayName(input, replacement);
+        addInput(replacement);
+        return replacement;
+    }
+
+    public void reindexDeclaredMembers() {
+        Map<org.objectweb.asm.tree.MethodNode, MethodInput> methodsByNode = new IdentityHashMap<>();
+        Map<org.objectweb.asm.tree.FieldNode, FieldInput> fieldsByNode = new IdentityHashMap<>();
+        List<MethodInput> inheritedMethods = methodList.values().stream()
+                .filter(method -> method.getOwningClass() != this).distinct().toList();
+        methodList.values().stream().filter(method -> method.getOwningClass() == this)
+                .forEach(method -> methodsByNode.put(method.getNode(), method));
+        fieldList.values().stream().filter(field -> field.getOwningClass() == this)
+                .forEach(field -> fieldsByNode.put(field.getNode(), field));
+        methodList.entrySet().removeIf(entry -> entry.getValue().getOwningClass() == this);
+        fieldList.entrySet().removeIf(entry -> entry.getValue().getOwningClass() == this);
+        memberList.clear();
+        getNode().methods.forEach(method -> {
+            MethodInput replacement = new MethodInput(method, this);
+            MethodInput source = methodsByNode.get(method);
+            if (source != null) {
+                preserveDisplayName(source, replacement);
+                preserveMethodState(source, replacement);
+            }
+            addInput(replacement);
+        });
+        getNode().fields.forEach(field -> {
+            FieldInput replacement = new FieldInput(field, this);
+            FieldInput source = fieldsByNode.get(field);
+            if (source != null) preserveDisplayName(source, replacement);
+            addInput(replacement);
+        });
+        inheritedMethods.forEach(method -> memberList.putIfAbsent(
+                new MemberDetails(getRealName(), method.getName(), method.getDescriptor()), method));
+    }
+
+    private void removeInput(MemberInput<?> input) {
+        methodList.entrySet().removeIf(entry -> entry.getValue() == input);
+        fieldList.entrySet().removeIf(entry -> entry.getValue() == input);
+        memberList.entrySet().removeIf(entry -> entry.getValue() == input);
+    }
+
+    private static void preserveDisplayName(MemberInput<?> source, MemberInput<?> target) {
+        if (source.getDisplayName().getType() != me.f1nal.trinity.remap.RenameType.NONE) {
+            target.getDisplayName().setName(source.getDisplayName().getName(), source.getDisplayName().getType());
+        }
+    }
+
     private void addInput(MemberDetails query, MemberInput<?> input) {
         final MemberDetails details = input.getDetails();
         final String memberKey = this.getMemberKey(details.getName(), details.getDesc());
@@ -88,6 +187,9 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     public void populatePopup(PopupItemBuilder builder) {
 //        builder.menuItem("View Hierarchy", () -> Main.getWindowManager().addClosableWindow(new ClassHierarchyWindow(this.getOwningClass().getExecution().getTrinity(), this)));
         super.populatePopup(builder);
+        builder.separator()
+                .menuItem("Add Field", () -> BytecodeEditorLauncher.addField(this))
+                .menuItem("Add Method", () -> BytecodeEditorLauncher.addMethod(this));
     }
 
     @Override
@@ -142,7 +244,7 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     }
 
     public List<String> getInterfaces() {
-        return this.interfaces;
+        return Objects.requireNonNullElse(getNode().interfaces, Collections.emptyList());
     }
 
     public Execution getExecution() {

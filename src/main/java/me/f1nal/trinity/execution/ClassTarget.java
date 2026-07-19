@@ -13,6 +13,7 @@ import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
+import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
@@ -49,6 +50,12 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     @Override
     public PopupItemBuilder createPopup(PopupItemBuilder builder) {
+        if (this.input != null) {
+            builder.menuItem("Edit Class", () -> BytecodeEditorLauncher.edit(this.input))
+                    .menuItem("Add Field", () -> BytecodeEditorLauncher.addField(this.input))
+                    .menuItem("Add Method", () -> BytecodeEditorLauncher.addMethod(this.input))
+                    .separator();
+        }
         this.addXrefViewerMenuItem(Main.getTrinity(), builder);
         return super.createPopup(builder);
     }
@@ -107,6 +114,11 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     public String getRealName() {
         return realName;
+    }
+
+    void replaceRealName(String realName) {
+        this.realName = realName;
+        this.displayName.replaceOriginalName(realName);
     }
 
     @Override

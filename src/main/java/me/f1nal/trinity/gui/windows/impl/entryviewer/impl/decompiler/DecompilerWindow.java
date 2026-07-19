@@ -167,6 +167,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     public void onClassModified(EventClassModified event) {
         if (event.getClassInput() == this.selectedClass) {
             this.forceRefreshDecompiler();
+            this.updateClassStructure();
         }
     }
 
