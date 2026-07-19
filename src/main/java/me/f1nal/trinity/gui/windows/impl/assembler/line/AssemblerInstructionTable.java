@@ -141,6 +141,9 @@ public class AssemblerInstructionTable {
             if (component.getInstruction() instanceof LabelNode) continue;
             if (!hideMetadata || component.getInstruction().getOpcode() >= 0) visible.add(component);
         }
+        List<InstructionComponent> selected = assemblerFrame.getSelectedInstructions().stream()
+                .filter(visible::contains).toList();
+        if (!selected.isEmpty()) this.highlightedInstructions = selected;
 
         y = vMin.y + 1.F;
         for (InstructionComponent instruction : visible) {

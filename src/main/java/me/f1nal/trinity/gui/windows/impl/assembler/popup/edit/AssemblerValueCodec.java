@@ -63,7 +63,7 @@ public final class AssemblerValueCodec {
         return handle;
     }
 
-    private static String quote(String value) {
+    public static String quote(String value) {
         StringBuilder output = new StringBuilder("\"");
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
@@ -82,6 +82,13 @@ public final class AssemblerValueCodec {
             }
         }
         return output.append('"').toString();
+    }
+
+    public static String parseQuotedString(String input) {
+        Parser parser = new Parser(input);
+        String value = parser.string();
+        parser.requireEnd();
+        return value;
     }
 
     private static String handleTagName(int tag) {

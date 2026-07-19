@@ -2,6 +2,8 @@ package me.f1nal.trinity.gui.windows.impl.assembler;
 
 import imgui.ImGui;
 import imgui.ImVec2;
+import imgui.flag.ImGuiFocusedFlags;
+import imgui.flag.ImGuiHoveredFlags;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiWindowFlags;
@@ -55,14 +57,16 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     private final Instruction2SourceMapping sourceMapping;
     private InstructionList instructions;
     /**
-     * Instruction selected for editing.
+     * Instruction cursor used as the insertion point.
      */
     private InstructionComponent selected;
+    private final Set<InstructionComponent> selectedInstructions = new LinkedHashSet<>();
     private ChangeManager<AssemblerHistory> history;
     public InstructionDrag draggingInstruction;
     private InstructionComponent scrollTo;
     private AssemblerInstructionDecoder decoder;
     private AssemblerInstructionTable instructionTable;
+    private InstructionComponent lastHoveredInstruction;
     /**
      * Dragging reference arrow.
      */
@@ -105,6 +109,8 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     private void setInstructions(boolean resetHistory) {
         this.saveMethod = this.methodNotFresh = false;
         this.selected = null;
+        this.selectedInstructions.clear();
+        this.lastHoveredInstruction = null;
         if (resetHistory || this.history == null) this.history = new ChangeManager<>();
         this.decoder = new AssemblerInstructionDecoder(this, methodInput);
         this.instructions = this.decoder.buildInstructions(document.getInstructions());
@@ -127,13 +133,20 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     protected void renderFrame() {
         if (historyFrame != null) historyFrame.render();
 
-        if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.Z)) {
+        boolean keyboardShortcuts = ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
+                && !ImGui.isAnyItemActive();
+        if (keyboardShortcuts && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.Z)) {
             this.undoHistory();
         }
-        if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.Y)) {
+        if (keyboardShortcuts && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.Y)) {
             this.redoHistory();
         }
-
+        if (keyboardShortcuts && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.C)) {
+            this.copySelectedInstructions();
+        }
+        if (keyboardShortcuts && ImGui.isKeyPressed(ImGuiKey.Escape)) {
+            this.clearInstructionSelection();
+        }
         this.popupMenuBar.draw();
 
         long now = System.nanoTime();
@@ -158,7 +171,6 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
                 externalChanges = false;
             }
         }
-        if (saveError != null) ImGui.textColored(CodeColorScheme.NOTIFY_ERROR, saveError);
         for (String warning : validationWarnings) ImGui.textColored(CodeColorScheme.NOTIFY_WARN, warning);
 
         ImVec2 vMin = ImGui.getWindowContentRegionMin();
@@ -173,11 +185,18 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         }
         AssemblerInstructionTable table = instructionTable;
         final float height = table.draw(vMin, vMax);
+        InstructionComponent hoveredInstruction = table.getHoveredInstruction();
+        if (hoveredInstruction != null) this.lastHoveredInstruction = hoveredInstruction;
+        if (keyboardShortcuts && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.V)) {
+            this.pasteInstructions(hoveredInstruction);
+        }
 
         // Block ImGui input to the window content
         ImGui.beginDisabled();
         ImGui.invisibleButton(getId("InvisBtn"), ImGui.getContentRegionAvailX(), height);
         ImGui.endDisabled();
+
+        this.drawSaveError();
 
         if (this.methodNotFresh) {
             if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.S)) {
@@ -210,7 +229,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
                 trinity.getExecution().getXrefMap().refreshMethod(methodInput);
                 trinity.getEventManager().postEvent(new EventMemberModified(this.methodInput));
                 Main.getDisplayManager().addNotification(new Notification(NotificationType.SUCCESS, this, ColoredStringBuilder.create()
-                        .fmt("Saved {} instructions to {}", count, methodInput.getDisplayName()).get()));
+                        .fmt("Saved {} instructions to {}", count, methodInput.getDisplayName().getName()).get()));
                 if (closeAfterSave) {
                     forceClose = true;
                     super.close();
@@ -221,6 +240,36 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         }
 
         this.getPopupMenu().draw();
+        if (ImGui.isMouseClicked(0)
+                && !ImGui.isWindowHovered(ImGuiHoveredFlags.RootAndChildWindows)) {
+            this.clearInstructionSelection();
+        }
+    }
+
+    private void drawSaveError() {
+        if (saveError == null) return;
+
+        final float padding = 8.F;
+        final float spacing = 4.F;
+        float cursorX = ImGui.getCursorPosX();
+        float cursorY = ImGui.getCursorPosY();
+        float screenX = ImGui.getCursorScreenPosX();
+        float screenY = ImGui.getCursorScreenPosY();
+        float width = Math.max(1.F, ImGui.getContentRegionAvailX());
+        float textWidth = Math.max(1.F, width - padding * 2.F);
+        float height = ImGui.calcTextSize(saveError, false, textWidth).y + padding * 2.F;
+
+        ImGui.getWindowDrawList().addRectFilled(screenX, screenY, screenX + width, screenY + height,
+                CodeColorScheme.setAlpha(CodeColorScheme.NOTIFY_ERROR, 32), 3.F);
+        ImGui.getWindowDrawList().addRect(screenX, screenY, screenX + width, screenY + height,
+                CodeColorScheme.setAlpha(CodeColorScheme.NOTIFY_ERROR, 110));
+
+        ImGui.setCursorPos(cursorX + padding, cursorY + padding);
+        ImGui.pushTextWrapPos(cursorX + width - padding);
+        ImGui.textColored(CodeColorScheme.NOTIFY_ERROR, saveError);
+        ImGui.popTextWrapPos();
+        ImGui.setCursorPos(cursorX, cursorY + height);
+        ImGui.dummy(0.F, spacing);
     }
 
     private PopupItemBuilder createMenuBar() {
@@ -229,6 +278,13 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
                     file.menuItem("Save", "Ctrl+S", this.methodNotFresh, () -> this.saveMethod = true)
                             .separator()
                             .menuItem("Go to Method", () -> Main.getDisplayManager().openDecompilerView(this.methodInput));
+                }).
+                menu("Edit", edit -> {
+                    edit.disabled(() -> this.selectedInstructions.isEmpty(), copy ->
+                                    copy.menuItem("Copy", "Ctrl+C", this::copySelectedInstructions))
+                            .menuItem("Copy All", this::copyAllInstructions)
+                            .disabled(() -> this.lastHoveredInstruction == null, paste ->
+                                    paste.menuItem("Paste", "Ctrl+V", this::pasteInstructions));
                 }).
                 menu("View", view -> {
                     view.menuItem("Hide Metadata", Main.getPreferences().isAssemblerHideMetadata(), this::toggleMetadataVisibility)
@@ -270,6 +326,9 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         pushMutation(captureSnapshot(true));
         this.addHistory(new InstructionClearHistory(instructions));
         instructions.clear();
+        selected = null;
+        selectedInstructions.clear();
+        lastHoveredInstruction = null;
         MethodNode method = document.getMethod();
         if (method.tryCatchBlocks != null) method.tryCatchBlocks.clear();
         method.localVariables = null;
@@ -516,25 +575,12 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         InstructionComponent component = decoder.translateInstruction(instruction);
 
         instructions.set(index, component);
+        if (selected == oldInstruction) selected = component;
+        if (selectedInstructions.remove(oldInstruction)) selectedInstructions.add(component);
+        if (lastHoveredInstruction == oldInstruction) lastHoveredInstruction = component;
         instructions.queueIdReset();
         decoder.rebuildReferenceArrows(instructions);
         this.addHistory(new InstructionSetHistory(oldInstruction, new InstructionPosition(this.instructions, component, instructions.indexOf(component))));
-    }
-
-    private static String getInstructionRawText(InstructionComponent instruction) {
-        boolean space = false;
-        StringBuilder sb = new StringBuilder();
-        sb.append(instruction.getName());
-        for (InstructionOperand argument : instruction.getOperands()) {
-            for (ColoredString coloredString : argument.getDetailsText()) {
-                if (!space) {
-                    sb.append(' ');
-                    space = true;
-                }
-                sb.append(coloredString.getText());
-            }
-        }
-        return sb.toString();
     }
 
     public void setInstructionView(InstructionComponent component) {
@@ -549,6 +595,28 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
 
     public void setSelected(InstructionComponent selected) {
         this.selected = selected;
+    }
+
+    public void toggleInstructionSelection(InstructionComponent instruction) {
+        if (!selectedInstructions.remove(instruction)) {
+            selectedInstructions.add(instruction);
+            selected = instruction;
+        } else if (selected == instruction) {
+            selected = selectedInstructions.stream().reduce((first, second) -> second).orElse(null);
+        }
+    }
+
+    public void clearInstructionSelection() {
+        selected = null;
+        selectedInstructions.clear();
+    }
+
+    public boolean isInstructionSelected(InstructionComponent instruction) {
+        return selectedInstructions.contains(instruction);
+    }
+
+    public List<InstructionComponent> getSelectedInstructions() {
+        return instructions.stream().filter(selectedInstructions::contains).toList();
     }
 
     public InstructionList getInstructions() {
@@ -569,8 +637,10 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             return;
         }
         beginMutation();
+        this.selectedInstructions.remove(instruction);
+        if (this.lastHoveredInstruction == instruction) this.lastHoveredInstruction = null;
         if (this.selected == instruction) {
-            this.selected = null;
+            this.selected = selectedInstructions.stream().reduce((first, second) -> second).orElse(null);
         }
         this.addHistory(new InstructionDeleteHistory(new InstructionPosition(this.instructions, instruction, instructions.indexOf(instruction))));
         this.instructions.remove(instruction);
@@ -643,8 +713,98 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         this.history.add(history);
     }
 
-    public void copyTextInstruction(InstructionComponent instruction) {
-        SystemUtil.copyToClipboard(getInstructionRawText(instruction));
+    public void copySelectedInstructions() {
+        List<InstructionComponent> selection = this.getSelectedInstructions();
+        if (selection.isEmpty()) return;
+        this.copyInstructions(selection);
+        this.clearInstructionSelection();
+    }
+
+    public void copySelectionOrInstruction(InstructionComponent instruction) {
+        if (selectedInstructions.contains(instruction)) this.copySelectedInstructions();
+        else this.copyInstructions(List.of(instruction));
+    }
+
+    public void copyAllInstructions() {
+        this.copyInstructions(this.instructions);
+    }
+
+    private void copyInstructions(Collection<InstructionComponent> components) {
+        List<AbstractInsnNode> nodes = components.stream().map(InstructionComponent::getInstruction).toList();
+        SystemUtil.copyToClipboard(AssemblerClipboardCodec.format(nodes,
+                label -> methodInput.getLabelTable().getLabel(label.getLabel()).getName()));
+    }
+
+    public void pasteInstructions() {
+        this.pasteInstructions(lastHoveredInstruction);
+    }
+
+    public void pasteInstructions(InstructionComponent target) {
+        if (target == null || !instructions.contains(target)) {
+            saveError = "Hover an instruction to choose where pasted bytecode should be inserted";
+            return;
+        }
+        String clipboard = SystemUtil.getClipboard();
+        if (clipboard == null || clipboard.isBlank()) {
+            saveError = "The clipboard does not contain assembler instructions";
+            return;
+        }
+
+        final AssemblerClipboardCodec.ParsedInstructions parsed;
+        try {
+            parsed = AssemblerClipboardCodec.parse(clipboard, this::findLabelByName);
+        } catch (IllegalArgumentException exception) {
+            saveError = "Could not paste instructions: " + exception.getMessage();
+            return;
+        }
+        if (parsed.instructions().isEmpty()) {
+            saveError = "The clipboard does not contain assembler instructions";
+            return;
+        }
+
+        beginMutation();
+        this.applyPastedLabelNames(parsed);
+        int insertionIndex = instructions.indexOf(target);
+        List<InstructionComponent> pasted = new ArrayList<>(parsed.instructions().size());
+        for (AbstractInsnNode instruction : parsed.instructions()) {
+            InstructionComponent component = decoder.translateInstruction(instruction);
+            instructions.add(insertionIndex++, component);
+            pasted.add(component);
+        }
+        instructions.queueIdReset();
+        decoder.rebuildReferenceArrows(instructions);
+        this.addHistory(new InstructionPasteHistory(instructions, pasted));
+
+        this.clearInstructionSelection();
+        saveError = null;
+    }
+
+    private LabelNode findLabelByName(String name) {
+        for (InstructionComponent component : instructions) {
+            if (component.getInstruction() instanceof LabelNode label
+                    && methodInput.getLabelTable().getLabel(label.getLabel()).getName().equals(name)) {
+                return label;
+            }
+        }
+        return null;
+    }
+
+    private void applyPastedLabelNames(AssemblerClipboardCodec.ParsedInstructions parsed) {
+        Set<String> usedNames = new HashSet<>();
+        for (InstructionComponent component : instructions) {
+            if (component.getInstruction() instanceof LabelNode label) {
+                usedNames.add(methodInput.getLabelTable().getLabel(label.getLabel()).getName());
+            }
+        }
+        for (AbstractInsnNode instruction : parsed.instructions()) {
+            if (!(instruction instanceof LabelNode label)) continue;
+            String requested = parsed.labelNames().get(label);
+            if (requested == null) continue;
+            String unique = requested;
+            int suffix = 2;
+            while (!usedNames.add(unique)) unique = requested + "_" + suffix++;
+            methodInput.getLabelTable().getLabel(label.getLabel()).getNameProperty().set(unique);
+        }
     }
 
     public void duplicateInstruction(InstructionComponent instruction) {

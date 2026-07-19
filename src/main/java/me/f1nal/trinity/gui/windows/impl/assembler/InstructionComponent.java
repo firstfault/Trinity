@@ -12,7 +12,6 @@ import me.f1nal.trinity.gui.windows.impl.assembler.line.SourceLineNumber;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.animation.Animation;
-import org.lwjgl.glfw.GLFW;
 import org.objectweb.asm.tree.*;
 
 import java.util.ArrayList;
@@ -65,10 +64,16 @@ public class InstructionComponent {
             }
 
             if (table.getHoveredInstruction() == this) {
+                boolean leftClicked = ImGui.isMouseClicked(0);
+                boolean toggleSelection = ImGui.getIO().getKeyCtrl();
+                if (leftClicked && !toggleSelection) {
+                    table.getAssemblerFrame().clearInstructionSelection();
+                }
                 if (ImGui.isMouseHoveringRect(bounds.x + table.sourceFileStartX, bounds.y, bounds.x + table.instructionStartX - 40, bounds.y + bounds.w)) {
                     table.setHoveredSourceLine(table.getSourceMapping().getSourceComponent(this.getInstruction()));
-                } else if (ImGui.isMouseClicked(0)) {
-                    table.setDraggingInstruction(this);
+                } else if (leftClicked) {
+                    if (toggleSelection) table.getAssemblerFrame().toggleInstructionSelection(this);
+                    else table.setDraggingInstruction(this);
                 } else {
                     final InstructionOperand hoveredOperand = this.operands.stream().filter(operand -> GuiUtil.isMouseHoveringRect(operand.getBounds())).findFirst().orElse(null);
 
@@ -124,7 +129,7 @@ public class InstructionComponent {
             table.getAssemblerFrame().moveInstructionTo(this, dragging.getIndex() - (deltaY > 0.F ? dragDelta : -dragDelta));
         }
 
-        drawList.addText(x + 5, y, this.getTextColor(CodeColorScheme.DISABLED),
+        drawList.addText(x + 5.F, y, this.getTextColor(CodeColorScheme.DISABLED),
                 this.instruction.getOpcode() < 0 ? "meta" : "+" + this.id);
         drawList.addText(x + table.instructionStartX + 5.F, y, this.getTextColor(this.color), this.getName());
 
@@ -180,7 +185,8 @@ public class InstructionComponent {
 
         popup.separator();
 
-        popup.menuItem("Copy Text", () -> af.copyTextInstruction(this));
+        popup.menuItem("Copy", "Ctrl+C", () -> af.copySelectionOrInstruction(this))
+                .menuItem("Paste", "Ctrl+V", () -> af.pasteInstructions(this));
         return popup;
     }
 
