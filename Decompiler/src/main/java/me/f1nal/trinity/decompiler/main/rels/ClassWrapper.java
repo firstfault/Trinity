@@ -25,6 +25,7 @@ import me.f1nal.trinity.decompiler.struct.StructMethod;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class ClassWrapper {
   private final StructClass classStruct;
@@ -38,6 +39,10 @@ public class ClassWrapper {
   }
 
   public void init() {
+    init(method -> { });
+  }
+
+  public void init(Consumer<StructMethod> methodDecompiled) {
     DecompilerContext.setProperty(DecompilerContext.CURRENT_CLASS, classStruct);
     DecompilerContext.setProperty(DecompilerContext.CURRENT_CLASS_WRAPPER, this);
     DecompilerContext.getLogger().startClass(classStruct.qualifiedName);
@@ -128,6 +133,8 @@ public class ClassWrapper {
 
         applyDebugInfo(mt, varProc, methodWrapper);  // if debug information is present and should be used
       }
+
+      methodDecompiled.accept(mt);
 
       DecompilerContext.getLogger().endMethod();
     }

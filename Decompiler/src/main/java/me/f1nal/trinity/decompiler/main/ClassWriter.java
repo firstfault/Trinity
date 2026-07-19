@@ -234,9 +234,10 @@ public class ClassWriter {
           buffer.appendLineSeparator();
           startLine++;
         }
+        int methodContentPosition = buffer.length();
         buffer.append(OutputMemberSerializer.serializeTags(new MethodStartEndOutputMember(0, node.classStruct.qualifiedName, mt.getDescriptor(), mt.getName())));
         BytecodeMappingTracer method_tracer = new BytecodeMappingTracer(startLine);
-        boolean methodSkipped = !methodToJava(node, mt, buffer, indent + 1, method_tracer);
+        boolean methodSkipped = !methodToJava(node, mt, buffer, indent + 1, method_tracer, false);
         buffer.append(OutputMemberSerializer.serializeTags(new MethodStartEndOutputMember(0)));
         if (!methodSkipped) {
           hasContent = true;
@@ -247,6 +248,9 @@ public class ClassWriter {
           buffer.setLength(position);
           startLine = storedLine;
         }
+        String methodContent = methodSkipped ? "" : buffer.substring(methodContentPosition);
+        DecompilerContext.getDecompilationProgressListener().methodDecompiled(
+          node.classStruct.qualifiedName, mt.getName(), mt.getDescriptor(), methodContent);
       }
 
       // member classes
@@ -647,7 +651,30 @@ public class ClassWriter {
     DecompilerContext.getBytecodeSourceMapper().addTracer(cls.qualifiedName, key, tracer);
   }
 
-  private boolean methodToJava(ClassesProcessor.ClassNode node, StructMethod mt, TextBuffer buffer, int indent, BytecodeMappingTracer tracer) {
+  public String methodToJavaProgressive(ClassesProcessor.ClassNode node, StructMethod mt) {
+    ClassesProcessor.ClassNode outerNode = (ClassesProcessor.ClassNode)DecompilerContext.getProperty(DecompilerContext.CURRENT_CLASS_NODE);
+    DecompilerContext.setProperty(DecompilerContext.CURRENT_CLASS_NODE, node);
+
+    try {
+      TextBuffer buffer = new TextBuffer();
+      buffer.append(OutputMemberSerializer.serializeTags(
+        new MethodStartEndOutputMember(0, node.classStruct.qualifiedName, mt.getDescriptor(), mt.getName())));
+      boolean methodSkipped = !methodToJava(node, mt, buffer, 1, new BytecodeMappingTracer(), true);
+      buffer.append(OutputMemberSerializer.serializeTags(new MethodStartEndOutputMember(0)));
+      return methodSkipped ? "" : buffer.toString();
+    }
+    catch (RuntimeException ignored) {
+      // Some methods depend on nested or class-wide processing that has not
+      // happened yet. The final class-writing pass will publish them later.
+      return null;
+    }
+    finally {
+      DecompilerContext.setProperty(DecompilerContext.CURRENT_CLASS_NODE, outerNode);
+    }
+  }
+
+  private boolean methodToJava(ClassesProcessor.ClassNode node, StructMethod mt, TextBuffer buffer, int indent,
+                               BytecodeMappingTracer tracer, boolean preview) {
     ClassWrapper wrapper = node.getWrapper();
     StructClass cl = wrapper.getClassStruct();
     MethodWrapper methodWrapper = wrapper.getMethodWrapper(mt.getName(), mt.getDescriptor());
@@ -906,6 +933,9 @@ public class ClassWriter {
             tracer.addTracer(codeTracer);
           }
           catch (Throwable t) {
+            if (preview) {
+              throw new MethodPreviewException(t);
+            }
             String message = "Method " + mt.getName() + " " + mt.getDescriptor() + " couldn't be written.";
             DecompilerContext.getLogger().writeMessage(message, IFernflowerLogger.Severity.WARN, t);
             methodWrapper.setErrorStacktrace(t);
@@ -947,6 +977,12 @@ public class ClassWriter {
     //tracer.setCurrentSourceLine(buffer.countLines(start_index_method));
 
     return !hideMethod;
+  }
+
+  private static final class MethodPreviewException extends RuntimeException {
+    private MethodPreviewException(Throwable cause) {
+      super(cause);
+    }
   }
 
   private static boolean isVarArgRecord(StructClass cl) {

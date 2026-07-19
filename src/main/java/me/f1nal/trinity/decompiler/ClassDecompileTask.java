@@ -4,6 +4,7 @@ import me.f1nal.trinity.decompiler.main.Fernflower;
 import me.f1nal.trinity.decompiler.main.extern.IBytecodeProvider;
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerLogger;
 import me.f1nal.trinity.decompiler.main.extern.IResultSaver;
+import me.f1nal.trinity.decompiler.main.extern.IDecompilationProgressListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,17 +16,20 @@ public class ClassDecompileTask extends IFernflowerLogger implements Runnable, I
     private final byte[] classBytes;
     private final Map<String, Object> options;
     private final Consumer<String> output;
+    private final IDecompilationProgressListener progressListener;
 
-    public ClassDecompileTask(byte[] classBytes, Map<String, Object> options, Consumer<String> output) {
+    public ClassDecompileTask(byte[] classBytes, Map<String, Object> options, Consumer<String> output,
+                              IDecompilationProgressListener progressListener) {
         this.classBytes = classBytes;
         this.options = options;
         this.output = output;
+        this.progressListener = progressListener;
     }
 
     @Override
     public void run() {
         try {
-            Fernflower fernflower = new Fernflower(this, this, this.options, this);
+            Fernflower fernflower = new Fernflower(this, this, this.options, this, null, this.progressListener);
             fernflower.addSource(new File("X.class"));
 
             try {

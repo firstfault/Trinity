@@ -17,6 +17,7 @@ import me.f1nal.trinity.decompiler.main.collectors.ImportCollector;
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerLogger;
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
 import me.f1nal.trinity.decompiler.main.extern.IIdentifierRenamer;
+import me.f1nal.trinity.decompiler.main.extern.IDecompilationProgressListener;
 import me.f1nal.trinity.decompiler.main.rels.ClassWrapper;
 import me.f1nal.trinity.decompiler.main.rels.LambdaProcessor;
 import me.f1nal.trinity.decompiler.main.rels.NestedClassProcessor;
@@ -397,11 +398,19 @@ public class ClassesProcessor implements CodeConstants {
     }
 
     ClassWrapper wrapper = new ClassWrapper(node.classStruct);
-    wrapper.init();
-
     node.classStruct.wrapper = wrapper;
-
     node.wrapper = wrapper;
+
+    wrapper.init(method -> {
+      IDecompilationProgressListener progressListener = DecompilerContext.getDecompilationProgressListener();
+      if (progressListener == IDecompilationProgressListener.NONE) {
+        return;
+      }
+      String content = new ClassWriter().methodToJavaProgressive(node, method);
+      if (content != null) {
+        progressListener.methodDecompiled(node.classStruct.qualifiedName, method.getName(), method.getDescriptor(), content);
+      }
+    });
 
     for (ClassNode nd : node.nested) {
       initWrappers(nd);

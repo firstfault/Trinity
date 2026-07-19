@@ -29,6 +29,15 @@ public class Fernflower implements IDecompiledData {
                     @Nullable Map<String, Object> customProperties,
                     IFernflowerLogger logger,
                     @Nullable CancellationManager cancellationManager) {
+    this(provider, saver, customProperties, logger, cancellationManager, null);
+  }
+
+  public Fernflower(IBytecodeProvider provider,
+                    IResultSaver saver,
+                    @Nullable Map<String, Object> customProperties,
+                    IFernflowerLogger logger,
+                    @Nullable CancellationManager cancellationManager,
+                    @Nullable IDecompilationProgressListener decompilationProgressListener) {
     Map<String, Object> properties = new HashMap<>(IFernflowerPreferences.DEFAULTS);
     if (customProperties != null) {
       properties.putAll(customProperties);
@@ -56,7 +65,7 @@ public class Fernflower implements IDecompiledData {
       converter = null;
     }
 
-    DecompilerContext context = new DecompilerContext(properties, logger, structContext, classProcessor, interceptor, cancellationManager);
+    DecompilerContext context = new DecompilerContext(properties, logger, structContext, classProcessor, interceptor, cancellationManager, decompilationProgressListener);
     DecompilerContext.setCurrentContext(context);
   }
 

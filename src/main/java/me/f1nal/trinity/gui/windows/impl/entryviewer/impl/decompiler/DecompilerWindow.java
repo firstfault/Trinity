@@ -47,6 +47,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> implements IEventListener, IDatabaseSavable<DatabaseDecompiler> {
+    private static final int MIN_LINE_NUMBER_DIGITS = 4;
     private ClassInput selectedClass;
     /**
      * Notifies the selected class must be refreshed.
@@ -155,7 +156,11 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             ImGui.text("No class selected");
         }
         DecompiledClass decompiledClass = this.getDecompiledClass();
-        getMenuBar().setProgress(decompiledClass == null ? new MenuBarProgress("Decompiler", "Decompiling Class", -1) : null);
+        boolean decompiling = trinity.getDecompiler().isDecompiling(selectedClass);
+        boolean progressive = decompiledClass != null && decompiledClass.isProgressive();
+        getMenuBar().setProgress(decompiling || progressive
+                ? new MenuBarProgress("Decompiler", decompiling ? "Decompiling Methods" : "Rendering Methods", -1)
+                : null);
     }
 
     @Subscribe
@@ -187,6 +192,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
 
         DecompiledClass decompiledClass = this.getDecompiledClass();
+        if (decompiledClass != null && decompiledClass.applyPendingMethodOutput()) {
+            this.searchDirty = true;
+        }
         if (decompiledClass != null && this.resetLines) {
             decompiledClass.resetLines();
             this.resetLines = false;
@@ -379,7 +387,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         float mousePosY = ImGui.getMousePosY() + ImGui.getScrollY() - ImGui.getWindowPosY();
         float mousePosX = ImGui.getMousePosX() + ImGui.getScrollX();
 
-        ImVec2 textSize = ImGui.calcTextSize(String.valueOf(decompiledClass.getLines().size() + 1));
+        int lineNumberDigits = Math.max(MIN_LINE_NUMBER_DIGITS,
+                String.valueOf(decompiledClass.getLines().size() + 1).length());
+        ImVec2 textSize = ImGui.calcTextSize("0".repeat(lineNumberDigits));
         float lineNumberSpacing = 3.F + textSize.x;
         float cursorPosX = ImGui.getCursorPosX();
 

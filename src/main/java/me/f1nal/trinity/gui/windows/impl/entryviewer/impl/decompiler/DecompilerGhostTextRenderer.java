@@ -6,8 +6,8 @@ import imgui.ImVec2;
 import imgui.flag.ImGuiMouseCursor;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
 import me.f1nal.trinity.decompiler.output.FontEnum;
-import me.f1nal.trinity.decompiler.util.TextBuffer;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.execution.hierarchy.MethodHierarchy;
@@ -33,7 +33,7 @@ public class DecompilerGhostTextRenderer implements Runnable {
         this.text.add(xrefsCount == 0 ? "no usages" : (xrefsCount + " usage" + (xrefsCount == 1 ? "" : "s")));
 
         if (input instanceof MethodInput) {
-            this.indent = new TextBuffer().appendIndent(1).toString();
+            this.indent = IFernflowerPreferences.DEFAULTS.get(IFernflowerPreferences.INDENT_STRING).toString();
             if (false) {
                 MethodHierarchy methodHierarchy = ((MethodInput) input).getMethodHierarchy();
                 if (methodHierarchy != null) {

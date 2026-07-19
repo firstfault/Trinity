@@ -5,6 +5,7 @@ import me.f1nal.trinity.decompiler.DecompiledMethod;
 import me.f1nal.trinity.decompiler.output.impl.*;
 import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.execution.ClassInput;
+import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.MethodOpcodeSource;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
@@ -14,8 +15,13 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import static me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer.TAG_END;
 import static me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer.TAG_START;
@@ -24,8 +30,10 @@ public class DecompilerMemberReader {
     private final DecompiledClass decompiledClass;
     private DecompiledMethod currentMethod;
     private final List<DecompilerComponent> componentList = new ArrayList<>();
+    private final Map<MemberDetails, MethodComponents> methodComponents = new LinkedHashMap<>();
     private List<AbstractInsnNode> instructionsLinkedToComponent;
     private List<AbstractInsnNode> lastInstructionsLinkedToComponent;
+    private final Set<DecompiledMethod> methodsWithBytecodeMarkers = new HashSet<>();
 
     public DecompilerMemberReader(DecompiledClass decompiledClass, String rawOutput) throws IOException {
         this.decompiledClass = decompiledClass;
@@ -100,6 +108,7 @@ public class DecompilerMemberReader {
                 continue;
             }
             DecompiledMethod method = decompiledClass.createMethod(methodInput);
+            methodsWithBytecodeMarkers.add(method);
             if (method.getOpcodeMap().containsKey(marker.getOffsetFromStart())) {
                 new IllegalStateException(String.format("Already have this bytecode at %d!", marker.getOffsetFromStart())).printStackTrace();
                 continue;
@@ -114,7 +123,7 @@ public class DecompilerMemberReader {
     }
 
     private void setBytecodeMarkers() {
-        for (DecompiledMethod method : this.decompiledClass.getMethods()) {
+        for (DecompiledMethod method : this.methodsWithBytecodeMarkers) {
             this.setBytecodeMarkers(method);
         }
     }
@@ -162,6 +171,8 @@ public class DecompilerMemberReader {
      */
     private void decode(String rawOutput) throws IOException {
         int index = 0;
+        MemberDetails activeMethod = null;
+        Map<MemberDetails, DecompilerComponent> methodStarts = new HashMap<>();
 
         while (true) {
             final int start = rawOutput.indexOf(TAG_START, index);
@@ -186,14 +197,31 @@ public class DecompilerMemberReader {
                 this.handleBytecodeMarker((BytecodeMarkerOutputMember) outputMember);
                 continue;
             }
-            if (outputMember instanceof MethodStartEndOutputMember) {
-                this.processMethodStartEnd((MethodStartEndOutputMember) outputMember);
+            MethodStartEndOutputMember methodBoundary = outputMember instanceof MethodStartEndOutputMember
+                    ? (MethodStartEndOutputMember) outputMember : null;
+            MemberDetails boundaryMethod = null;
+            if (methodBoundary != null) {
+                boundaryMethod = methodBoundary.isStart() ? new MemberDetails(methodBoundary) : activeMethod;
+                this.processMethodStartEnd(methodBoundary);
             }
 
             DecompilerComponent component = new DecompilerComponent(componentText);
             DecompilerComponentInitializer initializer = new DecompilerComponentInitializer(decompiledClass.getTrinity(), component, componentText, decompiledClass.getClassInput(), currentMethod);
             outputMember.visit(initializer);
             this.addComponent(component);
+
+            if (methodBoundary != null && boundaryMethod != null) {
+                if (methodBoundary.isStart()) {
+                    activeMethod = boundaryMethod;
+                    methodStarts.put(boundaryMethod, component);
+                } else {
+                    DecompilerComponent startComponent = methodStarts.remove(boundaryMethod);
+                    if (startComponent != null) {
+                        methodComponents.put(boundaryMethod, new MethodComponents(startComponent, component));
+                    }
+                    activeMethod = null;
+                }
+            }
 
         }
 
@@ -230,6 +258,13 @@ public class DecompilerMemberReader {
 
     public List<DecompilerComponent> getComponentList() {
         return componentList;
+    }
+
+    public Map<MemberDetails, MethodComponents> getMethodComponents() {
+        return methodComponents;
+    }
+
+    public record MethodComponents(DecompilerComponent start, DecompilerComponent end) {
     }
 
     private String sanityCheckEncoded(OutputMember currentOutputMember, String targetString) {

@@ -8,6 +8,7 @@ import me.f1nal.trinity.decompiler.main.collectors.CounterContainer;
 import me.f1nal.trinity.decompiler.main.collectors.ImportCollector;
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerLogger;
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
+import me.f1nal.trinity.decompiler.main.extern.IDecompilationProgressListener;
 import me.f1nal.trinity.decompiler.modules.decompiler.vars.VarProcessor;
 import me.f1nal.trinity.decompiler.modules.renamer.PoolInterceptor;
 import me.f1nal.trinity.decompiler.struct.StructContext;
@@ -37,6 +38,8 @@ public class DecompilerContext {
   private VarProcessor varProcessor;
   private CounterContainer counterContainer;
   private BytecodeSourceMapper bytecodeSourceMapper;
+  @NotNull
+  private final IDecompilationProgressListener decompilationProgressListener;
 
   public DecompilerContext(@NotNull Map<String, Object> properties,
                            @NotNull IFernflowerLogger logger,
@@ -52,6 +55,16 @@ public class DecompilerContext {
                            @NotNull ClassesProcessor classProcessor,
                            @Nullable PoolInterceptor interceptor,
                            @Nullable CancellationManager cancellationManager) {
+    this(properties, logger, structContext, classProcessor, interceptor, cancellationManager, null);
+  }
+
+  public DecompilerContext(@NotNull Map<String, Object> properties,
+                           @NotNull IFernflowerLogger logger,
+                           @NotNull StructContext structContext,
+                           @NotNull ClassesProcessor classProcessor,
+                           @Nullable PoolInterceptor interceptor,
+                           @Nullable CancellationManager cancellationManager,
+                           @Nullable IDecompilationProgressListener decompilationProgressListener) {
     Objects.requireNonNull(properties);
     Objects.requireNonNull(logger);
     Objects.requireNonNull(structContext);
@@ -69,6 +82,7 @@ public class DecompilerContext {
     this.poolInterceptor = interceptor;
     this.counterContainer = new CounterContainer();
     this.cancellationManager = cancellationManager;
+    this.decompilationProgressListener = decompilationProgressListener == null ? IDecompilationProgressListener.NONE : decompilationProgressListener;
   }
 
   // *****************************************************************************
@@ -133,6 +147,10 @@ public class DecompilerContext {
 
   public static CancellationManager getCancellationManager() {
     return getCurrentContext().cancellationManager;
+  }
+
+  public static IDecompilationProgressListener getDecompilationProgressListener() {
+    return getCurrentContext().decompilationProgressListener;
   }
 
   public static PoolInterceptor getPoolInterceptor() {

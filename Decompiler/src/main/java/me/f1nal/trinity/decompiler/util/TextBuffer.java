@@ -172,6 +172,10 @@ public class TextBuffer {
     return myStringBuilder.length();
   }
 
+  public String substring(int start) {
+    return myStringBuilder.substring(start);
+  }
+
   public void setStart(int position) {
     myStringBuilder.delete(0, position);
     shiftMapping(-position);
