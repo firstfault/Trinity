@@ -25,6 +25,7 @@ public class PreferencesFile extends AppDataFile {
     private boolean decompilerNormalizeText = false;
     private boolean decompilerEnumClass = false;
     private boolean autoviewXref = false;
+    private boolean assemblerHideMetadata = false;
     private String currentTheme;
     private final Set<KeyBindingData> keyBindingData = new HashSet<>();
     private final Map<String, Boolean> memorizedCheckboxes = new HashMap<>();
@@ -36,6 +37,7 @@ public class PreferencesFile extends AppDataFile {
     public PreferencesFile(AppDataManager manager) {
         super("preferences", manager);
         this.addAlias(FontSettings.class, "fontSetting");
+        this.addAlias(KeyBindingData.class, "keyBinding");
     }
 
     public void setDecompilerNormalizeText(boolean decompilerNormalizeText) {
@@ -77,6 +79,7 @@ public class PreferencesFile extends AppDataFile {
 
     @Override
     public void handleLoad() {
+        Main.getKeyBindManager().load(this.keyBindingData);
         ThemeManager themeManager = Main.getThemeManager();
         Theme theme = this.currentTheme == null ? null : themeManager.getTheme(this.currentTheme);
         if (theme == null) {
@@ -119,11 +122,28 @@ public class PreferencesFile extends AppDataFile {
         this.autoviewXref = autoviewXref;
     }
 
+    public boolean isAssemblerHideMetadata() {
+        return assemblerHideMetadata;
+    }
+
+    public void setAssemblerHideMetadata(boolean assemblerHideMetadata) {
+        this.assemblerHideMetadata = assemblerHideMetadata;
+    }
+
     public int getSearchLimit(int size) {
         return Math.min(size, searchMaxDisplay.getMax());
     }
 
     public Set<KeyBindingData> getKeyBindings() {
         return keyBindingData;
+    }
+
+    public void setKeyBinding(KeyBindingData binding) {
+        this.keyBindingData.removeIf(existing -> existing.getShortName().equals(binding.getShortName()));
+        this.keyBindingData.add(binding);
+    }
+
+    public void removeKeyBinding(String identifier) {
+        this.keyBindingData.removeIf(binding -> binding.getShortName().equals(identifier));
     }
 }

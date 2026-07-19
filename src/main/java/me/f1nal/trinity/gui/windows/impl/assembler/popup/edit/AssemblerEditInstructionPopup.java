@@ -8,13 +8,14 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.windows.api.PopupWindow;
 import me.f1nal.trinity.theme.CodeColorScheme;
-import me.f1nal.trinity.util.UnsafeUtil;
 import org.objectweb.asm.tree.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.Map;
 
 public class AssemblerEditInstructionPopup extends PopupWindow {
     private final ImString opcodeName = new ImString(32);
@@ -22,11 +23,17 @@ public class AssemblerEditInstructionPopup extends PopupWindow {
     private EditingInstruction instruction;
     private final Consumer<EditingInstruction> callback;
     private final MethodInput methodInput;
+    private final Supplier<LabelNode> defaultLabel;
+    private final Supplier<Map<LabelNode, LabelNode>> labelMap;
 
-    public AssemblerEditInstructionPopup(Trinity trinity, MethodInput methodInput, Consumer<EditingInstruction> callback) {
+    public AssemblerEditInstructionPopup(Trinity trinity, MethodInput methodInput, Supplier<LabelNode> defaultLabel,
+                                         Supplier<Map<LabelNode, LabelNode>> labelMap,
+                                         Consumer<EditingInstruction> callback) {
         super("Edit/View Instruction", trinity);
         this.callback = Objects.requireNonNull(callback);
         this.methodInput = methodInput;
+        this.defaultLabel = defaultLabel;
+        this.labelMap = labelMap;
     }
 
     @Override
@@ -115,18 +122,11 @@ public class AssemblerEditInstructionPopup extends PopupWindow {
                 this.autocompletedInstructions.add(autocomplete);
             }
             if (opcode.equalsIgnoreCase(search)) {
-                AbstractInsnNode insnNode;
-                try {
-                    insnNode = (AbstractInsnNode) UnsafeUtil.getUnsafe().allocateInstance(OpcodeClasses.getOpcodeClass(opcode));
-                } catch (InstantiationException e) {
-                    throw new RuntimeException(e);
-                }
-                final int opcodeIndex = OpcodeClasses.getOpcodeIndex(opcode);
-                if (opcodeIndex != -1) {
-                    OpcodeClasses.setInstructionOpcode(insnNode, opcodeIndex);
-                }
-                EditingInstruction editingInstruction = new EditingInstruction(trinity, methodInput.createLabelMap(), insnNode);
+                AbstractInsnNode insnNode = OpcodeClasses.createDefault(opcode,
+                        methodInput.getOwningClass().getRealName(), defaultLabel.get());
+                EditingInstruction editingInstruction = new EditingInstruction(trinity, labelMap.get(), insnNode, false);
                 editingInstruction.addInstructionFields(methodInput);
+                for (EditField<?> editField : editingInstruction.getEditFieldList()) editField.updateField();
                 this.instruction = editingInstruction;
             }
         }

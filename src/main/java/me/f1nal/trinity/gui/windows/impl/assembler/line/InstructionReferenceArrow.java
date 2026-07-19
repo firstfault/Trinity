@@ -5,6 +5,7 @@ import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.ImVec4;
 import imgui.flag.ImGuiKey;
+import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.execution.labels.MethodLabel;
 import me.f1nal.trinity.gui.windows.impl.assembler.InstructionComponent;
 import me.f1nal.trinity.theme.CodeColorScheme;
@@ -59,12 +60,11 @@ public class InstructionReferenceArrow {
         final boolean escape = ImGui.isKeyDown(ImGui.getKeyIndex(ImGuiKey.Escape));
         boolean clearDrag = false;
 
-        if (table.draggingArrowNow) System.out.println("SWTF");
         if (!table.draggingArrowNow && (ImGui.isMouseClicked(0) || escape)) {
             final InstructionComponent target = escape ? null : table.getHoveredInstruction();
 
             if (target != null && target != this.from) {
-                this.setTo(target);
+                table.getAssemblerFrame().retargetReference(this, target);
             }
 
             clearDrag = true;
@@ -154,6 +154,52 @@ public class InstructionReferenceArrow {
 
         drawList.addLine(lx + lineWidth - arrowWidth, tp - arrowOpen, lx + lineWidth, tp, color, 1.F);
         drawList.addLine(lx + lineWidth - arrowWidth, tp + arrowOpen, lx + lineWidth, tp, color, 1.F);
+    }
+
+    public void drawOffscreenEndpoints(ImDrawList drawList, AssemblerInstructionTable table) {
+        drawOffscreenEndpoint(drawList, table, this.from, "start");
+        drawOffscreenEndpoint(drawList, table, this.to, "end");
+    }
+
+    private void drawOffscreenEndpoint(ImDrawList drawList, AssemblerInstructionTable table,
+                                       InstructionComponent endpoint, String endpointName) {
+        ImVec4 bounds = endpoint.getBounds();
+        boolean above = bounds.y + bounds.w <= table.getViewportMinY();
+        boolean below = bounds.y >= table.getViewportMaxY();
+        if (!above && !below) return;
+
+        float x = table.getViewportMinX();
+        float y = above ? table.getViewportMinY() : table.getViewportMaxY() - bounds.w;
+        float maxX = table.getViewportMaxX();
+        int borderColor = CodeColorScheme.DISABLED;
+
+        drawList.addRectFilled(x, y, maxX, y + bounds.w,
+                CodeColorScheme.setAlpha(table.getWindowBackgroundColor(), 245));
+
+        float textX = x + 5.F;
+        String prefix = endpointName + "  +" + endpoint.getId() + "  ";
+        drawList.addText(textX, y, borderColor, prefix);
+        textX += ImGui.calcTextSize(prefix).x;
+
+        List<ColoredString> text = endpoint.asText();
+        for (int i = 0; i < text.size(); i++) {
+            ColoredString part = text.get(i);
+            drawList.addText(textX, y, i == 0 ? endpoint.getColor() : part.getColor(), part.getText());
+            textX += ImGui.calcTextSize(part.getText()).x;
+        }
+    }
+
+    public boolean isVisible() {
+        if (points[0] == null) return false;
+        float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+        for (ImVec4 point : points) {
+            minX = Math.min(minX, Math.min(point.x, point.z));
+            minY = Math.min(minY, Math.min(point.y, point.w));
+            maxX = Math.max(maxX, Math.max(point.x, point.z));
+            maxY = Math.max(maxY, Math.max(point.y, point.w));
+        }
+        return ImGui.isRectVisible(minX - 5.F, minY - 5.F, maxX + 5.F, maxY + 5.F);
     }
 
     private float getLineWidth() {

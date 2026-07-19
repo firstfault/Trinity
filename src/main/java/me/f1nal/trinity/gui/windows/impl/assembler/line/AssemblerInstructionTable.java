@@ -7,6 +7,7 @@ import me.f1nal.trinity.gui.windows.impl.assembler.AssemblerFrame;
 import me.f1nal.trinity.gui.windows.impl.assembler.InstructionComponent;
 import me.f1nal.trinity.gui.windows.impl.assembler.InstructionList;
 import me.f1nal.trinity.gui.windows.impl.assembler.args.InstructionOperand;
+import org.objectweb.asm.tree.LabelNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +15,7 @@ import java.util.List;
 public class AssemblerInstructionTable {
     private final AssemblerFrame assemblerFrame;
     private final InstructionList instructions;
-    private final ImDrawList drawList = ImGui.getWindowDrawList();
+    private ImDrawList drawList;
     private final Instruction2SourceMapping sourceMapping;
     public float sourceFileStartX;
     private SourceLineNumber hoveredSourceLine;
@@ -23,6 +24,10 @@ public class AssemblerInstructionTable {
     private InstructionReferenceArrow hoveredReferenceArrow;
     public float instructionStartX;
     public float instructionOperandsStartX;
+    private float viewportMinX;
+    private float viewportMinY;
+    private float viewportMaxX;
+    private float viewportMaxY;
     /**
      * If non-null, then every instruction that isn't in this list gets a lower opacity.
      */
@@ -44,6 +49,7 @@ public class AssemblerInstructionTable {
     }
 
     public void setDraggingInstruction(InstructionComponent draggingInstruction) {
+        assemblerFrame.beginDragMutation();
         assemblerFrame.draggingInstruction = new InstructionDrag(draggingInstruction, ImGui.getMousePos(), instructions.indexOf(draggingInstruction));
     }
 
@@ -109,6 +115,13 @@ public class AssemblerInstructionTable {
     }
 
     public float draw(ImVec2 vMin, ImVec2 vMax) {
+        this.drawList = ImGui.getWindowDrawList();
+        this.hoveredSourceLine = null;
+        this.hoveredInstruction = null;
+        this.hoveredOperand = null;
+        this.hoveredReferenceArrow = null;
+        this.highlightedInstructions = null;
+        this.draggingArrowNow = false;
         float fontSize = Main.getPreferences().getDefaultFont().getSize();
         float spacing = fontSize * 0.5F;
 
@@ -117,11 +130,20 @@ public class AssemblerInstructionTable {
         this.sourceFileStartX = 58.F + fontSize * 2.F;
 
         float x = vMin.x, y = vMin.y + 1.F;
+        this.viewportMinX = vMin.x + ImGui.getScrollX();
+        this.viewportMinY = vMin.y + ImGui.getScrollY();
+        this.viewportMaxX = vMax.x + ImGui.getScrollX();
+        this.viewportMaxY = vMax.y + ImGui.getScrollY();
 
-        ArrayList<InstructionComponent> sorted = new ArrayList<>(this.instructions);
-        sorted.removeIf(i -> i.getInstruction().getOpcode() == -1);
+        boolean hideMetadata = Main.getPreferences().isAssemblerHideMetadata();
+        List<InstructionComponent> visible = new ArrayList<>();
+        for (InstructionComponent component : instructions) {
+            if (component.getInstruction() instanceof LabelNode) continue;
+            if (!hideMetadata || component.getInstruction().getOpcode() >= 0) visible.add(component);
+        }
 
-        for (InstructionComponent instruction : sorted) {
+        y = vMin.y + 1.F;
+        for (InstructionComponent instruction : visible) {
             instruction.setBounds(this, x, y);
             ImVec4 bounds = instruction.getBounds();
             y += bounds.w;
@@ -131,18 +153,27 @@ public class AssemblerInstructionTable {
             arrow.setControls(this);
         }
 
-        for (InstructionComponent instruction : sorted) {
-            instruction.setControls(this);
+        for (InstructionComponent instruction : visible) {
+            ImVec4 bounds = instruction.getBounds();
+            if (ImGui.isRectVisible(bounds.x, bounds.y, bounds.x + 0x10000, bounds.y + bounds.w)) {
+                instruction.setControls(this);
+            }
         }
 
         if (this.getDraggingReferenceArrow() != null) this.getDraggingReferenceArrow().setDraggingControls(this);
 
-        for (InstructionComponent instruction : sorted) {
-            instruction.draw(drawList, this);
+        for (InstructionComponent instruction : visible) {
+            ImVec4 bounds = instruction.getBounds();
+            if (ImGui.isRectVisible(bounds.x, bounds.y, bounds.x + 0x10000, bounds.y + bounds.w)) {
+                instruction.draw(drawList, this);
+            }
         }
 
         for (InstructionReferenceArrow arrow : instructions.getInstructionReferenceArrowList()) {
-            arrow.draw(drawList, this);
+            if (arrow.isVisible()) arrow.draw(drawList, this);
+        }
+        if (this.hoveredReferenceArrow != null) {
+            this.hoveredReferenceArrow.drawOffscreenEndpoints(drawList, this);
         }
 
         return Math.max(y - vMin.y, ImGui.getContentRegionAvailY());
@@ -159,4 +190,21 @@ public class AssemblerInstructionTable {
     public boolean isWindowHovered() {
         return ImGui.isWindowHovered();
     }
+
+    public float getViewportMinX() {
+        return viewportMinX;
+    }
+
+    public float getViewportMinY() {
+        return viewportMinY;
+    }
+
+    public float getViewportMaxX() {
+        return viewportMaxX;
+    }
+
+    public float getViewportMaxY() {
+        return viewportMaxY;
+    }
+
 }

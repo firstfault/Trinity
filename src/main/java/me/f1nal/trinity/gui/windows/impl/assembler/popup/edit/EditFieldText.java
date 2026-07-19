@@ -3,6 +3,7 @@ package me.f1nal.trinity.gui.windows.impl.assembler.popup.edit;
 import imgui.ImGui;
 import imgui.flag.ImGuiInputTextFlags;
 import imgui.type.ImString;
+import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -12,6 +13,7 @@ public abstract class EditFieldText<T> extends EditField<T> {
     protected final ImString text;
     protected int inputTextFlags = ImGuiInputTextFlags.None;
     private Boolean valid;
+    private String error;
 
     EditFieldText(int length, String label, String hint, Supplier<T> getter, Consumer<T> setter) {
         super(getter, setter);
@@ -27,17 +29,23 @@ public abstract class EditFieldText<T> extends EditField<T> {
     @Override
     public void draw() {
         if (ImGui.inputTextWithHint(this.label, this.hint, this.text, inputTextFlags)) {
-            T parse;
+            T parse = null;
+            boolean parsed = false;
             try {
                 parse = this.parse(this.text.get());
                 this.valid = true;
+                this.error = null;
+                parsed = true;
             } catch (InvalidEditInputException e) {
                 this.valid = false;
+                this.error = e.getMessage();
                 this.update();
-                return;
             }
-            this.set(parse);
+            if (parsed) {
+                this.set(parse);
+            }
         }
+        if (error != null && !error.isBlank()) ImGui.textColored(CodeColorScheme.NOTIFY_ERROR, error);
     }
 
     protected abstract T parse(String input) throws InvalidEditInputException;

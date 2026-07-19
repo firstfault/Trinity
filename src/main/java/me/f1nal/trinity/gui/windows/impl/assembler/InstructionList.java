@@ -51,9 +51,21 @@ public class InstructionList extends ArrayList<InstructionComponent> {
     }
 
     private void setInstructionIds() {
+        int id = 0;
         for (int i = 0; i < size(); i++) {
-            get(i).setId(i);
+            InstructionComponent component = get(i);
+            if (component.getInstruction().getOpcode() >= 0) {
+                component.setId(id++);
+            }
         }
+    }
+
+    public int getExecutableCount() {
+        int count = 0;
+        for (InstructionComponent component : this) {
+            if (component.getInstruction().getOpcode() >= 0) count++;
+        }
+        return count;
     }
 
     public InstructionReferenceArrow getReferenceArrow(MethodLabel label) {

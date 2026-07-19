@@ -12,7 +12,6 @@ import org.objectweb.asm.tree.*;
 import org.objectweb.asm.util.Printer;
 
 import java.awt.*;
-import java.awt.geom.Line2D;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -28,14 +27,18 @@ public class AssemblerInstructionDecoder {
 
     public InstructionList buildInstructions(InsnList il) {
         InstructionList instructions = new InstructionList();
-        Map<InstructionComponent, AbstractInsnNode> mappedInstructions = new LinkedHashMap<>();
         for (AbstractInsnNode insnNode : il) {
             InstructionComponent component = this.translateInstruction(insnNode);
             instructions.add(component);
-            mappedInstructions.put(component, insnNode);
         }
+        rebuildReferenceArrows(instructions);
+        return instructions;
+    }
+
+    public void rebuildReferenceArrows(InstructionList instructions) {
         AtomicReference<Float> hue = new AtomicReference<>(0.3F);
         List<InstructionReferenceArrow> arrowList = instructions.getInstructionReferenceArrowList();
+        arrowList.clear();
 
         for (InstructionComponent instruction : instructions) {
             for (InstructionOperand argument : instruction.getOperands()) {
@@ -53,19 +56,7 @@ public class AssemblerInstructionDecoder {
             }
         }
 
-        int maxDepth = 0;
-        boolean[] intersects = new boolean[1];
-        do {
-            intersects[0] = false;
-            for (InstructionReferenceArrow arrow : arrowList) {
-                int from = instructions.indexOf(arrow.getFrom()), to = instructions.indexOf(arrow.getTo());
-                arrow.setDepth(this.getArrowsInside(instructions, arrow, from, to, arrow.getDepth(), intersects));
-                maxDepth = Math.max(maxDepth, arrow.getDepth());
-            }
-        } while (intersects[0]);
-        instructions.setMaximumReferenceArrowDepth(maxDepth);
-        instructions.removeIf(insn -> insn.getInstruction().getOpcode() == -1);
-        return instructions;
+        assignArrowLanes(instructions, arrowList);
     }
 
     private InstructionComponent getNextMeaningfulInstruction(AbstractInsnNode label, InstructionList instructions) {
@@ -83,24 +74,26 @@ public class AssemblerInstructionDecoder {
         return null;
     }
 
-    private int getArrowsInside(InstructionList instructions, InstructionReferenceArrow exclude, int start, int end, int depth, boolean[] intersects) {
-        for (InstructionReferenceArrow arrow : instructions.getInstructionReferenceArrowList()) {
-            if (arrow == exclude) continue;
-
-            while (true) {
-                final int from = instructions.indexOf(arrow.getFrom()), to = instructions.indexOf(arrow.getTo());
-                final Line2D line = new Line2D.Double(start, depth, end, depth);
-                final Line2D otherLine = new Line2D.Double(from, arrow.getDepth(), to, arrow.getDepth());
-                if (line.intersectsLine(otherLine)) {
-                    intersects[0] = true;
-                    ++depth;
-                    continue;
-                }
-                break;
+    private void assignArrowLanes(InstructionList instructions, List<InstructionReferenceArrow> arrows) {
+        record Interval(InstructionReferenceArrow arrow, int start, int end) {}
+        record Active(int end, int lane) {}
+        List<Interval> intervals = arrows.stream().map(arrow -> {
+            int from = instructions.indexOf(arrow.getFrom());
+            int to = instructions.indexOf(arrow.getTo());
+            return new Interval(arrow, Math.min(from, to), Math.max(from, to));
+        }).sorted(Comparator.comparingInt(Interval::start).thenComparingInt(Interval::end)).toList();
+        PriorityQueue<Active> active = new PriorityQueue<>(Comparator.comparingInt(Active::end));
+        PriorityQueue<Integer> available = new PriorityQueue<>();
+        int lanes = 0;
+        for (Interval interval : intervals) {
+            while (!active.isEmpty() && active.peek().end() < interval.start()) {
+                available.add(active.remove().lane());
             }
+            int lane = available.isEmpty() ? lanes++ : available.remove();
+            interval.arrow().setDepth(lane);
+            active.add(new Active(interval.end(), lane));
         }
-
-        return depth;
+        instructions.setMaximumReferenceArrowDepth(Math.max(0, lanes - 1));
     }
 
     public InstructionComponent translateInstruction(AbstractInsnNode insnNode) {
@@ -112,8 +105,11 @@ public class AssemblerInstructionDecoder {
             arguments.add(new DetailsArgument(new MemberDetails(fin.owner, fin.name, fin.desc), false));
         } else if (insnNode instanceof VarInsnNode vin) {
             arguments.add(new VariableArgument(this.methodInput.getVariableTable().getVariable(vin.var)));
+        } else if (insnNode instanceof IincInsnNode increment) {
+            arguments.add(new VariableArgument(this.methodInput.getVariableTable().getVariable(increment.var)));
+            arguments.add(new NumberArgument(increment.incr));
         } else if (insnNode instanceof LabelNode ln) {
-//            arguments.add(new LabelArgument(this.assemblerFrame, this.methodInput, ln));
+            arguments.add(new LabelNameArgument(methodInput.getLabelTable().getLabel(ln.getLabel())));
         } else if (insnNode instanceof JumpInsnNode jin) {
             arguments.add(new LabelArgument(this.assemblerFrame, this.methodInput, jin.label, (newNode, labelNode) -> {
                 ((JumpInsnNode) newNode).label = labelNode;
@@ -167,14 +163,21 @@ public class AssemblerInstructionDecoder {
             final InstructionOperand cst = this.getCst(((LdcInsnNode)insnNode).cst);
             if (cst != null) arguments.add(cst);
         } else if (insnNode instanceof InvokeDynamicInsnNode indy) {
-            arguments.add(new InvokeDynamicArgument(indy.name, indy.name));
-            arguments.add(this.getCst(indy.bsm));
+            arguments.add(new InvokeDynamicArgument(indy.name, indy.desc));
+            InstructionOperand bootstrap = this.getCst(indy.bsm);
+            if (bootstrap != null) arguments.add(bootstrap);
             for (Object arg : indy.bsmArgs) {
                 InstructionOperand cst = getCst(arg);
                 if (cst != null) arguments.add(cst);
             }
         } else if (insnNode instanceof TypeInsnNode) {
             arguments.add(new TypeArgument((((TypeInsnNode) insnNode).desc.replace('.', '/'))));
+        } else if (insnNode instanceof MultiANewArrayInsnNode multiArray) {
+            arguments.add(new TypeArgument(multiArray.desc));
+            arguments.add(new NumberArgument(multiArray.dims));
+        } else if (insnNode instanceof LineNumberNode line) {
+            arguments.add(new NumberArgument(line.line));
+            arguments.add(new LabelNameArgument(methodInput.getLabelTable().getLabel(line.start.getLabel())));
         } else {
             switch (insnNode.getOpcode()) {
                 case Opcodes.SIPUSH:
@@ -202,6 +205,8 @@ public class AssemblerInstructionDecoder {
             }
         } else if (cst instanceof Handle) {
             return new HandleArgument((Handle) cst);
+        } else if (cst instanceof org.objectweb.asm.ConstantDynamic) {
+            return new AsmValueArgument(cst);
         }
         return null;
     }

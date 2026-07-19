@@ -1,9 +1,10 @@
 package me.f1nal.trinity.gui.windows.impl.assembler.popup.edit;
 
 import org.objectweb.asm.tree.*;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.util.Printer;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -12,7 +13,6 @@ public class OpcodeClasses {
     private static final Map<Class<? extends AbstractInsnNode>, String[]> classToOpcodeNames = new HashMap<>();
     private static final Map<Integer, Class<? extends AbstractInsnNode>> opcodesToClass = new HashMap<>();
     private static final Map<String, Class<? extends AbstractInsnNode>> namesToClasses = new HashMap<>();
-    private static Field opcodeField;
 
     public static int getOpcodeIndex(String name) {
         for (int i = 0; i < Printer.OPCODES.length; i++) {
@@ -36,12 +36,35 @@ public class OpcodeClasses {
         return namesToClasses.get(opcode);
     }
 
-    public static void setInstructionOpcode(AbstractInsnNode insnNode, int opcode) {
-        try {
-            opcodeField.setInt(insnNode, opcode);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+    public static AbstractInsnNode createDefault(String opcodeName, String owner, LabelNode target) {
+        int opcode = getOpcodeIndex(opcodeName);
+        Class<?> type = getOpcodeClass(opcodeName);
+        LabelNode label = target == null ? new LabelNode() : target;
+        if (type == InsnNode.class) return new InsnNode(opcode);
+        if (type == IntInsnNode.class) {
+            return new IntInsnNode(opcode, opcode == Opcodes.NEWARRAY ? Opcodes.T_INT : 0);
         }
+        if (type == VarInsnNode.class) return new VarInsnNode(opcode, 0);
+        if (type == TypeInsnNode.class) return new TypeInsnNode(opcode, "java/lang/Object");
+        if (type == FieldInsnNode.class) return new FieldInsnNode(opcode, owner, "field", "I");
+        if (type == MethodInsnNode.class) {
+            return new MethodInsnNode(opcode, owner, "method", "()V", opcode == Opcodes.INVOKEINTERFACE);
+        }
+        if (type == InvokeDynamicInsnNode.class) {
+            Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, owner, "bootstrap",
+                    "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;", false);
+            return new InvokeDynamicInsnNode("dynamic", "()V", bootstrap);
+        }
+        if (type == JumpInsnNode.class) return new JumpInsnNode(opcode, label);
+        if (type == LabelNode.class) return new LabelNode();
+        if (type == LdcInsnNode.class) return new LdcInsnNode("");
+        if (type == IincInsnNode.class) return new IincInsnNode(0, 1);
+        if (type == TableSwitchInsnNode.class) return new TableSwitchInsnNode(0, 0, label, label);
+        if (type == LookupSwitchInsnNode.class) return new LookupSwitchInsnNode(label, new int[]{0}, new LabelNode[]{label});
+        if (type == MultiANewArrayInsnNode.class) return new MultiANewArrayInsnNode("[[Ljava/lang/Object;", 1);
+        if (type == FrameNode.class) return new FrameNode(Opcodes.F_SAME, 0, null, 0, null);
+        if (type == LineNumberNode.class) return new LineNumberNode(1, label);
+        throw new IllegalArgumentException("Unsupported opcode: " + opcodeName);
     }
 
     static {
@@ -81,13 +104,5 @@ public class OpcodeClasses {
                 opcodesToClass.put(opcodeIndex, entry.getKey());
             }
         }
-        Field opcodeField;
-        try {
-            opcodeField = AbstractInsnNode.class.getDeclaredField("opcode");
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
-        opcodeField.setAccessible(true);
-        OpcodeClasses.opcodeField = opcodeField;
     }
 }

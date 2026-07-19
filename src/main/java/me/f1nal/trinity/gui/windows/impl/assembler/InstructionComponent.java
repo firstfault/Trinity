@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class InstructionComponent {
+    private static final float METADATA_TEXT_OPACITY = 0.5F;
     private static final List<InstructionAction> INSTRUCTION_ACTIONS = List.of(
             new InsertInstructionAction(),
             new EditInstructionAction(),
@@ -109,7 +110,7 @@ public class InstructionComponent {
             drawList.addRectFilled(x, y, x + 0x10000, y + this.bounds.w - 1,  ImColor.rgba(70, 70, 70, 33));
 
             for (InstructionAction instructionAction : INSTRUCTION_ACTIONS) {
-                if(ImGui.isKeyPressed(instructionAction.getKey())) {
+                if (instructionAction.isKeyPressed()) {
                     instructionAction.execute(table.getAssemblerFrame(), this);
                 }
             }
@@ -123,8 +124,9 @@ public class InstructionComponent {
             table.getAssemblerFrame().moveInstructionTo(this, dragging.getIndex() - (deltaY > 0.F ? dragDelta : -dragDelta));
         }
 
-        drawList.addText(x + 5, y, CodeColorScheme.DISABLED, "+" + this.id);
-        drawList.addText(x + table.instructionStartX + 5.F, y, this.color, this.getName());
+        drawList.addText(x + 5, y, this.getTextColor(CodeColorScheme.DISABLED),
+                this.instruction.getOpcode() < 0 ? "meta" : "+" + this.id);
+        drawList.addText(x + table.instructionStartX + 5.F, y, this.getTextColor(this.color), this.getName());
 
         if (this.instruction instanceof MethodInsnNode) {
             float lx = x + table.instructionStartX - 5.F, tp = y + (this.bounds.w / 2.2F);
@@ -149,7 +151,12 @@ public class InstructionComponent {
 
     private void drawArguments(AssemblerInstructionTable table) {
         for (InstructionOperand operand : this.operands) {
-            ColoredString.drawText(ImGui.getWindowDrawList(), operand.getBounds().x, operand.getBounds().y, operand.getDetailsText());
+            float x = operand.getBounds().x;
+            for (ColoredString detail : operand.getDetailsText()) {
+                ImGui.getWindowDrawList().addText(x, operand.getBounds().y,
+                        this.getTextColor(detail.getColor()), detail.getText());
+                x += ImGui.calcTextSize(detail.getText()).x;
+            }
 
 //            if (table.getHoveredOperand() == operand) {
 //                ImGui.beginTooltip();
@@ -169,7 +176,7 @@ public class InstructionComponent {
         popup.separator();
 
         if (getId() != 0) popup.menuItem("Move Up", () -> af.moveInstruction(this, -1));
-        if (getId() != af.getInstructions().size() - 1) popup.menuItem("Move Down", () -> af.moveInstruction(this, 1));
+        if (getId() != af.getInstructions().getExecutableCount() - 1) popup.menuItem("Move Down", () -> af.moveInstruction(this, 1));
 
         popup.separator();
 
@@ -183,7 +190,15 @@ public class InstructionComponent {
         float startClass = table.sourceFileStartX;
 
         drawList.addRectFilled(x + startClass - rect, rectY - rect, x + startClass + rect, rectY + rect, CodeColorScheme.CLASS_REF, 1.F);
-        drawList.addText(x + startClass + 12.F, y, table.getHoveredSourceLine() != sourceComponent ? CodeColorScheme.DISABLED : CodeColorScheme.TEXT, table.getSourceMapping().getClassWithLine(this.getInstruction()));
+        drawList.addText(x + startClass + 12.F, y, this.getTextColor(
+                table.getHoveredSourceLine() != sourceComponent ? CodeColorScheme.DISABLED : CodeColorScheme.TEXT),
+                table.getSourceMapping().getClassWithLine(this.getInstruction()));
+    }
+
+    private int getTextColor(int color) {
+        if (this.instruction.getOpcode() >= 0) return color;
+        int alpha = color >>> 24;
+        return color & 0x00FFFFFF | Math.round(alpha * METADATA_TEXT_OPACITY) << 24;
     }
 
     private static int getColor(AbstractInsnNode instruction) {
@@ -216,8 +231,8 @@ public class InstructionComponent {
         return instruction;
     }
 
-    public InstructionComponent copy() {
-        InstructionComponent component = new InstructionComponent(this.getName(), this.getInstruction().clone(Collections.emptyMap()));
+    public InstructionComponent copy(java.util.Map<LabelNode, LabelNode> labelMap) {
+        InstructionComponent component = new InstructionComponent(this.getName(), this.getInstruction().clone(labelMap));
         for (InstructionOperand argument : this.getOperands()) {
             component.getOperands().add(argument.copy());
         }

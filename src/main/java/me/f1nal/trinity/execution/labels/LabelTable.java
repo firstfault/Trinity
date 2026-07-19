@@ -24,6 +24,10 @@ public class LabelTable {
         return labelMap.computeIfAbsent(label, i -> new MethodLabel(this, "L".concat(String.valueOf(size))));
     }
 
+    public void reset() {
+        labelMap.clear();
+    }
+
     public MethodLabel getLabel(String name) {
         for (MethodLabel label : labelMap.values()) {
             if (label.getName().equals(name)) {

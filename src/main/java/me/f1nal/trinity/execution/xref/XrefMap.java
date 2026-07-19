@@ -86,6 +86,26 @@ public final class XrefMap extends ProgressiveLoadTask {
         }
     }
 
+    /** Replaces every reference originating from one edited method. */
+    public synchronized void refreshMethod(MethodInput methodInput) {
+        memberReferences.entries().removeIf(entry -> entry.getValue().getMethodInput() == methodInput);
+        for (ClassTarget target : execution.getClassTargetMap().values()) {
+            target.getReferences().removeIf(reference -> reference.getWhere().getInput() == methodInput);
+        }
+
+        XrefWhereMethod whereMethod = new XrefWhereMethod(methodInput);
+        processMethodInstructions(whereMethod, methodInput);
+        try {
+            processArgumentXrefs(methodInput, methodInput.getDescriptor());
+        } catch (Throwable throwable) {
+            Logging.warn("Failed to refresh argument references: {} in {}", throwable, methodInput);
+        }
+        processAnnotations(whereMethod, methodInput.getNode().visibleAnnotations);
+        processAnnotations(whereMethod, methodInput.getNode().invisibleAnnotations);
+        processThrows(whereMethod, methodInput.getNode().exceptions);
+        processTryCatchHandlers(whereMethod, methodInput.getNode().tryCatchBlocks);
+    }
+
     private void processMethodInstructions(XrefWhereMethod whereMethod, MethodInput methodInput) {
         for (AbstractInsnNode instruction : methodInput.getInstructions()) {
             if (instruction.getOpcode() <= Opcodes.NOP) {

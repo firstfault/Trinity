@@ -15,9 +15,11 @@ import me.f1nal.trinity.gui.components.general.EnumComboBox;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.xref.SearchMaxDisplay;
 import me.f1nal.trinity.keybindings.Bindable;
+import me.f1nal.trinity.keybindings.KeyBindManager;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;
 import me.f1nal.trinity.util.GuiUtil;
+import org.lwjgl.glfw.GLFW;
 
 public class PreferencesFrame extends StaticWindow {
     private final String id = ComponentId.getId(this.getClass());
@@ -25,6 +27,8 @@ public class PreferencesFrame extends StaticWindow {
     private final EnumComboBox<SearchMaxDisplay> searchMaxDisplayComboBox;
     private final PreferencesFile preferencesFile;
     private Bindable editingBind;
+    private boolean captureArmed;
+    private String keyMappingStatus;
 
     public PreferencesFrame(Trinity trinity) {
         super("Preferences", 450, 250, trinity);
@@ -83,24 +87,8 @@ public class PreferencesFrame extends StaticWindow {
                 ImGui.endTabItem();
             }
 
-            if (false&&ImGui.beginTabItem("Keybindings")) {
-                for (Bindable bindable : Main.getKeyBindManager().getBindables()) {
-                    ImGui.text(bindable.getDisplayName());
-                    ImGui.sameLine();
-                    if (ImGui.smallButton(this.editingBind == bindable ? "Press A Key..." : bindable.getKeyName())) {
-                        this.editingBind = bindable;
-                    }
-
-                    if (this.editingBind == bindable) {
-                        for (int i = 0; i < 512; i++) {
-                            if (ImGui.isKeyDown(i)) {
-                                this.editingBind.bind(i);
-                                this.editingBind = null;
-                                break;
-                            }
-                        }
-                    }
-                }
+            if (ImGui.beginTabItem("Key Mappings")) {
+                this.drawKeyMappings();
                 ImGui.endTabItem();
             }
 
@@ -110,5 +98,75 @@ public class PreferencesFrame extends StaticWindow {
 
     private void tooltip(String tooltip) {
         if (ImGui.isItemHovered()) ImGui.setTooltip(tooltip);
+    }
+
+    private void drawKeyMappings() {
+        KeyBindManager manager = Main.getKeyBindManager();
+        ImGui.textDisabled("Multiple key combinations supported. Escape cancels capture.");
+
+        for (String category : manager.getCategories()) {
+            ImGui.separator();
+            ImGui.text(category);
+            for (Bindable bindable : manager.getBindables()) {
+                if (!bindable.getCategory().equals(category)) continue;
+                ImGui.text(bindable.getDisplayName());
+                ImGui.sameLine(210.F);
+                String mapping = this.editingBind == bindable ? "Press shortcut..." : bindable.getKeyName();
+                if (ImGui.button(mapping + "###mapping." + bindable.getIdentifier(), 145.F, 0.F)) {
+                    this.editingBind = bindable;
+                    this.captureArmed = false;
+                    this.keyMappingStatus = null;
+                }
+                ImGui.sameLine();
+                if (ImGui.smallButton("Clear###clear." + bindable.getIdentifier())) {
+                    this.persistBinding(manager.bind(bindable, -1, false, false, false, false), bindable);
+                    if (this.editingBind == bindable) this.editingBind = null;
+                }
+                ImGui.sameLine();
+                if (ImGui.smallButton("Reset###reset." + bindable.getIdentifier())) {
+                    Bindable conflict = manager.reset(bindable);
+                    if (conflict != null) preferencesFile.setKeyBinding(conflict.createData());
+                    preferencesFile.removeKeyBinding(bindable.getIdentifier());
+                    this.keyMappingStatus = conflict == null ? null
+                            : "Cleared conflicting mapping from " + conflict.getDisplayName() + ".";
+                    if (this.editingBind == bindable) this.editingBind = null;
+                }
+            }
+        }
+
+        if (keyMappingStatus != null) ImGui.textDisabled(keyMappingStatus);
+        this.captureKeyMapping();
+    }
+
+    private void captureKeyMapping() {
+        if (this.editingBind == null) return;
+        if (!this.captureArmed) {
+            this.captureArmed = true;
+            return;
+        }
+        if (ImGui.isKeyPressed(GLFW.GLFW_KEY_ESCAPE, false)) {
+            this.editingBind = null;
+            return;
+        }
+        for (int key = GLFW.GLFW_KEY_SPACE; key <= GLFW.GLFW_KEY_LAST; key++) {
+            if (Bindable.isModifierKey(key) || !ImGui.isKeyPressed(key, false)) continue;
+            Bindable changed = this.editingBind;
+            Bindable conflict = Main.getKeyBindManager().bind(changed, key,
+                    ImGui.getIO().getKeyCtrl(), ImGui.getIO().getKeyShift(),
+                    ImGui.getIO().getKeyAlt(), ImGui.getIO().getKeySuper());
+            this.persistBinding(conflict, changed);
+            this.editingBind = null;
+            return;
+        }
+    }
+
+    private void persistBinding(Bindable conflict, Bindable changed) {
+        preferencesFile.setKeyBinding(changed.createData());
+        if (conflict != null) {
+            preferencesFile.setKeyBinding(conflict.createData());
+            this.keyMappingStatus = "Cleared conflicting mapping from " + conflict.getDisplayName() + ".";
+        } else {
+            this.keyMappingStatus = null;
+        }
     }
 }

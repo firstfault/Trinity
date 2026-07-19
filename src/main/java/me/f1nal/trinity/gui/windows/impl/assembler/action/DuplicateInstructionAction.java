@@ -1,8 +1,9 @@
 package me.f1nal.trinity.gui.windows.impl.assembler.action;
 
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.windows.impl.assembler.AssemblerFrame;
 import me.f1nal.trinity.gui.windows.impl.assembler.InstructionComponent;
-import org.lwjgl.glfw.GLFW;
+import me.f1nal.trinity.keybindings.Bindable;
 
 public final class DuplicateInstructionAction implements InstructionAction {
     @Override
@@ -16,7 +17,7 @@ public final class DuplicateInstructionAction implements InstructionAction {
     }
 
     @Override
-    public int getKey() {
-        return GLFW.GLFW_KEY_D;
+    public Bindable getKeyBinding() {
+        return Main.getKeyBindManager().ASSEMBLER_DUPLICATE;
     }
 }

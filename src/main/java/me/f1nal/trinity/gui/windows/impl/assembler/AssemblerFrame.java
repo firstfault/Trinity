@@ -11,6 +11,9 @@ import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.events.EventMemberModified;
 import me.f1nal.trinity.execution.MethodInput;
+import me.f1nal.trinity.execution.ClassInput;
+import me.f1nal.trinity.execution.compile.Console;
+import me.f1nal.trinity.execution.compile.SafeClassWriter;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
@@ -24,6 +27,7 @@ import me.f1nal.trinity.gui.windows.impl.assembler.line.Instruction2SourceMappin
 import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionDrag;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionReferenceArrow;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.AssemblerBytecodeGoToIndexPopup;
+import me.f1nal.trinity.gui.windows.impl.assembler.popup.AssemblerUnsavedChangesPopup;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.AssemblerEditInstructionPopup;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.EditField;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.EditingInstruction;
@@ -31,15 +35,15 @@ import me.f1nal.trinity.gui.viewport.notifications.ICaption;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.logging.Logging;
+import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.SystemUtil;
 import me.f1nal.trinity.util.animation.Animation;
 import me.f1nal.trinity.util.animation.Easing;
 import me.f1nal.trinity.util.history.ChangeManager;
 import org.lwjgl.glfw.GLFW;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.LabelNode;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.tree.*;
 
 import java.util.*;
 
@@ -48,6 +52,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
      * Method that we are inspecting.
      */
     private final MethodInput methodInput;
+    private final AssemblerDocument document;
     private final Instruction2SourceMapping sourceMapping;
     private InstructionList instructions;
     /**
@@ -58,20 +63,32 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     public InstructionDrag draggingInstruction;
     private InstructionComponent scrollTo;
     private AssemblerInstructionDecoder decoder;
+    private AssemblerInstructionTable instructionTable;
     /**
      * Dragging reference arrow.
      */
     public InstructionReferenceArrow draggingReferenceArrow;
     private PopupMenu popupMenu = new PopupMenu();
-    private final PopupMenuBar popupMenuBar = new PopupMenuBar(this.createMenuBar());
+    private final PopupMenuBar popupMenuBar;
     private AssemblerHistoryFrame historyFrame = null;
     private boolean methodNotFresh, saveMethod;
+    private String saveError;
+    private List<String> validationWarnings = List.of();
+    private boolean closePromptOpen;
+    private boolean closeAfterSave;
+    private boolean forceClose;
+    private final Deque<DocumentSnapshot> undoSnapshots = new ArrayDeque<>();
+    private final Deque<DocumentSnapshot> redoSnapshots = new ArrayDeque<>();
+    private boolean externalChanges;
+    private long nextExternalCheck;
 
     public AssemblerFrame(Trinity trinity, MethodInput methodInput, Instruction2SourceMapping sourceMapping) {
-        super("Assembler (beta!): " + methodInput.getName() + methodInput.getDescriptor(), 660, 500, trinity);
+        super("Assembler: " + methodInput.getName() + methodInput.getDescriptor(), 660, 500, trinity);
         this.methodInput = methodInput;
+        this.document = new AssemblerDocument(methodInput);
         this.sourceMapping = sourceMapping;
         this.setInstructions();
+        this.popupMenuBar = new PopupMenuBar(this.createMenuBar());
         this.windowFlags |= ImGuiWindowFlags.MenuBar;
     }
 
@@ -83,12 +100,18 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
      * Rebuilds the instruction view.
      */
     private void setInstructions() {
+        setInstructions(true);
+    }
+
+    private void setInstructions(boolean resetHistory) {
         this.saveMethod = this.methodNotFresh = false;
         this.selected = null;
-        this.history = new ChangeManager<>();
+        if (resetHistory || this.history == null) this.history = new ChangeManager<>();
         this.decoder = new AssemblerInstructionDecoder(this, methodInput);
-        this.instructions = this.decoder.buildInstructions(methodInput.getInstructions());
+        this.instructions = this.decoder.buildInstructions(document.getInstructions());
+        this.instructionTable = null;
         this.instructions.setIdsIfReset();
+        this.methodNotFresh = document.isDirty();
     }
 
     @Override
@@ -108,8 +131,36 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Z))) {
             this.undoHistory();
         }
+        if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGui.getKeyIndex(ImGuiKey.Y))) {
+            this.redoHistory();
+        }
 
         this.popupMenuBar.draw();
+
+        long now = System.nanoTime();
+        if (now >= nextExternalCheck) {
+            externalChanges = document.hasExternalChanges();
+            nextExternalCheck = now + 1_000_000_000L;
+        }
+        if (externalChanges) {
+            ImGui.textColored(CodeColorScheme.NOTIFY_ERROR,
+                    "This method changed outside the assembler. Reload or explicitly overwrite before saving.");
+            if (ImGui.smallButton("Reload external version")) {
+                document.reload();
+                undoSnapshots.clear();
+                redoSnapshots.clear();
+                setInstructions();
+                externalChanges = false;
+                saveError = null;
+            }
+            ImGui.sameLine();
+            if (ImGui.smallButton("Allow overwrite")) {
+                document.acceptExternalVersionForOverwrite();
+                externalChanges = false;
+            }
+        }
+        if (saveError != null) ImGui.textColored(CodeColorScheme.NOTIFY_ERROR, saveError);
+        for (String warning : validationWarnings) ImGui.textColored(CodeColorScheme.NOTIFY_WARN, warning);
 
         ImVec2 vMin = ImGui.getWindowContentRegionMin();
         ImVec2 vMax = ImGui.getWindowContentRegionMax();
@@ -118,7 +169,10 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         vMax.x += ImGui.getWindowPos().x;
         vMax.y += ImGui.getWindowPos().y;
 
-        AssemblerInstructionTable table = new AssemblerInstructionTable(this, this.getInstructions(), this.sourceMapping);
+        if (instructionTable == null) {
+            instructionTable = new AssemblerInstructionTable(this, this.getInstructions(), this.sourceMapping);
+        }
+        AssemblerInstructionTable table = instructionTable;
         final float height = table.draw(vMin, vMax);
 
         // Block ImGui input to the window content
@@ -135,6 +189,8 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         if (this.draggingInstruction != null && !ImGui.isMouseDown(0)) {
             if (this.draggingInstruction.getIndex() != this.instructions.indexOf(this.draggingInstruction.getComponent())) {
                 this.addHistory(new InstructionDragHistory(new InstructionPosition(this.instructions, this.draggingInstruction.getComponent(), this.draggingInstruction.getIndex())));
+            } else if (!undoSnapshots.isEmpty()) {
+                undoSnapshots.pop();
             }
             this.instructions.queueIdReset();
             this.draggingInstruction = null;
@@ -145,12 +201,24 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         }
 
         if (this.saveMethod) {
-            this.saveMethod = this.methodNotFresh = false;
-            Logging.info("Saved method");
-            int count = this.issueSave();
-            trinity.getEventManager().postEvent(new EventMemberModified(this.methodInput));
-            Main.getDisplayManager().addNotification(new Notification(NotificationType.SUCCESS, this, ColoredStringBuilder.create()
-                    .fmt("Saved {} instructions to {}", count, methodInput.getDisplayName()).get()));
+            this.saveMethod = false;
+            try {
+                int count = this.issueSave();
+                this.methodNotFresh = false;
+                this.saveError = null;
+                this.externalChanges = false;
+                Logging.info("Saved method");
+                trinity.getExecution().getXrefMap().refreshMethod(methodInput);
+                trinity.getEventManager().postEvent(new EventMemberModified(this.methodInput));
+                Main.getDisplayManager().addNotification(new Notification(NotificationType.SUCCESS, this, ColoredStringBuilder.create()
+                        .fmt("Saved {} instructions to {}", count, methodInput.getDisplayName()).get()));
+                if (closeAfterSave) {
+                    forceClose = true;
+                    super.close();
+                }
+            } catch (Throwable throwable) {
+                this.saveError = throwable.getMessage() == null ? throwable.getClass().getSimpleName() : throwable.getMessage();
+            }
         }
 
         this.getPopupMenu().draw();
@@ -159,10 +227,14 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     private PopupItemBuilder createMenuBar() {
         return PopupItemBuilder.create().
                 menu("File", file -> {
-                    file.menuItem("Save", "Ctrl+S", this.methodNotFresh, () -> this.saveMethod = true);
+                    file.menuItem("Save", "Ctrl+S", this.methodNotFresh, () -> this.saveMethod = true)
+                            .separator()
+                            .menuItem("Go to Method", () -> Main.getDisplayManager().openDecompilerView(this.methodInput));
                 }).
                 menu("View", view -> {
-                    view.menuItem("Refresh", this::setInstructions)
+                    view.menuItem("Hide Metadata", Main.getPreferences().isAssemblerHideMetadata(), this::toggleMetadataVisibility)
+                            .separator()
+                            .menuItem("Refresh", this::setInstructions)
                     ;
                 }).
                 menu("Bytecode", bytecode -> {
@@ -171,16 +243,23 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
                             .separator()
                             .menuItem("Go to index", () -> Main.getWindowManager().addPopup(new AssemblerBytecodeGoToIndexPopup(this, trinity)))
                             .separator()
+                            .menuItem("Recompute Frames", this::recomputeFramesAndMaxs)
+                            .separator()
                             .menuItem("Clear All", this::clearAll)
                     ;
                 }).
                 menu("History", history -> {
                     history.menuItem("View History...", this::openHistoryViewer)
-                            .predicate(() -> !this.history.isEmpty(),
-                                    p -> p.menuItem("Undo", "Ctrl+Z", this::undoHistory))
+                            .menuItem("Undo", "Ctrl+Z", !undoSnapshots.isEmpty(), this::undoHistory)
+                            .menuItem("Redo", "Ctrl+Y", !redoSnapshots.isEmpty(), this::redoHistory)
                     ;
                 })
         ;
+    }
+
+    private void toggleMetadataVisibility() {
+        Main.getPreferences().setAssemblerHideMetadata(!Main.getPreferences().isAssemblerHideMetadata());
+        this.popupMenuBar.set(this.createMenuBar());
     }
 
     private void openHistoryViewer() {
@@ -189,47 +268,34 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     private void clearAll() {
+        pushMutation(captureSnapshot(true));
         this.addHistory(new InstructionClearHistory(instructions));
         instructions.clear();
+        MethodNode method = document.getMethod();
+        if (method.tryCatchBlocks != null) method.tryCatchBlocks.clear();
+        method.localVariables = null;
+        method.visibleLocalVariableAnnotations = null;
+        method.invisibleLocalVariableAnnotations = null;
+        method.maxStack = 0;
+        method.maxLocals = 0;
         instructions.queueIdReset();
+        decoder.rebuildReferenceArrows(instructions);
     }
 
     /**
      * Saves method
      */
     private int issueSave() {
-        InsnList insnList = methodInput.getInstructions();
-        // Need to do this otherwise instruction's prev and next do not get set
-        AbstractInsnNode[] copy = insnList.toArray();
-        for (AbstractInsnNode insnNode : copy) {
-            insnList.remove(insnNode);
+        if (document.hasExternalChanges()) {
+            throw new IllegalStateException("The live method changed; reload it or choose Allow overwrite first");
         }
-
-        int count = 0;
-        // Map of newly created instructions
-        Map<InstructionComponent, AbstractInsnNode> mappedInstructions = new HashMap<>();
-        for (InstructionComponent instruction : instructions) {
-            AbstractInsnNode insnNode = instruction.getInstruction();
-
-            if (insnList.contains(insnNode)) {
-                throw new RuntimeException("What the heck");
-            }
-
-            insnList.add(insnNode);
-            mappedInstructions.put(instruction, insnNode);
-            ++count;
-        }
-        // Link labels
-        for (InstructionReferenceArrow arrow : instructions.getInstructionReferenceArrowList()) {
-            Label label = Objects.requireNonNull(arrow.getLabel().findOriginal(), "Jump label");
-            AbstractInsnNode targetInstruction = Objects.requireNonNull(mappedInstructions.get(arrow.getTo()), "Jump target");
-            AbstractInsnNode invokerInstruction = Objects.requireNonNull(mappedInstructions.get(arrow.getFrom()), "Jump invoker");
-
-            LabelNode labelNode = new LabelNode(label);
-            insnList.insertBefore(targetInstruction, labelNode);
-            arrow.updateLabel(invokerInstruction, labelNode);
-        }
-        return count;
+        List<AbstractInsnNode> ordered = instructions.stream().map(InstructionComponent::getInstruction).toList();
+        MethodNode candidate = document.buildCandidate(ordered);
+        AssemblerValidationResult validation = AssemblerValidator.validate(methodInput.getOwningClass(), candidate);
+        validationWarnings = validation.getWarnings();
+        if (!validation.isValid()) throw new IllegalStateException(String.join("\n", validation.getErrors()));
+        document.commit(candidate);
+        return instructions.getExecutableCount();
     }
 
     public ChangeManager<AssemblerHistory> getHistory() {
@@ -237,47 +303,124 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     private void undoHistory() {
-        if (history.isEmpty()) {
-            return;
+        if (undoSnapshots.isEmpty()) return;
+        DocumentSnapshot snapshot = undoSnapshots.pop();
+        redoSnapshots.push(captureSnapshot(snapshot.method() != null));
+        restoreSnapshot(snapshot);
+        if (!history.isEmpty()) history.removeLast();
+    }
+
+    private void redoHistory() {
+        if (redoSnapshots.isEmpty()) return;
+        DocumentSnapshot snapshot = redoSnapshots.pop();
+        undoSnapshots.push(captureSnapshot(snapshot.method() != null));
+        restoreSnapshot(snapshot);
+    }
+
+    private void beginMutation() {
+        pushMutation(captureSnapshot(false));
+    }
+
+    private void pushMutation(DocumentSnapshot snapshot) {
+        undoSnapshots.push(snapshot);
+        redoSnapshots.clear();
+    }
+
+    private DocumentSnapshot captureSnapshot(boolean deep) {
+        document.replaceInstructionOrder(instructions.stream().map(InstructionComponent::getInstruction).toList());
+        MethodNode copy = deep ? AssemblerDocument.cloneMethod(document.getMethod()) : null;
+        List<AbstractInsnNode> order = deep ? List.of() : List.of(document.getMethod().instructions.toArray());
+        List<String> names = new ArrayList<>();
+        for (AbstractInsnNode node : document.getMethod().instructions) {
+            if (node instanceof LabelNode label) {
+                names.add(methodInput.getLabelTable().getLabel(label.getLabel()).getName());
+            }
         }
-        this.history.undo(history.getStack().peek());
+        return new DocumentSnapshot(copy, order, names);
+    }
+
+    private void restoreSnapshot(DocumentSnapshot snapshot) {
+        if (snapshot.method() != null) document.replaceWorkingMethod(snapshot.method());
+        else document.replaceInstructionOrder(snapshot.instructions());
+        applyLabelNames(snapshot.labelNames());
+        setInstructions(false);
+    }
+
+    private void applyLabelNames(List<String> names) {
+        int index = 0;
+        for (AbstractInsnNode node : document.getMethod().instructions) {
+            if (node instanceof LabelNode label && index < names.size()) {
+                methodInput.getLabelTable().getLabel(label.getLabel()).getNameProperty().set(names.get(index++));
+            }
+        }
+    }
+
+    private record DocumentSnapshot(MethodNode method, List<AbstractInsnNode> instructions, List<String> labelNames) {
     }
 
     @Override
     public String getTitle() {
-        return super.getTitle() + ": " + instructions.size() + " instructions";
+        return super.getTitle() + ": " + instructions.getExecutableCount() + " instructions";
     }
 
     public void moveInstruction(InstructionComponent instruction, int delta) {
-        final int index = instructions.indexOf(instruction), nextIndex = index + delta;
+        final int index = instructions.indexOf(instruction);
+        List<InstructionComponent> executable = instructions.stream()
+                .filter(component -> component.getInstruction().getOpcode() >= 0).toList();
+        int executableIndex = executable.indexOf(instruction);
+        int targetExecutableIndex = executableIndex + delta;
+        if (targetExecutableIndex < 0 || targetExecutableIndex >= executable.size()) return;
+        beginMutation();
+        InstructionComponent target = executable.get(targetExecutableIndex);
+        int nextIndex = instructions.indexOf(target);
+        if (delta < 0) {
+            while (nextIndex > 0 && instructions.get(nextIndex - 1).getInstruction().getOpcode() < 0) nextIndex--;
+        } else {
+            nextIndex++;
+        }
         if (this.moveInstructionTo(instruction, nextIndex)) {
             this.addHistory(new InstructionDragHistory(new InstructionPosition(this.instructions, instruction, index)));
         }
     }
 
     public boolean moveInstructionTo(InstructionComponent instruction, int position) {
-        if (position >= 0 && position < this.instructions.size()) {
-            this.instructions.remove(instruction);
-            this.instructions.add(position, instruction);
+        if (position >= 0 && position <= this.instructions.size()) {
+            int instructionIndex = instructions.indexOf(instruction);
+            int groupStart = instructionIndex;
+            if (instruction.getInstruction().getOpcode() >= 0) {
+                while (groupStart > 0 && instructions.get(groupStart - 1).getInstruction().getOpcode() < 0) groupStart--;
+            }
+            List<InstructionComponent> group = new ArrayList<>(instructions.subList(groupStart, instructionIndex + 1));
+            if (position >= groupStart && position <= instructionIndex) return false;
+            instructions.subList(groupStart, instructionIndex + 1).clear();
+            int insertion = Math.min(position, instructions.size());
+            instructions.addAll(insertion, group);
             this.instructions.queueIdReset();
+            decoder.rebuildReferenceArrows(instructions);
             return true;
         }
         return false;
     }
 
     public void openInsertDialog(int index) {
-        Main.getWindowManager().addPopup(new AssemblerEditInstructionPopup(trinity, methodInput, (result) -> {
-            this.insertInstruction(index, result.getInsnNode());
+        while (index > 0 && index < instructions.size()
+                && instructions.get(index).getInstruction().getOpcode() >= 0
+                && instructions.get(index - 1).getInstruction().getOpcode() < 0) index--;
+        int insertionIndex = index;
+        Main.getWindowManager().addPopup(new AssemblerEditInstructionPopup(trinity, methodInput, this::findDefaultLabel,
+                document::createIdentityLabelMap, (result) -> {
+            this.insertInstruction(insertionIndex, result.getInsnNode());
         }));
     }
 
     public void openEditDialog(int index) {
-        final var popup = new AssemblerEditInstructionPopup(trinity, methodInput, (result) -> {
+        final var popup = new AssemblerEditInstructionPopup(trinity, methodInput, this::findDefaultLabel,
+                document::createIdentityLabelMap, (result) -> {
             this.setInstruction(index, result.getInsnNode());
         });
 
         final var component = instructions.get(index);
-        final var editingInstruction = new EditingInstruction(trinity, methodInput.createLabelMap(), component.getInstruction());
+        final var editingInstruction = new EditingInstruction(trinity, document.createIdentityLabelMap(), component.getInstruction());
 
         popup.setOpcodeName(component.getName());
         editingInstruction.addInstructionFields(popup.getMethodInput());
@@ -291,18 +434,91 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     private void insertInstruction(int index, AbstractInsnNode insnNode) {
+        beginMutation();
+        for (LabelNode referenced : getReferencedLabels(insnNode)) {
+            if (instructions.indexOfInsn(referenced) == -1) {
+                int targetIndex = 0;
+                while (targetIndex < instructions.size()
+                        && instructions.get(targetIndex).getInstruction().getOpcode() < 0) targetIndex++;
+                if (targetIndex == instructions.size()) targetIndex = instructions.size();
+                instructions.add(targetIndex, decoder.translateInstruction(referenced));
+                if (targetIndex < index) index++;
+            }
+        }
         InstructionComponent component = decoder.translateInstruction(insnNode);
         instructions.add(index, component);
         instructions.queueIdReset();
+        decoder.rebuildReferenceArrows(instructions);
         this.addHistory(new InstructionInsertHistory(new InstructionPosition(this.instructions, component, instructions.indexOf(component))));
     }
 
+    private void recomputeFramesAndMaxs() {
+        try {
+            DocumentSnapshot before = captureSnapshot(true);
+            List<AbstractInsnNode> ordered = instructions.stream().map(InstructionComponent::getInstruction).toList();
+            MethodNode candidate = document.buildCandidate(ordered);
+            ClassNode owner = new ClassNode(org.objectweb.asm.Opcodes.ASM9);
+            methodInput.getOwningClass().getNode().accept(owner);
+            for (int i = 0; i < owner.methods.size(); i++) {
+                MethodNode method = owner.methods.get(i);
+                if (method.name.equals(candidate.name) && method.desc.equals(candidate.desc)) {
+                    owner.methods.set(i, candidate);
+                    break;
+                }
+            }
+            SafeClassWriter writer = new SafeClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS,
+                    typeName -> {
+                        ClassInput input = trinity.getExecution().getClassInput(typeName);
+                        return input == null ? trinity.getJrtInput().getClass(typeName) : input.getNode();
+                    }, new Console());
+            owner.accept(writer);
+            ClassNode computedOwner = new ClassNode(org.objectweb.asm.Opcodes.ASM9);
+            new ClassReader(writer.toByteArray()).accept(computedOwner, 0);
+            MethodNode computed = computedOwner.methods.stream()
+                    .filter(method -> method.name.equals(candidate.name) && method.desc.equals(candidate.desc))
+                    .findFirst().orElseThrow(() -> new IllegalStateException("Recomputed method was not found"));
+            document.replaceWorkingMethod(computed);
+            methodInput.getLabelTable().reset();
+            applyLabelNames(before.labelNames());
+            pushMutation(before);
+            setInstructions(false);
+            saveError = null;
+        } catch (Throwable throwable) {
+            saveError = "Could not recompute frames/maxs: "
+                    + (throwable.getMessage() == null ? throwable.getClass().getSimpleName() : throwable.getMessage());
+        }
+    }
+
+    private LabelNode findDefaultLabel() {
+        for (InstructionComponent component : instructions) {
+            if (component.getInstruction() instanceof LabelNode label) return label;
+        }
+        return new LabelNode();
+    }
+
+    private static Set<LabelNode> getReferencedLabels(AbstractInsnNode instruction) {
+        Set<LabelNode> labels = Collections.newSetFromMap(new IdentityHashMap<>());
+        if (instruction instanceof JumpInsnNode jump) labels.add(jump.label);
+        if (instruction instanceof TableSwitchInsnNode table) {
+            labels.add(table.dflt);
+            labels.addAll(table.labels);
+        }
+        if (instruction instanceof LookupSwitchInsnNode lookup) {
+            labels.add(lookup.dflt);
+            labels.addAll(lookup.labels);
+        }
+        if (instruction instanceof LineNumberNode line) labels.add(line.start);
+        return labels;
+    }
+
     private void setInstruction(final int index, final AbstractInsnNode instruction) {
+        beginMutation();
         InstructionComponent oldInstruction = instructions.get(index);
         InstructionComponent component = decoder.translateInstruction(instruction);
 
         instructions.set(index, component);
         instructions.queueIdReset();
+        decoder.rebuildReferenceArrows(instructions);
         this.addHistory(new InstructionSetHistory(oldInstruction, new InstructionPosition(this.instructions, component, instructions.indexOf(component))));
     }
 
@@ -341,6 +557,19 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public void deleteInstruction(InstructionComponent instruction) {
+        for (InstructionReferenceArrow arrow : instructions.getInstructionReferenceArrowList()) {
+            if (arrow.getTo() == instruction) {
+                saveError = "Cannot delete this instruction: label " + arrow.getLabel().getName()
+                        + " is still referenced by " + arrow.getFrom().getName();
+                return;
+            }
+        }
+        if (instruction.getInstruction() instanceof LabelNode label && isLabelReferenced(label)) {
+            saveError = "Cannot delete label " + methodInput.getLabelTable().getLabel(label.getLabel()).getName()
+                    + ": it is still referenced by code metadata";
+            return;
+        }
+        beginMutation();
         if (this.selected == instruction) {
             this.selected = null;
         }
@@ -348,12 +577,68 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         this.instructions.remove(instruction);
         this.instructions.removeReferenceArrowsFrom(instruction);
         this.instructions.queueIdReset();
+        decoder.rebuildReferenceArrows(instructions);
+    }
+
+    public void retargetReference(InstructionReferenceArrow arrow, InstructionComponent target) {
+        beginMutation();
+        int targetIndex = instructions.indexOf(target);
+        LabelNode label = null;
+        for (int i = targetIndex - 1; i >= 0; i--) {
+            AbstractInsnNode previous = instructions.get(i).getInstruction();
+            if (previous.getOpcode() >= 0) break;
+            if (previous instanceof LabelNode found) {
+                label = found;
+                break;
+            }
+        }
+        if (label == null) {
+            label = new LabelNode();
+            instructions.add(targetIndex, decoder.translateInstruction(label));
+        }
+        InstructionComponent source = arrow.getFrom();
+        int sourceIndex = instructions.indexOf(source);
+        AbstractInsnNode replacement = source.getInstruction().clone(document.createIdentityLabelMap());
+        arrow.updateLabel(replacement, label);
+        instructions.set(sourceIndex, decoder.translateInstruction(replacement));
+        instructions.queueIdReset();
+        decoder.rebuildReferenceArrows(instructions);
+    }
+
+    private boolean isLabelReferenced(LabelNode target) {
+        document.replaceInstructionOrder(instructions.stream().map(InstructionComponent::getInstruction).toList());
+        MethodNode method = document.getMethod();
+        for (AbstractInsnNode node : method.instructions) {
+            if (node == target) continue;
+            if (node instanceof JumpInsnNode jump && jump.label == target) return true;
+            if (node instanceof TableSwitchInsnNode table
+                    && (table.dflt == target || table.labels.contains(target))) return true;
+            if (node instanceof LookupSwitchInsnNode lookup
+                    && (lookup.dflt == target || lookup.labels.contains(target))) return true;
+            if (node instanceof LineNumberNode line && line.start == target) return true;
+            if (node instanceof FrameNode frame
+                    && (frame.local != null && frame.local.contains(target)
+                    || frame.stack != null && frame.stack.contains(target))) return true;
+        }
+        if (method.tryCatchBlocks != null) for (TryCatchBlockNode block : method.tryCatchBlocks) {
+            if (block.start == target || block.end == target || block.handler == target) return true;
+        }
+        if (method.localVariables != null) for (LocalVariableNode local : method.localVariables) {
+            if (local.start == target || local.end == target) return true;
+        }
+        if (method.visibleLocalVariableAnnotations != null) for (LocalVariableAnnotationNode annotation : method.visibleLocalVariableAnnotations) {
+            if (annotation.start.contains(target) || annotation.end.contains(target)) return true;
+        }
+        if (method.invisibleLocalVariableAnnotations != null) for (LocalVariableAnnotationNode annotation : method.invisibleLocalVariableAnnotations) {
+            if (annotation.start.contains(target) || annotation.end.contains(target)) return true;
+        }
+        return false;
     }
 
     private void addHistory(AssemblerHistory history) {
         history.getBrowserViewerNode().addMouseClickHandler((clickType) -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
-                Main.getDisplayManager().showPopup(PopupItemBuilder.create().menuItem("Undo", () -> this.history.undo(history)));
+                Main.getDisplayManager().showPopup(PopupItemBuilder.create().menuItem("Undo latest", this::undoHistory));
             }
         });
         this.history.add(history);
@@ -364,10 +649,14 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public void duplicateInstruction(InstructionComponent instruction) {
-        final InstructionComponent copy = instruction.copy();
+        beginMutation();
+        AbstractInsnNode copiedNode = instruction.getInstruction() instanceof LabelNode
+                ? new LabelNode() : instruction.getInstruction().clone(document.createIdentityLabelMap());
+        final InstructionComponent copy = decoder.translateInstruction(copiedNode);
         this.addHistory(new InstructionDuplicateHistory(new InstructionPosition(this.instructions, instruction, instructions.indexOf(instruction)), copy));
         this.instructions.add(instructions.indexOf(instruction), copy);
         this.instructions.queueIdReset();
+        decoder.rebuildReferenceArrows(instructions);
     }
 
     public boolean isDraggingInstruction(InstructionComponent instructionComponent) {
@@ -386,5 +675,31 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         }
 
         return false;
+    }
+
+    public void beginDragMutation() {
+        beginMutation();
+    }
+
+    @Override
+    public void close() {
+        if (forceClose || !methodNotFresh) {
+            super.close();
+            return;
+        }
+        if (closePromptOpen) return;
+        closePromptOpen = true;
+        Main.getWindowManager().addPopup(new AssemblerUnsavedChangesPopup(trinity,
+                () -> {
+                    closePromptOpen = false;
+                    closeAfterSave = true;
+                    saveMethod = true;
+                },
+                () -> {
+                    closePromptOpen = false;
+                    forceClose = true;
+                    AssemblerFrame.super.close();
+                },
+                () -> closePromptOpen = false));
     }
 }
