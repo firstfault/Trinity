@@ -15,9 +15,7 @@ import java.util.List;
 
 public final class DecompilerPreviewRenderer {
     private static final int METHOD_PREVIEW_LINES = 7;
-    private static final float MAX_LINE_WIDTH = 150.F;
-    private static final String ELLIPSIS = "...";
-    private static final String TRUNCATED_MESSAGE = "Preview truncated, hold SHIFT to show all";
+    private static final float MAX_LINE_WIDTH = 550.F;
 
     private final Trinity trinity;
     private final boolean limitWidth = !ImGui.getIO().getKeyShift();
@@ -86,7 +84,7 @@ public final class DecompilerPreviewRenderer {
             ImGui.separator();
         }
         if (preview.skippedLeading()) {
-            ImGui.textColored(CodeColorScheme.DISABLED, ELLIPSIS);
+            ImGui.textColored(CodeColorScheme.DISABLED, "...");
         }
         int classIndent = preview.lines().stream()
                 .mapToInt(DecompilerPreviewRenderer::getLeadingWhitespace)
@@ -96,7 +94,7 @@ public final class DecompilerPreviewRenderer {
             drawDecompilerLine(line, classIndent);
         }
         if (preview.hasMoreLines()) {
-            ImGui.textColored(CodeColorScheme.DISABLED, ELLIPSIS);
+            ImGui.textColored(CodeColorScheme.DISABLED, "...");
         }
     }
 
@@ -144,8 +142,8 @@ public final class DecompilerPreviewRenderer {
         if (!truncated) {
             return;
         }
-        ImGui.separator();
-        ImGui.textColored(CodeColorScheme.DISABLED, TRUNCATED_MESSAGE);
+//        ImGui.separator();
+//        ImGui.textColored(CodeColorScheme.DISABLED, "Preview truncated, hold SHIFT to show all");
     }
 
     private void drawDecompilerLine(List<DecompilerLineText> line, int leadingWhitespaceToTrim) {
@@ -171,7 +169,7 @@ public final class DecompilerPreviewRenderer {
         }
 
         truncated = true;
-        float remainingWidth = Math.max(0.F, MAX_LINE_WIDTH - ImGui.calcTextSize(ELLIPSIS).x);
+        float remainingWidth = Math.max(0.F, MAX_LINE_WIDTH - ImGui.calcTextSize("...").x);
         boolean rendered = false;
         for (PreviewSegment segment : segments) {
             float segmentWidth = ImGui.calcTextSize(segment.text()).x;
@@ -194,7 +192,7 @@ public final class DecompilerPreviewRenderer {
         if (rendered) {
             ImGui.sameLine(0.F, 0.F);
         }
-        ImGui.textColored(CodeColorScheme.DISABLED, ELLIPSIS);
+        ImGui.textColored(CodeColorScheme.DISABLED, "...");
     }
 
     private static List<PreviewSegment> trimLeadingWhitespace(List<PreviewSegment> segments,

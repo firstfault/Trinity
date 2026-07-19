@@ -2,6 +2,7 @@ package me.f1nal.trinity.execution.xref.where;
 
 import imgui.ImGui;
 import imgui.ImVec2;
+import imgui.flag.ImGuiMouseButton;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.Input;
@@ -50,7 +51,9 @@ public abstract class XrefWhere {
     public void controls(PopupMenu popupMenu, Trinity trinity) {
         if (ImGui.isItemHovered()) {
             hover();
-            if (ImGui.isItemClicked(1)) {
+            if (ImGui.isMouseDoubleClicked(ImGuiMouseButton.Left)) {
+                followInDecompiler();
+            } else if (ImGui.isItemClicked(ImGuiMouseButton.Right)) {
                 popupMenu.show(menuItem());
             }
         }

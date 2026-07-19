@@ -65,7 +65,7 @@ public final class MethodEditorWindow extends AbstractBytecodeEditorWindow {
     }
 
     private MethodEditorWindow(Trinity trinity, ClassInput owner, MethodInput input, MethodNode node) {
-        super(input == null ? "Add Method" : "Edit Method: " + input.getDisplayName().getName(), trinity);
+        super(input == null ? "Add Method" : "Edit Method: " + input.getDisplayName().getName() + " (" + input.getInstructions().size() + " instructions)", trinity);
         this.owner = owner;
         this.input = input;
         this.node = node;
