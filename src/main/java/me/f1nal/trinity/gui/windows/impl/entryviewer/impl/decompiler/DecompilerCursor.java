@@ -3,6 +3,7 @@ package me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler;
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiKey;
+import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.viewport.FontManager;
@@ -39,6 +40,10 @@ public class DecompilerCursor {
      * @see DecompilerCursor#selectionEnd
      */
     private boolean draggingSelection;
+    /**
+     * Whether the current selection was created by dragging and should highlight matching text.
+     */
+    private boolean highlightSelectionMatches;
 
     public DecompilerCursor(DecompilerWindow window) {
         this.window = window;
@@ -56,6 +61,7 @@ public class DecompilerCursor {
             if (!this.coordinates.equals(newCoordinates)) {
                 if (!newCoordinates.equals(this.selectionEnd)) {
                     this.selectionEnd = newCoordinates;
+                    this.highlightSelectionMatches = true;
                     this.blink.reset();
                 }
             }
@@ -63,12 +69,56 @@ public class DecompilerCursor {
 
         ImGui.setMouseCursor(ImGuiMouseCursor.TextInput);
 
-        if (ImGui.isMouseClicked(0)) {
+        int clickCount = ImGui.getMouseClickedCount(ImGuiMouseButton.Left);
+        if (clickCount >= 3) {
+            this.selectLine(line);
+        } else if (clickCount == 2) {
+            this.selectWord(this.getCoordinates(line, mousePosX, startX));
+        } else if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
             this.setCoordinates(this.getCoordinates(line, mousePosX, startX));
             this.draggingSelection = true;
             this.selectionEnd = null;
+            this.highlightSelectionMatches = false;
             this.blink.reset();
         }
+    }
+
+    private void selectLine(DecompilerLine line) {
+        String text = line.getText();
+        if (text.isEmpty()) {
+            this.draggingSelection = false;
+            this.highlightSelectionMatches = false;
+            this.selectionEnd = null;
+            this.setCoordinates(new DecompilerCoordinates(line, 0));
+        } else {
+            this.selectRange(new DecompilerCoordinates(line, 0),
+                    new DecompilerCoordinates(line, text.length() - 1), true);
+        }
+        this.blink.reset();
+    }
+
+    private void selectWord(DecompilerCoordinates coordinates) {
+        String text = coordinates.getLine().getText();
+        if (text.isEmpty()) {
+            this.setCoordinates(coordinates);
+            return;
+        }
+
+        int character = Math.min(coordinates.getCharacter(), text.length() - 1);
+        int start = character;
+        int end = character;
+        if (Character.isJavaIdentifierPart(text.charAt(character))) {
+            while (start > 0 && Character.isJavaIdentifierPart(text.charAt(start - 1))) {
+                start--;
+            }
+            while (end + 1 < text.length() && Character.isJavaIdentifierPart(text.charAt(end + 1))) {
+                end++;
+            }
+        }
+
+        this.selectRange(new DecompilerCoordinates(coordinates.getLine(), start),
+                new DecompilerCoordinates(coordinates.getLine(), end), true);
+        this.blink.reset();
     }
 
     public void setCoordinates(DecompilerCoordinates coordinates) {
@@ -79,8 +129,16 @@ public class DecompilerCursor {
     public void navigateTo(DecompilerCoordinates coordinates) {
         this.selectionEnd = null;
         this.draggingSelection = false;
+        this.highlightSelectionMatches = false;
         this.setCoordinates(coordinates);
         this.setScrollToCursor();
+    }
+
+    public void selectRange(DecompilerCoordinates from, DecompilerCoordinates to, boolean highlightMatches) {
+        this.draggingSelection = false;
+        this.highlightSelectionMatches = highlightMatches;
+        this.setCoordinates(from);
+        this.selectionEnd = to;
     }
 
     private DecompilerCoordinates getCoordinates(DecompilerLine line, float mousePosX, float startX) {
@@ -250,6 +308,10 @@ public class DecompilerCursor {
 
     public boolean hasTextSelection() {
         return selectionEnd != null && coordinates != null;
+    }
+
+    public boolean shouldHighlightSelectionMatches() {
+        return this.highlightSelectionMatches && this.hasTextSelection();
     }
 
     public String getSelectionText() {
