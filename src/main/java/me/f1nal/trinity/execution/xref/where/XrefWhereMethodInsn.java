@@ -44,6 +44,24 @@ public class XrefWhereMethodInsn extends XrefWhereMethod {
 
     @Override
     public void followInDecompiler(NavigationAction action) {
-        Main.getDisplayManager().followDecompilerView(this.getInput(), this.insnNode, action);
+        NavigationAction navigationAction = this.previewConstant
+                ? NavigationAction.FOLLOW_CONSTANT : action;
+        Main.getDisplayManager().followDecompilerView(this.getInput(), this.insnNode, navigationAction,
+                this.previewConstant ? formatConstant(this.constantValue) : null);
+    }
+
+    private static String formatConstant(Object value) {
+        if (value == null) return "null";
+        if (value instanceof String string) {
+            return '"' + string.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r")
+                    .replace("\t", "\\t") + '"';
+        }
+        if (value instanceof Long) return value + "L";
+        if (value instanceof Float) return value + "F";
+        if (value instanceof Double) return value + "D";
+        return String.valueOf(value);
     }
 }

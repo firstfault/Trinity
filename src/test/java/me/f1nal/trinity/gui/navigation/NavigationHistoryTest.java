@@ -106,7 +106,7 @@ class NavigationHistoryTest {
     @Test
     void databaseObjectRoundTripsThroughProjectXml() {
         NavigationHistory history = new NavigationHistory();
-        history.record(target("sample/Persisted"), NavigationAction.FOLLOW_XREF);
+        history.record(target("sample/Persisted"), NavigationAction.FOLLOW_CONSTANT);
         Database database = new Database("test", new File("test.tdb"), null);
         database.getObjects().add(history.createDatabaseObject());
 
@@ -114,6 +114,24 @@ class NavigationHistoryTest {
 
         assertTrue(restored.getObjects().stream()
                 .anyMatch(DatabaseNavigationHistory.class::isInstance));
+    }
+
+    @Test
+    void constantNavigationUsesItsOwnHistoryLabel() {
+        assertEquals("constant", NavigationAction.FOLLOW_CONSTANT.getHistoryLabel());
+    }
+
+    @Test
+    void constantNavigationRetainsItsDisplayText() {
+        NavigationHistory history = new NavigationHistory();
+        NavigationTarget target = target("sample/Constants");
+
+        history.record(target, NavigationAction.FOLLOW_CONSTANT, "\"first\"");
+        history.record(target, NavigationAction.FOLLOW_CONSTANT, "\"second\"");
+
+        assertEquals(2, history.getEntries().size());
+        assertEquals("\"first\"", history.getEntries().get(0).displayText());
+        assertEquals("\"second\"", history.getEntries().get(1).displayText());
     }
 
     private static NavigationTarget target(String name) {

@@ -11,6 +11,7 @@ public final class DatabaseNavigationEntry {
     private final int instructionIndex;
     private final String action;
     private final long timestampMillis;
+    private final String displayText;
 
     public DatabaseNavigationEntry(NavigationEntry entry) {
         this.id = entry.id();
@@ -21,6 +22,7 @@ public final class DatabaseNavigationEntry {
         this.instructionIndex = entry.target().getInstructionIndex();
         this.action = entry.action().name();
         this.timestampMillis = entry.timestampMillis();
+        this.displayText = entry.displayText();
     }
 
     public long getId() {
@@ -53,5 +55,9 @@ public final class DatabaseNavigationEntry {
 
     public long getTimestampMillis() {
         return timestampMillis;
+    }
+
+    public String getDisplayText() {
+        return displayText;
     }
 }

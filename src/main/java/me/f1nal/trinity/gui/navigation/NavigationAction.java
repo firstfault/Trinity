@@ -4,7 +4,8 @@ public enum NavigationAction {
     NAVIGATE("Navigating to", "go to"),
     FOLLOW_MEMBER("Followed member to", "go to"),
     FOLLOW_XREF("Followed xref to", "xref"),
-    FOLLOW_SINGLE_XREF("Followed single xref to", "xref");
+    FOLLOW_SINGLE_XREF("Followed single xref to", "xref"),
+    FOLLOW_CONSTANT("Followed constant to", "constant");
 
     private final String notificationPrefix;
     private final String historyLabel;

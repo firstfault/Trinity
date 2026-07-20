@@ -265,27 +265,35 @@ public final class DisplayManager extends ImGuiApplication {
     }
 
     public void openDecompilerView(Input<?> input) {
-        this.navigateDecompilerView(input, null, NavigationAction.NAVIGATE);
+        this.navigateDecompilerView(input, null, NavigationAction.NAVIGATE, null);
     }
 
     public void openDecompilerView(Input<?> input, AbstractInsnNode instruction) {
-        this.navigateDecompilerView(input, instruction, NavigationAction.NAVIGATE);
+        this.navigateDecompilerView(input, instruction, NavigationAction.NAVIGATE, null);
     }
 
     public void followDecompilerView(Input<?> input, NavigationAction action) {
-        this.navigateDecompilerView(input, null, action);
+        this.navigateDecompilerView(input, null, action, null);
     }
 
     public void followDecompilerView(Input<?> input, AbstractInsnNode instruction, NavigationAction action) {
-        this.navigateDecompilerView(input, instruction, action);
+        this.navigateDecompilerView(input, instruction, action, null);
     }
 
-    private void navigateDecompilerView(Input<?> input, AbstractInsnNode instruction, NavigationAction action) {
+    public void followDecompilerView(Input<?> input, AbstractInsnNode instruction,
+                                     NavigationAction action, String displayText) {
+        this.navigateDecompilerView(input, instruction, action, displayText);
+    }
+
+    private void navigateDecompilerView(Input<?> input, AbstractInsnNode instruction,
+                                        NavigationAction action, String displayText) {
         NavigationTarget target = NavigationTarget.capture(input, instruction);
         boolean track = trinity != null && !trinity.getDatabase().isLoading();
         if (track) {
-            ensureCurrentNavigationRecorded();
-            this.navigationHistory.record(target, action);
+            if (action != NavigationAction.FOLLOW_CONSTANT) {
+                ensureCurrentNavigationRecorded();
+            }
+            this.navigationHistory.record(target, action, displayText);
         }
         this.openDecompilerViewDirect(input, instruction);
         this.currentDecompilerTarget = target;

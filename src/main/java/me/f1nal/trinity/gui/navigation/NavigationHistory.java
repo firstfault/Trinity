@@ -6,6 +6,7 @@ import me.f1nal.trinity.database.object.DatabaseNavigationHistory;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 public final class NavigationHistory implements IDatabaseSavable<DatabaseNavigationHistory> {
@@ -25,14 +26,20 @@ public final class NavigationHistory implements IDatabaseSavable<DatabaseNavigat
     }
 
     public NavigationEntry record(NavigationTarget target, NavigationAction action) {
+        return record(target, action, null);
+    }
+
+    public NavigationEntry record(NavigationTarget target, NavigationAction action, String displayText) {
         NavigationEntry current = getCurrent();
-        if (current != null && current.target().equals(target)) {
+        if (current != null && current.target().equals(target)
+                && Objects.equals(current.displayText(), displayText)) {
             return current;
         }
         if (currentIndex + 1 < entries.size()) {
             entries.subList(currentIndex + 1, entries.size()).clear();
         }
-        NavigationEntry entry = new NavigationEntry(++nextId, target, action, System.currentTimeMillis());
+        NavigationEntry entry = new NavigationEntry(
+                ++nextId, target, action, System.currentTimeMillis(), displayText);
         entries.add(entry);
         currentIndex = entries.size() - 1;
         trimToLimit();

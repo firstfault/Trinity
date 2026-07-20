@@ -272,6 +272,13 @@ public final class DecompiledClass {
     public DecompilerComponent findInstructionComponent(MethodInput methodInput, AbstractInsnNode targetInstruction) {
         MemberDetails targetMember = getInstructionMember(targetInstruction);
         if (targetMember == null) {
+            for (Object constant : getInstructionConstants(targetInstruction)) {
+                DecompilerComponent component = findInstructionConstantComponent(
+                        methodInput, targetInstruction, constant);
+                if (component != null) {
+                    return component;
+                }
+            }
             return null;
         }
 

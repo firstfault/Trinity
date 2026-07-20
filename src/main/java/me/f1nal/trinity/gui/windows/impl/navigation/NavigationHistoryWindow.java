@@ -13,6 +13,7 @@ import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.InputType;
 import me.f1nal.trinity.execution.MethodInput;
+import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.navigation.NavigationEntry;
 import me.f1nal.trinity.gui.navigation.NavigationHistory;
 import me.f1nal.trinity.gui.navigation.NavigationTarget;
@@ -89,7 +90,11 @@ public final class NavigationHistoryWindow extends StaticWindow {
         float timestampWidth = ImGui.calcTextSize("12:59 AM").x + 9.F;
         float actionX = timestampX + timestampWidth;
         String actionLabel = entry.action().getHistoryLabel();
-        float actionWidth = Math.max(ImGui.calcTextSize("go to").x, ImGui.calcTextSize("xref").x) + 6.F;
+        float actionWidth = 0.F;
+        for (NavigationAction action : NavigationAction.values()) {
+            actionWidth = Math.max(actionWidth, ImGui.calcTextSize(action.getHistoryLabel()).x);
+        }
+        actionWidth += 6.F;
         float targetX = actionX + actionWidth;
         NavigationTarget.ResolvedNavigation resolved = entry.target().resolve(trinity);
         int targetColor = getTargetColor(entry.target(), resolved);
@@ -99,7 +104,7 @@ public final class NavigationHistoryWindow extends StaticWindow {
         drawList.addText(timestampX, textY, CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, 175), timestamp);
         drawList.addText(actionX, textY, CodeColorScheme.DISABLED, actionLabel);
         drawList.addText(targetX, textY, ImGui.getColorU32(ImGuiCol.Text),
-                getTargetDisplayName(entry.target(), resolved));
+                getTargetDisplayName(entry, resolved));
 
         if (ImGui.isItemHovered()) {
             this.drawEntryTooltip(entry, resolved, targetColor);
@@ -119,6 +124,9 @@ public final class NavigationHistoryWindow extends StaticWindow {
         ImGui.separator();
 
         drawDetail("Class", toJavaName(target.getClassTarget().getDisplayOrRealName()));
+        if (entry.displayText() != null) {
+            drawDetail("Constant", entry.displayText());
+        }
         String realClassName = toJavaName(target.getClassTarget().getRealName());
         if (!realClassName.equals(toJavaName(target.getClassTarget().getDisplayOrRealName()))) {
             drawDetail("Bytecode class", realClassName);
@@ -214,8 +222,10 @@ public final class NavigationHistoryWindow extends StaticWindow {
         return TIME_FORMAT.format(Instant.ofEpochMilli(timestampMillis).atZone(ZoneId.systemDefault()));
     }
 
-    private static String getTargetDisplayName(NavigationTarget target,
+    private static String getTargetDisplayName(NavigationEntry entry,
                                                NavigationTarget.ResolvedNavigation resolved) {
+        if (entry.displayText() != null) return entry.displayText();
+        NavigationTarget target = entry.target();
         Input<?> input = resolved == null ? null : resolved.input();
         if (input instanceof MethodInput method) return method.getDisplayName().getName();
         if (input instanceof FieldInput field) return field.getDisplayName().getName();
