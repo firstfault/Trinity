@@ -30,6 +30,7 @@ public class DisplayName {
     }
 
     public void setName(String name, RenameType renameType) {
+        if (name == null || name.isBlank()) return;
         if (name.equals(this.originalName)) {
             renameType = RenameType.NONE;
         } else if (renameType == null) {

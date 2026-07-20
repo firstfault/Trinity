@@ -112,7 +112,7 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
         input.getVariableTable().getVariableMap().forEach(variable -> {
             Integer index = variable.findIndex();
             if (index != null && variable.isEditable()) {
-                replacement.getVariableTable().getVariable(index).getNameProperty().set(variable.getName());
+                replacement.getVariableTable().getVariable(index).setName(variable.getName());
             }
         });
         input.getLabelTable().getLabels().forEach(label -> {

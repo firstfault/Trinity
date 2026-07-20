@@ -20,6 +20,7 @@ public final class Remapper {
     }
 
     public void renameClass(ClassTarget target, String newName) {
+        if (isBlank(newName)) return;
         target.getDisplayName().setName(newName);
         target.setPackage(execution.getRootPackage());
         target.save();
@@ -27,6 +28,7 @@ public final class Remapper {
     }
 
     public void renameMethod(MethodInput methodInput, String newName) {
+        if (isBlank(newName)) return;
         Collection<MethodInput> affectedMethods;
 
         if (methodInput.getMethodHierarchy() != null) {
@@ -44,6 +46,7 @@ public final class Remapper {
     }
 
     public void renameField(FieldInput fieldInput, String newName) {
+        if (isBlank(newName)) return;
         fieldInput.getDisplayName().setName(newName);
         fieldInput.save();
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
@@ -59,5 +62,9 @@ public final class Remapper {
 
     public Execution getExecution() {
         return execution;
+    }
+
+    private static boolean isBlank(String name) {
+        return name == null || name.isBlank();
     }
 }

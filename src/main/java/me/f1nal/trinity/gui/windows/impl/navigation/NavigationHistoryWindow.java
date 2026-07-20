@@ -60,6 +60,7 @@ public final class NavigationHistoryWindow extends StaticWindow {
         ImGui.separator();
 
         if (ImGui.beginChild(getId("NavigationEntries"), 0.F, 0.F)) {
+            ImGui.setCursorPosY(ImGui.getCursorPosY() + 2.F);
             List<NavigationEntry> entries = history.getEntries();
             if (entries.isEmpty()) {
                 ImGui.textDisabled("No navigation history yet.");

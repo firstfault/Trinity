@@ -43,7 +43,10 @@ public class DatabaseVariable extends AbstractDatabaseObject {
             Logging.warn("Database tried to update variable {} that is not editable.", this.getDebugInformation());
             return false;
         }
-        variable.getNameProperty().set(this.name);
+        if (!variable.setName(this.name)) {
+            Logging.warn("Database tried to assign an empty name to variable {}.", this.getDebugInformation());
+            return false;
+        }
         return true;
     }
 

@@ -22,7 +22,11 @@ public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHand
     }
 
     public String getName() {
-        return nameProperty != null ? nameProperty.get() : name;
+        if (nameProperty != null) {
+            String currentName = nameProperty.get();
+            if (!currentName.isBlank()) this.name = currentName;
+        }
+        return name;
     }
 
     public ImString getNameProperty() {
@@ -33,6 +37,13 @@ public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHand
     }
 
     public boolean isEditable() {
+        return true;
+    }
+
+    public boolean setName(String newName) {
+        if (!this.isEditable() || newName == null || newName.isBlank()) return false;
+        this.name = newName;
+        this.getNameProperty().set(newName);
         return true;
     }
 
@@ -63,11 +74,7 @@ public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHand
 
             @Override
             public void rename(Remapper remapper, String newName) {
-                if (isEditable()) {
-                    getNameProperty().set(newName);
-                    save();
-                }
-
+                if (setName(newName)) save();
             }
         };
     }
