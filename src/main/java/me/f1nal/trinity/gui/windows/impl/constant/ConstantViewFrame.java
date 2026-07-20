@@ -23,6 +23,7 @@ public class ConstantViewFrame extends ClosableWindow {
         this.table.getColumns().add(new TableColumn<>("Constant", ConstantViewCache::getConstant));
         this.table.getColumns().add(new TableColumn<>("Where", new TableColumnRendererXrefWhere<>()));
         this.setCloseableByEscape(true);
+        this.setInitialPositionAtMouse();
     }
 
     @Override

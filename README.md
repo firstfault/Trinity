@@ -30,13 +30,19 @@ Trinity approaches decompilation differently. Built on the battle-tested [Fernfl
 
 Rename variables, fields, methods, and classes in place. Trinity updates every known usage across the workspace immediately, so you can turn an unreadable codebase into something understandable as you investigate it.
 
+![Renaming Example](screenshots/renaming.gif)
+
 ### Cross-referencing
 
 Trinity's cross-reference (Xref) search is instant and exceptionally thorough. It follows references throughout the bytecode, including class literals, annotations, casts, method parameters, return types, field accesses, and invocations.
 
+![Xref Example](screenshots/xref.gif)
+
 ### Constant search
 
-Search constants across the entire project, not just the strings visible in decompiled source. Strings, numbers, class literals, annotation values, bootstrap arguments, and other class-pool constants are all discoverable.
+Search constants across the entire project <b>instantly</b>, not just the strings visible in decompiled source. Strings, numbers, class literals, annotation values, bootstrap arguments, and other class-pool constants are all discoverable.
+
+![Constants Example](screenshots/constants.png)
 
 ### Workspaces
 

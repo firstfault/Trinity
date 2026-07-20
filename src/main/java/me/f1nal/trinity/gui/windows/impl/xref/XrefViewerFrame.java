@@ -29,6 +29,7 @@ public class XrefViewerFrame extends ClosableWindow {
         this.listFilterComponent = new ListFilterComponent<>(this.xrefViewList, new SearchBarFilter<>(), new KindFilter<>(XrefKind.values()));
         this.builder = builder;
         this.setCloseableByEscape(true);
+        this.setInitialPositionAtMouse();
 
         this.xrefTable.getColumns().add(new TableColumn<>("Access", AbstractXref::getAccessText));
         this.xrefTable.getColumns().add(new TableColumn<>("Invocation", AbstractXref::getInvocation));

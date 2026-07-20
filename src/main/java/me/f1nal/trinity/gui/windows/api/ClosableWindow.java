@@ -1,6 +1,8 @@
 package me.f1nal.trinity.gui.windows.api;
 
 import imgui.ImGui;
+import imgui.ImGuiViewport;
+import imgui.ImVec2;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiWindowFlags;
@@ -23,6 +25,8 @@ public abstract class ClosableWindow extends AbstractWindow {
     private boolean closeRequested;
     private boolean rendered;
     private PopupMenuBar menuBar;
+    private Float initialPositionX;
+    private Float initialPositionY;
 
     protected ClosableWindow(String title, float width, float height, Trinity trinity) {
         super(title, width, height, trinity);
@@ -45,6 +49,12 @@ public abstract class ClosableWindow extends AbstractWindow {
 
     public int getId() {
         return id;
+    }
+
+    protected final void setInitialPositionAtMouse() {
+        ImVec2 mousePosition = ImGui.getMousePos();
+        this.initialPositionX = mousePosition.x;
+        this.initialPositionY = mousePosition.y;
     }
 
     public void setCloseableByEscape(boolean closeableByEscape) {
@@ -119,6 +129,21 @@ public abstract class ClosableWindow extends AbstractWindow {
     }
 
     protected boolean beginWindow() {
+        if (this.initialPositionX != null && this.initialPositionY != null) {
+            ImGuiViewport viewport = ImGui.getMainViewport();
+            float maximumX = Math.max(viewport.getWorkPosX(),
+                    viewport.getWorkPosX() + viewport.getWorkSizeX() - this.width);
+            float maximumY = Math.max(viewport.getWorkPosY(),
+                    viewport.getWorkPosY() + viewport.getWorkSizeY() - this.height);
+            float centeredX = this.initialPositionX - this.width * 0.5F;
+            float centeredY = this.initialPositionY - this.height * 0.5F;
+            float x = Math.max(viewport.getWorkPosX(), Math.min(centeredX, maximumX));
+            float y = Math.max(viewport.getWorkPosY(), Math.min(centeredY, maximumY));
+            ImGui.setNextWindowPos(x, y, ImGuiCond.Always);
+            this.initialPositionX = null;
+            this.initialPositionY = null;
+        }
+
         int flags = this.windowFlags | (this.isDialog() ? ImGuiWindowFlags.NoDocking : 0);
         if (!this.isDialog()) return ImGui.begin(this.getImGuiWindowName(), this.openState, flags);
 
