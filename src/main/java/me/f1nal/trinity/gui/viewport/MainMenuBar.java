@@ -180,6 +180,8 @@ public class MainMenuBar {
             }
         }
 
+        ImGui.separator();
+
         this.drawNavigationBand(navigationBand);
 
         ImGui.endMainMenuBar();
