@@ -22,6 +22,11 @@ public class ConstantSearchTypeNull extends ConstantSearchType {
     }
 
     @Override
+    public String getSearchDescription() {
+        return "null";
+    }
+
+    @Override
     public void populate(List<ConstantViewCache> list) {
         for (ClassInput classInput : getTrinity().getExecution().getClassList()) {
             for (MethodInput methodInput : classInput.getMethodMap().values()) {

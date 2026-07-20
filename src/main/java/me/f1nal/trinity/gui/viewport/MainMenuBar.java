@@ -120,7 +120,8 @@ public class MainMenuBar {
                     ConstantSearchTypeString typeString = new ConstantSearchTypeString(displayManager.getTrinity());
                     List<ConstantViewCache> constantList = new ArrayList<>();
                     typeString.populate(constantList);
-                    Main.getWindowManager().addClosableWindow(new ConstantViewFrame(displayManager.getTrinity(), constantList));
+                    Main.getWindowManager().addClosableWindow(new ConstantViewFrame(
+                            displayManager.getTrinity(), constantList, typeString.getSearchDescription()));
                 }
                 ImGui.endMenu();
             }

@@ -53,6 +53,11 @@ public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
         }
 
         @Override
+        public String getSearchDescription() {
+            return value.get() + "F";
+        }
+
+        @Override
         protected String convertConstantToText(Number value) {
             if (value instanceof Float) {
                 if (value.floatValue() != this.value.get()) {
@@ -80,6 +85,11 @@ public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
         public boolean draw() {
             ImGui.inputScalar("Double", ImGuiDataType.Double, value, 1.D, 5.D);
             return true;
+        }
+
+        @Override
+        public String getSearchDescription() {
+            return value.get() + "D";
         }
 
         @Override
@@ -113,6 +123,11 @@ public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
         }
 
         @Override
+        public String getSearchDescription() {
+            return String.valueOf(value.get());
+        }
+
+        @Override
         protected String convertConstantToText(Number value) {
             if (value instanceof Integer || value instanceof Byte || value instanceof Short) {
                 if (value.intValue() != this.value.get()) {
@@ -143,6 +158,11 @@ public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
         }
 
         @Override
+        public String getSearchDescription() {
+            return value.get() + "L";
+        }
+
+        @Override
         protected String convertConstantToText(Number value) {
             if (value instanceof Long) {
                 if (value.longValue() != this.value.get()) {
@@ -165,6 +185,11 @@ public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
         public boolean draw() {
             ImGui.inputScalar("Decimal", ImGuiDataType.S64, value, 1, 5);
             return true;
+        }
+
+        @Override
+        public String getSearchDescription() {
+            return value.get() + " (Any Numeric Type)";
         }
 
         @Override

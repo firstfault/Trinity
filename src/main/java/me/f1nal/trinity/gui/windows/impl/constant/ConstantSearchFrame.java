@@ -41,7 +41,8 @@ public class ConstantSearchFrame extends StaticWindow {
         if (ImGui.button("Search")) {
             List<ConstantViewCache> constantList = new ArrayList<>();
             type.populate(constantList);
-            Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantList));
+            Main.getWindowManager().addClosableWindow(new ConstantViewFrame(
+                    trinity, constantList, type.getSearchDescription()));
             if (closeFrame.isChecked()) this.close();
         }
         if (!result) ImGui.endDisabled();

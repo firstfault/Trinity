@@ -12,6 +12,7 @@ class ConstantSearchTypeNumberTest {
         ConstantSearchTypeNumber.ConstantSearchTypeLong search =
                 new ConstantSearchTypeNumber.ConstantSearchTypeLong(null, expected);
 
+        assertEquals(expected + "L", search.getSearchDescription());
         assertEquals(expected + "L", search.convertConstantToText(expected));
         assertNull(search.convertConstantToText((long) (int) expected));
     }

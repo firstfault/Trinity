@@ -158,7 +158,8 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             ConstantSearchType constantSearchType = settings.displayType.getConstantSearchType(trinity, number);
             List<ConstantViewCache> constantViewList = new ArrayList<>();
             constantSearchType.populate(constantViewList);
-            Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
+            Main.getWindowManager().addClosableWindow(new ConstantViewFrame(
+                    trinity, constantViewList, constantSearchType.getSearchDescription()));
         };
         component.setSearchAllOccurrences(searchAllOccurrences);
 
@@ -377,7 +378,8 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
             constantSearchType.getExact().set(true);
             List<ConstantViewCache> constantViewList = new ArrayList<>();
             constantSearchType.populate(constantViewList);
-            Main.getWindowManager().addClosableWindow(new ConstantViewFrame(trinity, constantViewList));
+            Main.getWindowManager().addClosableWindow(new ConstantViewFrame(
+                    trinity, constantViewList, constantSearchType.getSearchDescription()));
         };
         component.setSearchAllOccurrences(searchAllOccurrences);
 

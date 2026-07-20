@@ -24,6 +24,10 @@ public abstract class ConstantSearchType implements INameable {
         return trinity;
     }
 
+    public String getSearchDescription() {
+        return getName();
+    }
+
     public abstract boolean draw();
     public abstract void populate(List<ConstantViewCache> list);
 }

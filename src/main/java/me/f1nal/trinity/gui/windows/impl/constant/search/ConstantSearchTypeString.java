@@ -29,6 +29,17 @@ public class ConstantSearchTypeString extends ConstantSearchType {
     }
 
     @Override
+    public String getSearchDescription() {
+        String term = searchTerm.get();
+        if (term.isEmpty()) return "All Strings";
+        String escaped = term.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
+        return exact.get() ? "\"" + escaped + "\"" : "Strings containing \"" + escaped + "\"";
+    }
+
+    @Override
     public boolean draw() {
         ImGui.inputText("Search Term", this.searchTerm);
         GuiUtil.smallCheckbox("Case Insensitive", this.caseInsensitive);
