@@ -28,6 +28,7 @@ public class PreferencesFile extends AppDataFile {
     private boolean decompilerEnumClass = false;
     private boolean autoviewXref = false;
     private boolean navigationNotifications = true;
+    private boolean navigationHistoryVisible = false;
     private boolean assemblerHideMetadata = false;
     private AccentColor accentColor = AccentColor.SAPPHIRE;
     private String currentTheme;
@@ -140,6 +141,14 @@ public class PreferencesFile extends AppDataFile {
 
     public void setNavigationNotifications(boolean navigationNotifications) {
         this.navigationNotifications = navigationNotifications;
+    }
+
+    public boolean isNavigationHistoryVisible() {
+        return navigationHistoryVisible;
+    }
+
+    public void setNavigationHistoryVisible(boolean navigationHistoryVisible) {
+        this.navigationHistoryVisible = navigationHistoryVisible;
     }
 
     public boolean isAssemblerHideMetadata() {

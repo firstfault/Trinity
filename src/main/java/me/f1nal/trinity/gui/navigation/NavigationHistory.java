@@ -10,10 +10,14 @@ public final class NavigationHistory {
     private long nextId;
 
     public NavigationEntry record(NavigationTarget target, NavigationAction action) {
+        NavigationEntry current = getCurrent();
+        if (current != null && current.target().equals(target)) {
+            return current;
+        }
         if (currentIndex + 1 < entries.size()) {
             entries.subList(currentIndex + 1, entries.size()).clear();
         }
-        NavigationEntry entry = new NavigationEntry(++nextId, target, action);
+        NavigationEntry entry = new NavigationEntry(++nextId, target, action, System.currentTimeMillis());
         entries.add(entry);
         currentIndex = entries.size() - 1;
         return entry;

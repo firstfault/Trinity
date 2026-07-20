@@ -1,25 +1,25 @@
 package me.f1nal.trinity.gui.navigation;
 
 public enum NavigationAction {
-    NAVIGATE("Navigating to", "Navigated to"),
-    FOLLOW_MEMBER("Followed member to", "Followed member to"),
-    FOLLOW_XREF("Followed xref to", "Followed xref to"),
-    FOLLOW_SINGLE_XREF("Followed single xref to", "Followed single xref to");
+    NAVIGATE("Navigating to", "go to"),
+    FOLLOW_MEMBER("Followed member to", "go to"),
+    FOLLOW_XREF("Followed xref to", "xref"),
+    FOLLOW_SINGLE_XREF("Followed single xref to", "xref");
 
     private final String notificationPrefix;
-    private final String historyPrefix;
+    private final String historyLabel;
 
-    NavigationAction(String notificationPrefix, String historyPrefix) {
+    NavigationAction(String notificationPrefix, String historyLabel) {
         this.notificationPrefix = notificationPrefix;
-        this.historyPrefix = historyPrefix;
+        this.historyLabel = historyLabel;
     }
 
     public String getNotificationPrefix() {
         return notificationPrefix;
     }
 
-    public String getHistoryPrefix() {
-        return historyPrefix;
+    public String getHistoryLabel() {
+        return historyLabel;
     }
 
     public boolean isFollow() {

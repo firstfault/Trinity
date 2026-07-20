@@ -40,6 +40,7 @@ public class WindowManager {
     private ClosableWindow focusRequested;
     private int focusFramesRemaining;
     private final Animation dialogDimAnimation = new Animation(Easing.EASE_IN_OUT_QUAD, 220L);
+    private boolean resettingWindows;
 
     public WindowManager(DisplayManager displayManager) {
         this.displayManager = displayManager;
@@ -119,10 +120,18 @@ public class WindowManager {
      * Removes every window.
      */
     public void resetAllWindows() {
-        getAllWindows().stream().filter(abstractWindow -> !(abstractWindow instanceof PopupWindow)).forEach(AbstractWindow::close);
+        this.resettingWindows = true;
+        try {
+            getAllWindows().stream().filter(abstractWindow -> !(abstractWindow instanceof PopupWindow)).forEach(AbstractWindow::close);
+            closableWindows.clear();
+            staticWindowMap.clear();
+        } finally {
+            this.resettingWindows = false;
+        }
+    }
 
-        closableWindows.clear();
-        staticWindowMap.clear();
+    public boolean isResettingWindows() {
+        return resettingWindows;
     }
 
 

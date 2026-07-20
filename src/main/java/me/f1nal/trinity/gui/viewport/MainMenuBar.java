@@ -127,8 +127,13 @@ public class MainMenuBar {
 
             if (ImGui.beginMenu("Windows")) {
                 windowsToolbar.forEach((type, name) -> {
-                    if (ImGui.menuItem(name, null, getWindowManager().isStaticWindowOpen(type))) {
-                        getWindowManager().addStaticWindow(type);
+                    boolean open = getWindowManager().isStaticWindowOpen(type);
+                    if (ImGui.menuItem(name, null, open)) {
+                        if (open) {
+                            getWindowManager().getStaticWindow(type).close();
+                        } else {
+                            getWindowManager().addStaticWindow(type);
+                        }
                     }
                 });
                 ImGui.endMenu();

@@ -92,6 +92,34 @@ public final class NavigationTarget {
         return "class " + ownerName;
     }
 
+    public String getDisplayClassName() {
+        return classTarget.getDisplaySimpleName();
+    }
+
+    public ClassTarget getClassTarget() {
+        return classTarget;
+    }
+
+    public InputType getInputType() {
+        return inputType;
+    }
+
+    public @Nullable String getMemberName() {
+        return memberName;
+    }
+
+    public @Nullable String getMemberDescriptor() {
+        return memberDescriptor;
+    }
+
+    public boolean isInstructionTarget() {
+        return instruction != null;
+    }
+
+    public int getInstructionIndex() {
+        return instructionIndex;
+    }
+
     private @Nullable MethodInput resolveMethod(ClassInput owner) {
         for (MethodInput method : owner.getMethodMap().values()) {
             if (method.getNode() == memberNode) return method;

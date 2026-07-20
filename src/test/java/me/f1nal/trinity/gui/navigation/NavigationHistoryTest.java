@@ -58,6 +58,18 @@ class NavigationHistoryTest {
         assertSame(second, history.forward().orElseThrow().target());
     }
 
+    @Test
+    void consecutiveNavigationsToTheSameTargetAreNotDuplicated() {
+        NavigationHistory history = new NavigationHistory();
+        NavigationTarget target = target("sample/Target");
+
+        NavigationEntry first = history.record(target, NavigationAction.NAVIGATE);
+        NavigationEntry duplicate = history.record(target, NavigationAction.FOLLOW_MEMBER);
+
+        assertSame(first, duplicate);
+        assertEquals(1, history.getEntries().size());
+    }
+
     private static NavigationTarget target(String name) {
         ClassNode node = new ClassNode(Opcodes.ASM9);
         node.name = name;

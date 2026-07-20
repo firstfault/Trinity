@@ -31,6 +31,7 @@ import me.f1nal.trinity.gui.windows.impl.SavingDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerWindow;
+import me.f1nal.trinity.gui.windows.impl.navigation.NavigationHistoryWindow;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.gui.viewport.FontManager;
 import me.f1nal.trinity.gui.viewport.MainMenuBar;
@@ -105,6 +106,9 @@ public final class DisplayManager extends ImGuiApplication {
         Main.getAppDataManager().getRecentDatabases().addDatabase(new RecentDatabaseEntry(trinity.getDatabase().getName(), trinity.getDatabase().getPath().getAbsolutePath(), System.currentTimeMillis()));
 
         Main.runLater(() -> this.windowManager.addStaticWindow(ProjectBrowserFrame.class));
+        if (Main.getPreferences().isNavigationHistoryVisible()) {
+            Main.runLater(() -> this.windowManager.addStaticWindow(NavigationHistoryWindow.class));
+        }
     }
 
     @Override
