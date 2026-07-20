@@ -117,6 +117,8 @@ public class DatabaseLoader {
         aliases.put(DatabaseFieldDisplayName.class, "fieldObj");
         aliases.put(DatabasePackage.class, "packageObj");
         aliases.put(DatabaseDecompiler.class, "decompiler");
+        aliases.put(DatabaseNavigationHistory.class, "navigationHistory");
+        aliases.put(DatabaseNavigationEntry.class, "navigationEntry");
 //        aliases.put(ClassNode.class, "asmClassNode");
         aliases.forEach((clazz, alias) -> {
             stream.processAnnotations(clazz);

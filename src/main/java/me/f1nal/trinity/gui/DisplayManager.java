@@ -67,7 +67,7 @@ public final class DisplayManager extends ImGuiApplication {
     private final PopupMenu popupMenu = new PopupMenu();
     private final FontManager fontManager = new FontManager();
     private final WindowManager windowManager = new WindowManager(this);
-    private final NavigationHistory navigationHistory = new NavigationHistory();
+    private final NavigationHistory navigationHistory = new NavigationHistory(this::persistNavigationHistory);
     private NavigationTarget currentDecompilerTarget;
     private boolean initialized;
 
@@ -89,7 +89,7 @@ public final class DisplayManager extends ImGuiApplication {
 
     public void setDatabase(Trinity trinity) {
         Main.runLater(this.windowManager::resetAllWindows);
-        this.navigationHistory.clear();
+        this.navigationHistory.reset();
         this.currentDecompilerTarget = null;
 
         if (this.trinity != null) {
@@ -353,6 +353,12 @@ public final class DisplayManager extends ImGuiApplication {
 
     public NavigationHistory getNavigationHistory() {
         return navigationHistory;
+    }
+
+    private void persistNavigationHistory() {
+        Trinity activeTrinity = this.trinity;
+        if (activeTrinity == null || activeTrinity.getDatabase().isLoading()) return;
+        activeTrinity.getDatabase().save(this.navigationHistory);
     }
 
     public PopupMenu getPopupMenu() {

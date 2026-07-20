@@ -1,13 +1,28 @@
 package me.f1nal.trinity.gui.navigation;
 
+import me.f1nal.trinity.database.IDatabaseSavable;
+import me.f1nal.trinity.database.object.DatabaseNavigationHistory;
+
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-public final class NavigationHistory {
+public final class NavigationHistory implements IDatabaseSavable<DatabaseNavigationHistory> {
+    public static final int MAX_ENTRIES = 500;
+
     private final List<NavigationEntry> entries = new ArrayList<>();
+    private final Runnable changeListener;
     private int currentIndex = -1;
     private long nextId;
+
+    public NavigationHistory() {
+        this(null);
+    }
+
+    public NavigationHistory(Runnable changeListener) {
+        this.changeListener = changeListener;
+    }
 
     public NavigationEntry record(NavigationTarget target, NavigationAction action) {
         NavigationEntry current = getCurrent();
@@ -20,22 +35,29 @@ public final class NavigationHistory {
         NavigationEntry entry = new NavigationEntry(++nextId, target, action, System.currentTimeMillis());
         entries.add(entry);
         currentIndex = entries.size() - 1;
+        trimToLimit();
+        changed();
         return entry;
     }
 
     public Optional<NavigationEntry> back() {
         if (!canGoBack()) return Optional.empty();
-        return Optional.of(entries.get(--currentIndex));
+        NavigationEntry entry = entries.get(--currentIndex);
+        changed();
+        return Optional.of(entry);
     }
 
     public Optional<NavigationEntry> forward() {
         if (!canGoForward()) return Optional.empty();
-        return Optional.of(entries.get(++currentIndex));
+        NavigationEntry entry = entries.get(++currentIndex);
+        changed();
+        return Optional.of(entry);
     }
 
     public Optional<NavigationEntry> select(int index) {
         if (index < 0 || index >= entries.size()) return Optional.empty();
         currentIndex = index;
+        changed();
         return Optional.of(entries.get(index));
     }
 
@@ -60,7 +82,47 @@ public final class NavigationHistory {
     }
 
     public void clear() {
+        if (entries.isEmpty() && currentIndex == -1) return;
         entries.clear();
         currentIndex = -1;
+        changed();
+    }
+
+    public void reset() {
+        entries.clear();
+        currentIndex = -1;
+        nextId = 0L;
+    }
+
+    public void restore(List<NavigationEntry> restoredEntries, int restoredCurrentIndex) {
+        entries.clear();
+        int firstEntry = Math.max(0, restoredEntries.size() - MAX_ENTRIES);
+        entries.addAll(restoredEntries.subList(firstEntry, restoredEntries.size()));
+        if (entries.isEmpty()) {
+            currentIndex = -1;
+        } else {
+            currentIndex = Math.max(0, Math.min(entries.size() - 1,
+                    restoredCurrentIndex - firstEntry));
+        }
+        nextId = entries.stream()
+                .max(Comparator.comparingLong(NavigationEntry::id))
+                .map(NavigationEntry::id)
+                .orElse(0L);
+    }
+
+    private void trimToLimit() {
+        int removeCount = entries.size() - MAX_ENTRIES;
+        if (removeCount <= 0) return;
+        entries.subList(0, removeCount).clear();
+        currentIndex -= removeCount;
+    }
+
+    private void changed() {
+        if (changeListener != null) changeListener.run();
+    }
+
+    @Override
+    public DatabaseNavigationHistory createDatabaseObject() {
+        return new DatabaseNavigationHistory(entries, currentIndex);
     }
 }

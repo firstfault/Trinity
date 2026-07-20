@@ -1,10 +1,16 @@
 package me.f1nal.trinity.gui.navigation;
 
+import me.f1nal.trinity.database.Database;
+import me.f1nal.trinity.database.DatabaseLoader;
+import me.f1nal.trinity.database.object.DatabaseNavigationHistory;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
+
+import java.io.File;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -68,6 +74,46 @@ class NavigationHistoryTest {
 
         assertSame(first, duplicate);
         assertEquals(1, history.getEntries().size());
+    }
+
+    @Test
+    void retainsOnlyTheNewestFiveHundredEntries() {
+        NavigationHistory history = new NavigationHistory();
+        for (int i = 0; i < NavigationHistory.MAX_ENTRIES + 25; i++) {
+            history.record(target("sample/Target" + i), NavigationAction.NAVIGATE);
+        }
+
+        assertEquals(NavigationHistory.MAX_ENTRIES, history.getEntries().size());
+        assertEquals("sample/Target25",
+                history.getEntries().get(0).target().getClassTarget().getRealName());
+        assertEquals(NavigationHistory.MAX_ENTRIES - 1, history.getCurrentIndex());
+    }
+
+    @Test
+    void mutationsRequestPersistenceButSessionResetDoesNot() {
+        AtomicInteger changes = new AtomicInteger();
+        NavigationHistory history = new NavigationHistory(changes::incrementAndGet);
+        history.record(target("sample/First"), NavigationAction.NAVIGATE);
+        history.record(target("sample/Second"), NavigationAction.NAVIGATE);
+        history.back();
+        history.clear();
+
+        assertEquals(4, changes.get());
+        history.reset();
+        assertEquals(4, changes.get());
+    }
+
+    @Test
+    void databaseObjectRoundTripsThroughProjectXml() {
+        NavigationHistory history = new NavigationHistory();
+        history.record(target("sample/Persisted"), NavigationAction.FOLLOW_XREF);
+        Database database = new Database("test", new File("test.tdb"), null);
+        database.getObjects().add(history.createDatabaseObject());
+
+        Database restored = DatabaseLoader.fromXML(DatabaseLoader.toXML(database));
+
+        assertTrue(restored.getObjects().stream()
+                .anyMatch(DatabaseNavigationHistory.class::isInstance));
     }
 
     private static NavigationTarget target(String name) {
