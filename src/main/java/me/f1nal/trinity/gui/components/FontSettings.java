@@ -8,8 +8,6 @@ import com.thoughtworks.xstream.io.HierarchicalStreamReader;
 import com.thoughtworks.xstream.io.HierarchicalStreamWriter;
 import imgui.ImFont;
 import imgui.ImGui;
-import imgui.flag.ImGuiDataType;
-import imgui.flag.ImGuiSliderFlags;
 import imgui.type.ImFloat;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.FontEnum;
@@ -93,14 +91,15 @@ public class FontSettings {
     }
 
     public void setSize(float size) {
-        this.size = size;
+        this.size = Math.min(Math.max(size, 12.F), 30.F);
     }
 
     public void drawControls() {
         this.setFont(this.comboBox.draw());
         ImFloat fontSize = new ImFloat(this.getSize());
-        ImGui.inputScalar("Font Size", ImGuiDataType.Float, fontSize, 0.5F, 1.F, "%.2f px", ImGuiSliderFlags.AlwaysClamp);
-        this.setSize(fontSize.get());
+        if (ImGui.inputScalar("Font Size (px)", fontSize, 0.5F, 1.F, "%.1f")) {
+            this.setSize(fontSize.get());
+        }
 
         if (this.getBuiltSize() != this.getSize()) {
             ImGui.textDisabled("Please restart Trinity for a clear version of the font.");

@@ -1,13 +1,10 @@
 package me.f1nal.trinity.gui.windows.impl;
 
 import imgui.ImGui;
-import imgui.flag.ImGuiDataType;
 import imgui.flag.ImGuiColorEditFlags;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiMouseButton;
-import imgui.flag.ImGuiSliderFlags;
 import imgui.flag.ImGuiWindowFlags;
-import imgui.type.ImFloat;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.PreferencesFile;
@@ -25,6 +22,7 @@ import me.f1nal.trinity.theme.ThemeManager;
 import me.f1nal.trinity.util.GuiUtil;
 
 public class PreferencesFrame extends StaticWindow {
+    private static final float CONTROL_WIDTH = 340.F;
     private final String id = ComponentId.getId(this.getClass());
     private final EnumComboBox<NumberDisplayTypeEnum> numberDisplayTypeComboBox;
     private final EnumComboBox<SearchMaxDisplay> searchMaxDisplayComboBox;
@@ -44,11 +42,11 @@ public class PreferencesFrame extends StaticWindow {
 
     @Override
     protected void renderFrame() {
+        ImGui.pushItemWidth(CONTROL_WIDTH);
         if (ImGui.beginTabBar("preferences tab" + id)) {
             if (ImGui.beginTabItem("General")) {
                 ThemeManager themeManager = Main.getThemeManager();
                 ImGui.text("Theme");
-                ImGui.setNextItemWidth(-1.F);
                 if (ImGui.beginCombo("###PreferencesTheme", themeManager.getCurrentTheme().getName())) {
                     for (Theme theme : themeManager.getThemes()) {
                         if (ImGui.selectable(theme.getName(), themeManager.getCurrentTheme() == theme)) {
@@ -108,6 +106,7 @@ public class PreferencesFrame extends StaticWindow {
 
             ImGui.endTabBar();
         }
+        ImGui.popItemWidth();
     }
 
     private void drawAccentColor() {
@@ -116,7 +115,6 @@ public class PreferencesFrame extends StaticWindow {
         ImGui.colorButton("###PreferencesAccentPreview", selected.getRgba(),
                 ImGuiColorEditFlags.NoTooltip, 20.F, 20.F);
         ImGui.sameLine();
-        ImGui.setNextItemWidth(-1.F);
         if (!ImGui.beginCombo("###PreferencesAccentColor", selected.getName())) return;
 
         for (AccentColor accentColor : AccentColor.values()) {
