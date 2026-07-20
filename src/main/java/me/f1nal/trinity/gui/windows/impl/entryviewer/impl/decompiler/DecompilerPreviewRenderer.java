@@ -1,6 +1,8 @@
 package me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler;
 
+import imgui.ImColor;
 import imgui.ImGui;
+import imgui.ImVec2;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.decompiler.modules.decompiler.exps.VarExprent;
@@ -10,6 +12,7 @@ import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +20,9 @@ import java.util.List;
 public final class DecompilerPreviewRenderer {
     private static final int CLASS_PREVIEW_LINES = 7;
     private static final int METHOD_PREVIEW_LINES = 7;
+    private static final int METHOD_USAGE_SURROUNDING_LINES = 2;
+    private static final int USAGE_HIGHLIGHT_FILL = ImColor.rgba(145, 145, 145, 18);
+    private static final int USAGE_HIGHLIGHT_BORDER = ImColor.rgba(145, 145, 145, 85);
     private static final float MAX_LINE_WIDTH = 550.F;
 
     private final Trinity trinity;
@@ -35,14 +41,14 @@ public final class DecompilerPreviewRenderer {
             int newline;
             while ((newline = text.indexOf('\n', lineStart)) != -1) {
                 if (newline > lineStart) {
-                    line.add(new PreviewSegment(text.substring(lineStart, newline), detail.getColor()));
+                    line.add(new PreviewSegment(text.substring(lineStart, newline), detail.getColor(), false));
                 }
                 drawDetailLine(line);
                 line.clear();
                 lineStart = newline + 1;
             }
             if (lineStart < text.length()) {
-                line.add(new PreviewSegment(text.substring(lineStart), detail.getColor()));
+                line.add(new PreviewSegment(text.substring(lineStart), detail.getColor(), false));
             }
         }
         if (!line.isEmpty()) {
@@ -131,6 +137,51 @@ public final class DecompilerPreviewRenderer {
         }
     }
 
+    public void drawMethodUsagePreview(MethodInput methodInput, AbstractInsnNode instruction,
+                                       boolean highlightOwnerClass) {
+        drawMethodUsagePreview(methodInput, instruction, highlightOwnerClass, false, null);
+    }
+
+    public void drawMethodConstantUsagePreview(MethodInput methodInput, AbstractInsnNode instruction,
+                                               Object constantValue) {
+        drawMethodUsagePreview(methodInput, instruction, false, true, constantValue);
+    }
+
+    private void drawMethodUsagePreview(MethodInput methodInput, AbstractInsnNode instruction,
+                                        boolean highlightOwnerClass, boolean highlightConstant,
+                                        Object constantValue) {
+        drawDetails(methodSignature(methodInput));
+        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(methodInput.getOwningClass());
+        if (previewClass == null) {
+            return;
+        }
+
+        previewClass.applyPendingOutput();
+        DecompiledClass.MethodUsagePreview preview = previewClass.getMethodUsagePreview(
+                methodInput, instruction, METHOD_USAGE_SURROUNDING_LINES,
+                highlightOwnerClass, highlightConstant, constantValue);
+        if (preview.signature().isEmpty()) {
+            drawMethodPreview(methodInput, true);
+            return;
+        }
+
+        ImGui.separator();
+        int classIndent = getLeadingWhitespace(preview.signature());
+        for (List<DecompilerLineText> line : preview.lines()) {
+            classIndent = Math.min(classIndent, getLeadingWhitespace(line));
+        }
+        drawDecompilerLine(preview.signature(), classIndent);
+        if (preview.skippedLeading()) {
+            ImGui.textColored(CodeColorScheme.DISABLED, "...");
+        }
+        for (List<DecompilerLineText> line : preview.lines()) {
+            drawDecompilerLine(line, classIndent, preview.usageComponent());
+        }
+        if (preview.hasMoreLines()) {
+            ImGui.textColored(CodeColorScheme.DISABLED, "...");
+        }
+    }
+
     public void drawFieldPreview(FieldInput fieldInput, boolean hasDetails) {
         DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(fieldInput.getOwningClass());
         if (previewClass == null) {
@@ -180,8 +231,14 @@ public final class DecompilerPreviewRenderer {
     }
 
     private void drawDecompilerLine(List<DecompilerLineText> line, int leadingWhitespaceToTrim) {
+        drawDecompilerLine(line, leadingWhitespaceToTrim, null);
+    }
+
+    private void drawDecompilerLine(List<DecompilerLineText> line, int leadingWhitespaceToTrim,
+                                    DecompilerComponent highlightedComponent) {
         List<PreviewSegment> segments = line.stream()
-                .map(text -> new PreviewSegment(text.getText(), text.getComponent().getColor()))
+                .map(text -> new PreviewSegment(text.getText(), text.getComponent().getColor(),
+                        text.getComponent() == highlightedComponent))
                 .toList();
         drawLine(segments, leadingWhitespaceToTrim);
     }
@@ -214,7 +271,7 @@ public final class DecompilerPreviewRenderer {
                 if (rendered) {
                     ImGui.sameLine(0.F, 0.F);
                 }
-                ImGui.textColored(segment.color(), value);
+                drawSegment(segment, value);
                 rendered = true;
                 remainingWidth -= ImGui.calcTextSize(value).x;
             }
@@ -248,7 +305,7 @@ public final class DecompilerPreviewRenderer {
                 continue;
             }
             contentFound = true;
-            trimmed.add(new PreviewSegment(value, segment.color()));
+            trimmed.add(new PreviewSegment(value, segment.color(), segment.highlighted()));
         }
         return trimmed;
     }
@@ -259,8 +316,21 @@ public final class DecompilerPreviewRenderer {
                 ImGui.sameLine(0.F, 0.F);
             }
             PreviewSegment segment = segments.get(i);
-            ImGui.textColored(segment.color(), segment.text());
+            drawSegment(segment, segment.text());
         }
+    }
+
+    private static void drawSegment(PreviewSegment segment, String text) {
+        ImGui.textColored(segment.color(), text);
+        if (!segment.highlighted()) {
+            return;
+        }
+
+        float padding = 1.F;
+        ImVec2 min = ImGui.getItemRectMin().minus(padding, padding);
+        ImVec2 max = ImGui.getItemRectMax().plus(padding, padding);
+        ImGui.getWindowDrawList().addRectFilled(min.x, min.y, max.x, max.y, USAGE_HIGHLIGHT_FILL);
+        ImGui.getWindowDrawList().addRect(min.x, min.y, max.x, max.y, USAGE_HIGHLIGHT_BORDER);
     }
 
     private static String fitPrefix(String value, float maximumWidth) {
@@ -309,6 +379,6 @@ public final class DecompilerPreviewRenderer {
                 new ColoredString(" " + fieldInput.getDescriptor(), CodeColorScheme.DISABLED));
     }
 
-    private record PreviewSegment(String text, int color) {
+    private record PreviewSegment(String text, int color, boolean highlighted) {
     }
 }

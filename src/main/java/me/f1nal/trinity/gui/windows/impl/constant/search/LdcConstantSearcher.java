@@ -22,23 +22,34 @@ public abstract class LdcConstantSearcher<T> {
             for (MethodInput methodInput : classInput.getMethodMap().values()) {
                 for (AbstractInsnNode insnNode : methodInput.getInstructions()) {
                     if (insnNode instanceof IincInsnNode) {
-                        this.addConstantView(list, ((IincInsnNode) insnNode).incr, new XrefWhereMethodInsn(methodInput, insnNode), XrefKind.LITERAL);
+                        int value = ((IincInsnNode) insnNode).incr;
+                        this.addConstantView(list, value,
+                                new XrefWhereMethodInsn(methodInput, insnNode, value), XrefKind.LITERAL);
                     } else if (insnNode instanceof LdcInsnNode) {
-                        this.addConstantView(list, ((LdcInsnNode) insnNode).cst, new XrefWhereMethodInsn(methodInput, insnNode), XrefKind.LITERAL);
+                        Object value = ((LdcInsnNode) insnNode).cst;
+                        this.addConstantView(list, value,
+                                new XrefWhereMethodInsn(methodInput, insnNode, value), XrefKind.LITERAL);
                     } else if (insnNode instanceof InsnNode) {
                         final int opcode = insnNode.getOpcode();
                         if (opcode >= ICONST_M1 && opcode <= DCONST_1) {
-                            this.addConstantView(list, InstructionUtil.decodeConstLoad(opcode), new XrefWhereMethodInsn(methodInput, insnNode), XrefKind.LITERAL);
+                            Object value = InstructionUtil.decodeConstLoad(opcode);
+                            this.addConstantView(list, value,
+                                    new XrefWhereMethodInsn(methodInput, insnNode, value), XrefKind.LITERAL);
                         }
                     } else if (insnNode instanceof InvokeDynamicInsnNode) {
                         InvokeDynamicInsnNode indy = (InvokeDynamicInsnNode) insnNode;
                         for (Object bsmArg : indy.bsmArgs) {
-                            this.addConstantView(list, bsmArg, new XrefWhereMethodInsn(methodInput, indy), XrefKind.LITERAL);
+                            this.addConstantView(list, bsmArg,
+                                    new XrefWhereMethodInsn(methodInput, indy, bsmArg), XrefKind.LITERAL);
                         }
                     } else if (insnNode instanceof IntInsnNode) {
-                        this.addConstantView(list, ((IntInsnNode) insnNode).operand, new XrefWhereMethodInsn(methodInput, insnNode), XrefKind.LITERAL);
+                        int value = ((IntInsnNode) insnNode).operand;
+                        this.addConstantView(list, value,
+                                new XrefWhereMethodInsn(methodInput, insnNode, value), XrefKind.LITERAL);
                     } else if (insnNode instanceof MultiANewArrayInsnNode) {
-                        this.addConstantView(list, ((MultiANewArrayInsnNode) insnNode).dims, new XrefWhereMethodInsn(methodInput, insnNode), XrefKind.LITERAL);
+                        int value = ((MultiANewArrayInsnNode) insnNode).dims;
+                        this.addConstantView(list, value,
+                                new XrefWhereMethodInsn(methodInput, insnNode, value), XrefKind.LITERAL);
                     }
                 }
 

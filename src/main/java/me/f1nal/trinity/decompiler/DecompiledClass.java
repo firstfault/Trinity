@@ -9,9 +9,17 @@ import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerLine;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerLineText;
+import me.f1nal.trinity.util.InstructionUtil;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.IincInsnNode;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.IntInsnNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MultiANewArrayInsnNode;
 
 import java.io.IOException;
 import java.util.*;
@@ -28,6 +36,7 @@ public final class DecompiledClass {
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> fieldComponents;
     private final Map<Integer, ClassPreview> classPreviewCache = new HashMap<>();
     private final Map<MethodPreviewKey, MethodPreview> methodPreviewCache = new HashMap<>();
+    private final Map<MethodUsagePreviewKey, MethodUsagePreview> methodUsagePreviewCache = new HashMap<>();
     private final Map<MemberDetails, List<DecompilerLineText>> fieldPreviewCache = new HashMap<>();
     private final Map<VariablePreviewKey, List<DecompilerLineText>> variablePreviewCache = new HashMap<>();
     private StickyHeaders stickyHeaders;
@@ -341,6 +350,7 @@ public final class DecompiledClass {
         this.addLines(this.componentList);
         this.classPreviewCache.clear();
         this.methodPreviewCache.clear();
+        this.methodUsagePreviewCache.clear();
         this.fieldPreviewCache.clear();
         this.variablePreviewCache.clear();
         this.stickyHeaders = null;
@@ -494,6 +504,217 @@ public final class DecompiledClass {
         int lastLine = Math.min(methodLines.size(), firstLine + maximumLines);
         return new MethodPreview(List.copyOf(methodLines.subList(firstLine, lastLine)),
                 skippedLeading, lastLine < methodLines.size());
+    }
+
+    public MethodUsagePreview getMethodUsagePreview(MethodInput methodInput,
+                                                     AbstractInsnNode instruction,
+                                                     int surroundingLines,
+                                                     boolean highlightOwnerClass,
+                                                     boolean highlightConstant,
+                                                     Object constantValue) {
+        if (instruction == null || surroundingLines < 0) {
+            return MethodUsagePreview.EMPTY;
+        }
+        MethodUsagePreviewKey key = new MethodUsagePreviewKey(
+                methodInput.getDetails(), instruction, surroundingLines, highlightOwnerClass,
+                highlightConstant, constantValue);
+        return methodUsagePreviewCache.computeIfAbsent(key,
+                ignored -> createMethodUsagePreview(
+                        methodInput, instruction, surroundingLines, highlightOwnerClass,
+                        highlightConstant, constantValue));
+    }
+
+    private MethodUsagePreview createMethodUsagePreview(MethodInput methodInput,
+                                                         AbstractInsnNode instruction,
+                                                         int surroundingLines,
+                                                         boolean highlightOwnerClass,
+                                                         boolean highlightConstant,
+                                                         Object constantValue) {
+        DecompilerComponent usageComponent = highlightConstant
+                ? findInstructionConstantComponent(methodInput, instruction, constantValue)
+                : findInstructionComponent(methodInput, instruction);
+        DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(methodInput.getDetails());
+        if (usageComponent == null || boundaries == null) {
+            return MethodUsagePreview.EMPTY;
+        }
+
+        int startIndex = componentList.indexOf(boundaries.start());
+        int endIndex = componentList.indexOf(boundaries.end());
+        if (startIndex < 0 || endIndex < startIndex) {
+            return MethodUsagePreview.EMPTY;
+        }
+
+        Set<DecompilerComponent> methodComponentSet = Collections.newSetFromMap(new IdentityHashMap<>());
+        methodComponentSet.addAll(componentList.subList(startIndex, endIndex + 1));
+
+        List<List<DecompilerLineText>> methodLines = new ArrayList<>();
+        int signatureLine = -1;
+        int usageLine = -1;
+        String methodKey = methodInput.getDetails().toString();
+        for (DecompilerLine line : lines) {
+            List<DecompilerLineText> previewLine = line.getComponents().stream()
+                    .filter(text -> methodComponentSet.contains(text.getComponent()))
+                    .filter(text -> !text.getText().isEmpty())
+                    .toList();
+            if (previewLine.isEmpty()) {
+                continue;
+            }
+            if (signatureLine == -1 && previewLine.stream()
+                    .anyMatch(text -> methodKey.equals(text.getComponent().memberKey))) {
+                signatureLine = methodLines.size();
+            }
+            if (previewLine.stream().anyMatch(text -> text.getComponent() == usageComponent)) {
+                usageLine = methodLines.size();
+            }
+            methodLines.add(previewLine);
+        }
+
+        if (signatureLine == -1 || usageLine <= signatureLine) {
+            return MethodUsagePreview.EMPTY;
+        }
+
+        List<List<DecompilerLineText>> bodyLines = methodLines.subList(signatureLine + 1, methodLines.size());
+        int usageBodyLine = usageLine - signatureLine - 1;
+        int contextLineCount = surroundingLines + 1;
+        int firstLine = Math.max(0, usageBodyLine - surroundingLines / 2);
+        int lastLine = Math.min(bodyLines.size(), firstLine + contextLineCount);
+        firstLine = Math.max(0, lastLine - contextLineCount);
+
+        List<List<DecompilerLineText>> context = List.copyOf(bodyLines.subList(firstLine, lastLine));
+        DecompilerComponent highlightedComponent = highlightOwnerClass
+                ? findInstructionOwnerComponent(usageComponent, instruction)
+                : usageComponent;
+        return new MethodUsagePreview(methodLines.get(signatureLine), context, highlightedComponent,
+                firstLine > 0, lastLine < bodyLines.size());
+    }
+
+    private DecompilerComponent findInstructionConstantComponent(MethodInput methodInput,
+                                                                 AbstractInsnNode targetInstruction,
+                                                                 Object constantValue) {
+        int occurrence = 0;
+        boolean targetFound = false;
+        for (AbstractInsnNode instruction : methodInput.getInstructions()) {
+            List<Object> constants = getInstructionConstants(instruction);
+            if (instruction == targetInstruction) {
+                targetFound = constants.stream().anyMatch(value -> constantsEqual(value, constantValue));
+                break;
+            }
+            for (Object value : constants) {
+                if (constantsEqual(value, constantValue)) {
+                    occurrence++;
+                }
+            }
+        }
+        if (!targetFound) {
+            return null;
+        }
+
+        DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(methodInput.getDetails());
+        if (boundaries == null) {
+            return null;
+        }
+        int startIndex = componentList.indexOf(boundaries.start());
+        int endIndex = componentList.indexOf(boundaries.end());
+        if (startIndex < 0 || endIndex < startIndex) {
+            return null;
+        }
+        for (int i = startIndex; i <= endIndex; i++) {
+            DecompilerComponent component = componentList.get(i);
+            if (!component.hasConstantValue()
+                    || !constantsEqual(component.getConstantValue(), constantValue)) {
+                continue;
+            }
+            if (occurrence-- == 0) {
+                return component;
+            }
+        }
+        return null;
+    }
+
+    private static List<Object> getInstructionConstants(AbstractInsnNode instruction) {
+        if (instruction instanceof IincInsnNode increment) {
+            return List.of(increment.incr);
+        }
+        if (instruction instanceof LdcInsnNode constant) {
+            return List.of(constant.cst);
+        }
+        if (instruction instanceof InsnNode) {
+            int opcode = instruction.getOpcode();
+            if (opcode == Opcodes.ACONST_NULL) {
+                return Collections.singletonList(null);
+            }
+            if (opcode >= Opcodes.ICONST_M1 && opcode <= Opcodes.DCONST_1) {
+                return List.of(InstructionUtil.decodeConstLoad(opcode));
+            }
+        }
+        if (instruction instanceof InvokeDynamicInsnNode dynamic) {
+            return Arrays.asList(dynamic.bsmArgs);
+        }
+        if (instruction instanceof IntInsnNode integer) {
+            return List.of(integer.operand);
+        }
+        if (instruction instanceof MultiANewArrayInsnNode array) {
+            return List.of(array.dims);
+        }
+        return List.of();
+    }
+
+    private static boolean constantsEqual(Object first, Object second) {
+        if (first instanceof Number firstNumber && second instanceof Number secondNumber) {
+            if (first instanceof Float || second instanceof Float) {
+                return first instanceof Float && second instanceof Float
+                        && Float.compare(firstNumber.floatValue(), secondNumber.floatValue()) == 0;
+            }
+            if (first instanceof Double || second instanceof Double) {
+                return first instanceof Double && second instanceof Double
+                        && Double.compare(firstNumber.doubleValue(), secondNumber.doubleValue()) == 0;
+            }
+            if (first instanceof Long || second instanceof Long) {
+                return first instanceof Long && second instanceof Long
+                        && firstNumber.longValue() == secondNumber.longValue();
+            }
+            return firstNumber.longValue() == secondNumber.longValue();
+        }
+        return Objects.equals(first, second);
+    }
+
+    private DecompilerComponent findInstructionOwnerComponent(DecompilerComponent usageComponent,
+                                                               AbstractInsnNode instruction) {
+        String owner;
+        if (instruction instanceof MethodInsnNode method) {
+            owner = method.owner;
+        } else if (instruction instanceof FieldInsnNode field) {
+            owner = field.owner;
+        } else {
+            return null;
+        }
+
+        for (DecompilerLine line : lines) {
+            List<DecompilerLineText> lineComponents = line.getComponents();
+            int usageIndex = -1;
+            for (int i = 0; i < lineComponents.size(); i++) {
+                if (lineComponents.get(i).getComponent() == usageComponent) {
+                    usageIndex = i;
+                    break;
+                }
+            }
+            if (usageIndex == -1) {
+                continue;
+            }
+            for (int distance = 1; distance < lineComponents.size(); distance++) {
+                int before = usageIndex - distance;
+                if (before >= 0 && owner.equals(lineComponents.get(before).getComponent().memberKey)) {
+                    return lineComponents.get(before).getComponent();
+                }
+                int after = usageIndex + distance;
+                if (after < lineComponents.size()
+                        && owner.equals(lineComponents.get(after).getComponent().memberKey)) {
+                    return lineComponents.get(after).getComponent();
+                }
+            }
+            return null;
+        }
+        return null;
     }
 
     public List<DecompilerLineText> getFieldDeclarationPreview(FieldInput fieldInput) {
@@ -651,6 +872,11 @@ public final class DecompiledClass {
     private record MethodPreviewKey(MemberDetails details, int maximumLines) {
     }
 
+    private record MethodUsagePreviewKey(MemberDetails details, AbstractInsnNode instruction,
+                                         int surroundingLines, boolean highlightOwnerClass,
+                                         boolean highlightConstant, Object constantValue) {
+    }
+
     private record VariablePreviewKey(MemberDetails method, int variableIndex) {
     }
 
@@ -667,5 +893,13 @@ public final class DecompiledClass {
     public record MethodPreview(List<List<DecompilerLineText>> lines, boolean skippedLeading,
                                 boolean hasMoreLines) {
         private static final MethodPreview EMPTY = new MethodPreview(List.of(), false, false);
+    }
+
+    public record MethodUsagePreview(List<DecompilerLineText> signature,
+                                     List<List<DecompilerLineText>> lines,
+                                     DecompilerComponent usageComponent,
+                                     boolean skippedLeading, boolean hasMoreLines) {
+        private static final MethodUsagePreview EMPTY = new MethodUsagePreview(
+                List.of(), List.of(), null, false, false);
     }
 }

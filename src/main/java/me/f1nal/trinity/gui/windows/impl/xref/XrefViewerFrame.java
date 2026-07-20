@@ -14,6 +14,7 @@ import me.f1nal.trinity.gui.components.general.table.TableComponent;
 import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
+import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 
 import java.util.Collection;
 
@@ -34,7 +35,8 @@ public class XrefViewerFrame extends ClosableWindow {
 
         this.xrefTable.getColumns().add(new TableColumn<>("Access", AbstractXref::getAccessText));
         this.xrefTable.getColumns().add(new TableColumn<>("Invocation", AbstractXref::getInvocation));
-        this.xrefTable.getColumns().add(new TableColumn<>("Where", new TableColumnRendererXrefWhere<>()));
+        this.xrefTable.getColumns().add(new TableColumn<>("Where", new TableColumnRendererXrefWhere<>(
+                builder instanceof XrefBuilderClassRef)));
 
         if (autofollowXref && this.xrefViewList.size() == 1) this.followFirstXref();
     }

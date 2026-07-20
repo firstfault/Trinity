@@ -37,7 +37,16 @@ public abstract class XrefWhere {
         return null;
     }
 
+    protected void drawPreview(DecompilerPreviewRenderer renderer, Input<?> input,
+                               boolean highlightOwnerClass) {
+        renderer.drawInputPreview(input);
+    }
+
     public void hover() {
+        hover(false);
+    }
+
+    public void hover(boolean highlightOwnerClass) {
         FontSettings font = Main.getPreferences().getDecompilerFont();
         font.pushFont();
         ImGui.beginTooltip();
@@ -46,7 +55,7 @@ public abstract class XrefWhere {
             ImGui.text(getText());
         } else {
             DecompilerPreviewRenderer renderer = new DecompilerPreviewRenderer(Main.getTrinity());
-            renderer.drawInputPreview(input);
+            drawPreview(renderer, input, highlightOwnerClass);
             renderer.finish();
         }
         ImGui.endTooltip();
@@ -54,8 +63,12 @@ public abstract class XrefWhere {
     }
 
     public void controls(PopupMenu popupMenu, Trinity trinity) {
+        controls(popupMenu, trinity, false);
+    }
+
+    public void controls(PopupMenu popupMenu, Trinity trinity, boolean highlightOwnerClass) {
         if (ImGui.isItemHovered()) {
-            hover();
+            hover(highlightOwnerClass);
             if (ImGui.isMouseDoubleClicked(ImGuiMouseButton.Left)) {
                 followInDecompiler();
             } else if (ImGui.isItemClicked(ImGuiMouseButton.Right)) {
@@ -65,6 +78,10 @@ public abstract class XrefWhere {
     }
 
     public void draw(IKindType kind, PopupMenu popupMenu, Trinity trinity) {
+        draw(kind, popupMenu, trinity, false);
+    }
+
+    public void draw(IKindType kind, PopupMenu popupMenu, Trinity trinity, boolean highlightOwnerClass) {
         float rectSize = 12.F * Main.getPreferences().getDefaultFont().getSize() / 15F;
         ImGui.invisibleButton("XrefWhereButton", rectSize, rectSize);
         ImVec2 min = ImGui.getItemRectMin();
@@ -74,7 +91,7 @@ public abstract class XrefWhere {
         GuiUtil.tooltip(kind.getName());
         ImGui.sameLine(0.F, 4.F);
         ImGui.text(getText());
-        controls(popupMenu, trinity);
+        controls(popupMenu, trinity, highlightOwnerClass);
     }
 
     @Override

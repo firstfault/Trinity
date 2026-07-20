@@ -46,6 +46,9 @@ public class DecompilerComponent {
     private VariablePreview previewVariable;
     private IXrefBuilderProvider xrefBuilderProvider;
     private Runnable searchAllOccurrences;
+    private boolean recursiveInvocation;
+    private boolean constantValueSet;
+    private Object constantValue;
     // Temporary
     public Input<?> input;
     public String memberKey;
@@ -120,6 +123,19 @@ public class DecompilerComponent {
         this.identifier = type.getClass().getSimpleName().concat(Objects.toString(identifier));
     }
 
+    public void setConstantValue(Object constantValue) {
+        this.constantValue = constantValue;
+        this.constantValueSet = true;
+    }
+
+    public boolean hasConstantValue() {
+        return constantValueSet;
+    }
+
+    public Object getConstantValue() {
+        return constantValue;
+    }
+
     public void setCustomRenderer(Runnable customRenderer) {
         this.customRenderer = customRenderer;
     }
@@ -172,6 +188,14 @@ public class DecompilerComponent {
 
     public Runnable getSearchAllOccurrences() {
         return searchAllOccurrences;
+    }
+
+    public boolean isRecursiveInvocation() {
+        return recursiveInvocation;
+    }
+
+    public void setRecursiveInvocation(boolean recursiveInvocation) {
+        this.recursiveInvocation = recursiveInvocation;
     }
 
     public void stopRenaming(@Nullable String newName) {

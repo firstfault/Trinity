@@ -50,4 +50,11 @@ public class DecompilerLine {
         }
         return null;
     }
+
+    public DecompilerComponent getRecursiveInvocation() {
+        for (DecompilerLineText component : components) {
+            if (component.getComponent().isRecursiveInvocation()) return component.getComponent();
+        }
+        return null;
+    }
 }

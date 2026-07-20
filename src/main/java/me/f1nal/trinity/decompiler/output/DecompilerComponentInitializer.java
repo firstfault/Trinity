@@ -11,6 +11,7 @@ import me.f1nal.trinity.decompiler.output.number.NumberDisplayTypeEnum;
 import me.f1nal.trinity.decompiler.output.impl.*;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.*;
+import me.f1nal.trinity.execution.hierarchy.MethodHierarchy;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.execution.var.ImmutableVariable;
 import me.f1nal.trinity.execution.var.Variable;
@@ -148,6 +149,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     @Override
     public void visitNumber(NumberOutputMember constant) {
         final Number number = constant.getNumber();
+        component.setConstantValue(number);
         var settings = new Object() {
             NumberDisplayType displayType = Main.getPreferences().getDefaultNumberDisplayType().getInstance();
         };
@@ -230,9 +232,48 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         @Nullable MethodInput methodInput = trinity.getExecution().getMethod(memberDetails);
         MethodInput caller = decompilingMethod == null ? null : decompilingMethod.getMethodInput();
 
+        component.setRecursiveInvocation(!isClearSuperInvocation(caller, methodInput, invocation)
+                && isRecursiveInvocation(caller, methodInput, memberDetails));
         component.addPopupBuilder(builder -> builder.menuItem("View Invocation", () ->
                 Main.getWindowManager().addClosableWindow(new InvocationDetailsWindow(trinity, invocation, caller, methodInput))));
         initializeMethod(invocation, memberDetails, methodInput);
+    }
+
+    private static boolean isRecursiveInvocation(@Nullable MethodInput caller,
+                                                 @Nullable MethodInput resolvedTarget,
+                                                 MemberDetails symbolicTarget) {
+        if (caller == null) {
+            return false;
+        }
+        if (caller.getDetails().equals(symbolicTarget)) {
+            return true;
+        }
+
+        MethodHierarchy hierarchy = caller.getMethodHierarchy();
+        return resolvedTarget != null
+                && hierarchy != null
+                && hierarchy.getLinkedMethods().contains(resolvedTarget);
+    }
+
+    private boolean isClearSuperInvocation(@Nullable MethodInput caller,
+                                           @Nullable MethodInput resolvedTarget,
+                                           InvocationOutputMember invocation) {
+        if (caller == null
+                || !"invokespecial".equals(invocation.getInvocationType())
+                || !"Method".equals(invocation.getFunctionType())) {
+            return false;
+        }
+
+        ClassInput callerClass = caller.getOwningClass();
+        ClassInput symbolicOwner = trinity.getExecution().getClassInput(invocation.getOwnerName());
+        if (symbolicOwner != null && callerClass != symbolicOwner
+                && callerClass.getClassHierarchy().getExtending().contains(symbolicOwner)) {
+            return true;
+        }
+        return resolvedTarget != null
+                && callerClass != resolvedTarget.getOwningClass()
+                && callerClass.getClassHierarchy().getExtending()
+                .contains(resolvedTarget.getOwningClass());
     }
 
     @Override
@@ -280,6 +321,9 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
     @Override
     public void visitKeyword(KeywordOutputMember keyword) {
+        if (originalText.equals("null")) {
+            component.setConstantValue(null);
+        }
         if (originalText.equals("length")) {
             component.setColorFunction(() -> CodeColorScheme.TEXT);
         } else {
@@ -325,6 +369,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     @Override
     public void visitString(StringOutputMember string) {
         final String unquotedText = string.getData();
+        component.setConstantValue(unquotedText);
         Runnable searchAllOccurrences = () -> {
             Trinity trinity = Main.getTrinity();
             ConstantSearchTypeString constantSearchType = new ConstantSearchTypeString(trinity);

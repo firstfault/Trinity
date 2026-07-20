@@ -498,9 +498,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             if (hovered)
                 this.cursor.handleHoveredLineInputs(cursorScreenPosX, lineNumberSpacing, mousePosX, line);
 
-            ImGui.setCursorPosX(cursorPosX);
-            ImGui.textColored(CodeColorScheme.LINE_NUMBER, String.valueOf(line.getLineNumber()));
-            ImGui.sameLine();
+            this.drawLineGutter(line, cursorPosX, textSize);
+            ImGui.sameLine(cursorPosX + lineNumberSpacing, 0.F);
 
             this.cursor.handleLineDrawing(line, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
 
@@ -580,6 +579,43 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
 
         this.handleMemberKeyMappings();
+    }
+
+    private void drawLineGutter(DecompilerLine line, float cursorPosX, ImVec2 textSize) {
+        ImGui.setCursorPosX(cursorPosX);
+        float gutterScreenX = ImGui.getCursorScreenPosX();
+        float gutterScreenY = ImGui.getCursorScreenPosY();
+        String lineNumber = String.valueOf(line.getLineNumber());
+        float lineNumberWidth = ImGui.calcTextSize(lineNumber).x;
+        ImGui.textColored(CodeColorScheme.LINE_NUMBER, lineNumber);
+        DecompilerComponent recursiveInvocation = line.getRecursiveInvocation();
+        if (recursiveInvocation == null) return;
+
+        FontSettings decompilerFont = Main.getPreferences().getDecompilerFont();
+        float iconSize = Math.max(8.F, decompilerFont.getSize() * 0.65F);
+        ImGui.pushFont(decompilerFont.getIconFont(), iconSize);
+        ImVec2 iconBounds = ImGui.calcTextSize(FontAwesomeIcons.RedoAlt);
+        ImGui.popFont();
+        float remainingNumberSpace = textSize.x - lineNumberWidth;
+        float iconX = remainingNumberSpace >= iconBounds.x + 1.F
+                ? cursorPosX + lineNumberWidth + 1.F
+                : Math.max(0.5F, cursorPosX - iconBounds.x - 1.F);
+        float iconScreenX = gutterScreenX + iconX - cursorPosX + 3.F;
+        float iconScreenY = gutterScreenY + 3.F;
+        ImGui.getWindowDrawList().addText(decompilerFont.getIconFont(), Math.round(iconSize),
+                iconScreenX, iconScreenY, Main.getPreferences().getAccentColor().getColor(),
+                FontAwesomeIcons.RedoAlt);
+        boolean iconHovered = ImGui.isWindowHovered()
+                && ImGui.isMouseHoveringRect(iconScreenX, iconScreenY,
+                iconScreenX + iconBounds.x, iconScreenY + iconBounds.y);
+        if (iconHovered) this.drawRecursiveInvocationTooltip(recursiveInvocation);
+    }
+
+    private void drawRecursiveInvocationTooltip(DecompilerComponent component) {
+        ImGui.beginTooltip();
+        ImGui.textColored(Main.getPreferences().getAccentColor().getColor(),
+                FontAwesomeIcons.RedoAlt + " Recursive method invocation");
+        ImGui.endTooltip();
     }
 
     private void handleMemberKeyMappings() {
