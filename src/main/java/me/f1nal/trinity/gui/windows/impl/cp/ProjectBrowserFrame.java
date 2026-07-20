@@ -111,7 +111,9 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
 
     private void setNodeRoot() {
         this.filteredSet = new HashSet<>(this.filterComponent.getFilteredList());
-        this.rootNode = new ProjectBrowserTreeNodePackage(trinity.getExecution().getRootPackage());
+        Package rootPackage = trinity.getExecution().getRootPackage();
+        rootPackage.setOpenForced(true);
+        this.rootNode = new ProjectBrowserTreeNodePackage(rootPackage);
         List<ProjectBrowserTreeNodePackage> packages = new ArrayList<>();
         packages.add(this.rootNode);
 
