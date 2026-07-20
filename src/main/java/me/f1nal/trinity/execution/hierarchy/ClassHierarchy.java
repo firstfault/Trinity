@@ -1,15 +1,15 @@
 package me.f1nal.trinity.execution.hierarchy;
 
 import me.f1nal.trinity.execution.ClassInput;
-import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.execution.MethodInput;
 import org.jetbrains.annotations.Nullable;
+import org.objectweb.asm.Opcodes;
 
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 public final class ClassHierarchy {
     private final ClassInput currentClass;
@@ -24,76 +24,117 @@ public final class ClassHierarchy {
      * All classes that we extend/implement.
      */
     private final Set<ClassInput> extending = new LinkedHashSet<>(1);
-    private boolean built;
+    private BuildState buildState = BuildState.UNBUILT;
 
     public ClassHierarchy(ClassInput currentClass) {
         this.currentClass = currentClass;
     }
 
-    void buildHierarchy(Execution execution) {
-        if (this.built) {
+    private void buildHierarchy(Function<String, @Nullable ClassInput> classLookup) {
+        if (buildState != BuildState.UNBUILT) {
             return;
         }
-        this.built = true;
+        buildState = BuildState.BUILDING;
 
         for (String itf : this.currentClass.getInterfaces()) {
-            final @Nullable ClassInput interfaceInput = execution.getClassInput(itf);
+            final @Nullable ClassInput interfaceInput = classLookup.apply(itf);
 
-            if (interfaceInput != null) {
+            if (interfaceInput != null && interfaceInput != currentClass) {
+                interfaceInput.getClassHierarchy().buildHierarchy(classLookup);
                 this.extending.add(interfaceInput);
                 this.interfaces.add(interfaceInput);
+                this.extending.addAll(interfaceInput.getClassHierarchy().getExtending());
+                this.interfaces.addAll(interfaceInput.getClassHierarchy().getInterfaces());
             }
         }
 
-        final @Nullable ClassInput superClass = execution.getClassInput(this.currentClass.getSuperName());
+        final @Nullable ClassInput superClass = classLookup.apply(this.currentClass.getSuperName());
 
         if (superClass != null && superClass != this.currentClass) {
             this.superClass = superClass;
-
-            this.addSuperElements(execution, superClass);
+            superClass.getClassHierarchy().buildHierarchy(classLookup);
+            this.extending.add(superClass);
+            this.extending.addAll(superClass.getClassHierarchy().getExtending());
+            this.superClasses.add(superClass);
+            this.superClasses.addAll(superClass.getClassHierarchy().getSuperClasses());
+            this.interfaces.addAll(superClass.getClassHierarchy().getInterfaces());
         }
 
-        for (ClassInput extendingInput : this.extending) {
-            extendingInput.getClassHierarchy().getExtending().add(this.getCurrentClass());
+        extending.remove(currentClass);
+        superClasses.remove(currentClass);
+        interfaces.remove(currentClass);
+        buildState = BuildState.BUILT;
+        for (ClassInput ancestor : this.extending) {
+            ancestor.getClassHierarchy().inheritors.add(this.currentClass);
         }
+    }
 
-        for (MethodInput methodInput : this.currentClass.getMethodMap().values()) {
-            if (methodInput.getMethodHierarchy() != null || methodInput.getAccessFlags().isStatic()) {
+    public static void rebuildAll(Execution execution) {
+        rebuildAll(execution.getClassList(), execution::getClassInput);
+    }
+
+    static void rebuildAll(Collection<ClassInput> classes,
+                           Function<String, @Nullable ClassInput> classLookup) {
+        for (ClassInput classInput : classes) {
+            classInput.getClassHierarchy().reset();
+            classInput.getMethodMap().values().forEach(method -> method.setMethodHierarchy(null));
+        }
+        for (ClassInput classInput : classes) {
+            classInput.getClassHierarchy().buildHierarchy(classLookup);
+        }
+        for (ClassInput classInput : classes) {
+            classInput.getClassHierarchy().linkDeclaredMethods();
+        }
+    }
+
+    private void reset() {
+        superClass = null;
+        superClasses.clear();
+        interfaces.clear();
+        inheritors.clear();
+        extending.clear();
+        buildState = BuildState.UNBUILT;
+    }
+
+    private void linkDeclaredMethods() {
+        for (MethodInput methodInput : currentClass.getMethodMap().values()) {
+            if (!canParticipateInOverride(methodInput)) {
                 continue;
             }
-
-            final MethodHierarchy methodHierarchy = new MethodHierarchy();
-            methodHierarchy.linkMethod(methodInput);
-
-            for (ClassInput extendingInput : this.extending) {
-                final @Nullable MethodInput overridingMethod = extendingInput.getMethod(methodInput.getName(), methodInput.getDescriptor());
-
-                if (overridingMethod != null && !overridingMethod.getAccessFlags().isStatic()) {
-                    methodHierarchy.linkMethod(overridingMethod);
+            MethodHierarchy methodHierarchy = methodInput.getMethodHierarchy();
+            if (methodHierarchy == null) {
+                methodHierarchy = new MethodHierarchy();
+                methodHierarchy.linkMethod(methodInput);
+            }
+            for (ClassInput ancestor : extending) {
+                MethodInput superMethod = ancestor.getDeclaredMethod(methodInput.getName(), methodInput.getDescriptor());
+                if (superMethod != null && canOverride(methodInput, superMethod)) {
+                    methodHierarchy.linkMethod(superMethod);
                 }
             }
         }
     }
 
-    private void addSuperElements(Execution execution, ClassInput superClass) {
-        final List<ClassInput> processedSupers = new ArrayList<>(1);
-
-        while (superClass != null) {
-            ClassHierarchy classHierarchy = superClass.getClassHierarchy();
-            classHierarchy.buildHierarchy(execution);
-
-            extending.add(superClass);
-            superClasses.add(superClass);
-            interfaces.addAll(classHierarchy.getInterfaces());
-
-            processedSupers.add(superClass);
-
-            if (processedSupers.contains(classHierarchy.getSuperClass())) {
-                break;
-            }
-
-            superClass = classHierarchy.getSuperClass();
+    private static boolean canOverride(MethodInput method, MethodInput superMethod) {
+        if (!canParticipateInOverride(superMethod)
+                || (superMethod.getAccessFlagsMask() & Opcodes.ACC_FINAL) != 0) {
+            return false;
         }
+        int access = superMethod.getAccessFlagsMask();
+        return (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0
+                || packageName(method.getOwningClass()).equals(packageName(superMethod.getOwningClass()));
+    }
+
+    private static boolean canParticipateInOverride(MethodInput method) {
+        int access = method.getAccessFlagsMask();
+        return !method.isInitOrClinit()
+                && (access & (Opcodes.ACC_STATIC | Opcodes.ACC_PRIVATE)) == 0;
+    }
+
+    private static String packageName(ClassInput classInput) {
+        String name = classInput.getRealName();
+        int separator = name.lastIndexOf('/');
+        return separator < 0 ? "" : name.substring(0, separator);
     }
 
     public Set<ClassInput> getInheritors() {
@@ -118,5 +159,11 @@ public final class ClassHierarchy {
 
     public ClassInput getSuperClass() {
         return superClass;
+    }
+
+    private enum BuildState {
+        UNBUILT,
+        BUILDING,
+        BUILT
     }
 }

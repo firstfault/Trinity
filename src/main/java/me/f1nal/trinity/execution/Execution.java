@@ -10,6 +10,7 @@ import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
 import me.f1nal.trinity.execution.hierarchy.ObjectHierarchyLoadTask;
+import me.f1nal.trinity.execution.hierarchy.ClassHierarchy;
 import me.f1nal.trinity.execution.loading.AsynchronousLoad;
 import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
 import me.f1nal.trinity.execution.packages.Package;
@@ -219,6 +220,12 @@ public final class Execution {
         classTargetMap.put(newName, target);
         target.setPackage(rootPackage);
         trinity.getEventManager().postEvent(new EventClassesLoaded());
+    }
+
+    /** Refreshes hierarchy-dependent member lookup and cross-reference targets. */
+    public void refreshStructuralIndexes() {
+        ClassHierarchy.rebuildAll(this);
+        xrefMap.rebuild();
     }
 
     /**

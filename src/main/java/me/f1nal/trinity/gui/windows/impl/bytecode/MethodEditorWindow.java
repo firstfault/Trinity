@@ -268,8 +268,8 @@ public final class MethodEditorWindow extends AbstractBytecodeEditorWindow {
             throw new IllegalArgumentException("Abstract and native methods cannot contain Code instructions");
         }
 
-        MethodInput conflict = owner.getMethod(newName, newDescriptor);
-        if (conflict != null && conflict != input && conflict.getOwningClass() == owner) {
+        MethodInput conflict = owner.getDeclaredMethod(newName, newDescriptor);
+        if (conflict != null && conflict != input) {
             throw new IllegalArgumentException("A method with this name and descriptor already exists");
         }
 
@@ -298,6 +298,7 @@ public final class MethodEditorWindow extends AbstractBytecodeEditorWindow {
 
         if (input == null) {
             owner.addMethod(node);
+            trinity.getExecution().refreshStructuralIndexes();
             trinity.getEventManager().postEvent(new EventClassModified(owner));
         } else {
             MemberDetails previousDetails = input.getDetails();
@@ -306,6 +307,7 @@ public final class MethodEditorWindow extends AbstractBytecodeEditorWindow {
                     || originallyStatic != ((node.access & Opcodes.ACC_STATIC) != 0)) {
                 savedInput = owner.reindexMethod(input);
             }
+            trinity.getExecution().refreshStructuralIndexes();
             trinity.getEventManager().postEvent(new EventMemberModified(savedInput, previousDetails));
         }
     }

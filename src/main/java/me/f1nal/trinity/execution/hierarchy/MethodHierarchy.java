@@ -2,24 +2,28 @@ package me.f1nal.trinity.execution.hierarchy;
 
 import me.f1nal.trinity.execution.MethodInput;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public final class MethodHierarchy {
     /**
      * Methods linked to this hierarchy.
      */
-    private final Set<MethodInput> linkedMethods = new HashSet<>();
+    private final Set<MethodInput> linkedMethods = new LinkedHashSet<>();
 
     public Set<MethodInput> getLinkedMethods() {
         return linkedMethods;
     }
 
     public void linkMethod(MethodInput methodInput) {
-        if (methodInput.getMethodHierarchy() != null) {
-            methodInput.getMethodHierarchy().mergeInto(this);
+        MethodHierarchy existing = methodInput.getMethodHierarchy();
+        if (existing == this) {
+            return;
+        }
+        if (existing != null) {
+            for (MethodInput linkedMethod : Set.copyOf(existing.linkedMethods)) {
+                this.updateMethodHierarchy(linkedMethod);
+            }
             return;
         }
         this.updateMethodHierarchy(methodInput);
@@ -30,9 +34,4 @@ public final class MethodHierarchy {
         methodInput.setMethodHierarchy(this);
     }
 
-    private void mergeInto(MethodHierarchy methodHierarchy) {
-        for (MethodInput linkedMethod : methodHierarchy.getLinkedMethods()) {
-            this.updateMethodHierarchy(linkedMethod);
-        }
-    }
 }

@@ -265,8 +265,10 @@ public final class ClassEditorWindow extends AbstractBytecodeEditorWindow {
         if (input == null) {
             node.name = newName;
             trinity.getExecution().createClass(targetPackage, node);
+            trinity.getExecution().refreshStructuralIndexes();
         } else {
             trinity.getExecution().reindexClass(input, newName);
+            trinity.getExecution().refreshStructuralIndexes();
             input.getClassTarget().resetKind();
             trinity.getEventManager().postEvent(new EventClassModified(input));
         }

@@ -2,6 +2,7 @@ package me.f1nal.trinity.execution.xref;
 
 import com.google.common.collect.ListMultimap;
 import me.f1nal.trinity.execution.*;
+import me.f1nal.trinity.execution.hierarchy.MemberResolver;
 import me.f1nal.trinity.execution.loading.ProgressiveLoadTask;
 import me.f1nal.trinity.execution.xref.where.XrefWhere;
 import me.f1nal.trinity.execution.xref.where.XrefWhereClass;
@@ -42,12 +43,28 @@ public final class XrefMap extends ProgressiveLoadTask {
      * Builds the reference map by analyzing the execution context.
      */
     @Override
-    public void runImpl() {
+    public synchronized void runImpl() {
         List<ClassInput> classList = execution.getClassList();
         this.startWork(classList.size());
+        clearReferences();
         for (ClassInput classInput : classList) {
             this.buildClassXrefs(classInput);
             this.finishedWork();
+        }
+    }
+
+    /** Rebuilds target resolution after class or member structure changes. */
+    public synchronized void rebuild() {
+        clearReferences();
+        for (ClassInput classInput : execution.getClassList()) {
+            buildClassXrefs(classInput);
+        }
+    }
+
+    private void clearReferences() {
+        memberReferences.clear();
+        for (ClassTarget target : new ArrayList<>(execution.getClassTargetMap().values())) {
+            target.getReferences().clear();
         }
     }
 
@@ -113,9 +130,9 @@ public final class XrefMap extends ProgressiveLoadTask {
             }
 
             if (instruction instanceof MethodInsnNode min) {
-                this.addMethodReference(min.owner, min.name, min.desc, new MemberXref(methodInput, instruction));
+                this.addMethodReference(min, new MemberXref(methodInput, instruction));
             } else if (instruction instanceof FieldInsnNode fin) {
-                this.addReference(fin.owner, fin.name, fin.desc, new MemberXref(methodInput, instruction));
+                this.addFieldReference(fin, new MemberXref(methodInput, instruction));
             } else if (instruction instanceof TypeInsnNode) {
                 this.processTypeInstruction(whereMethod, (TypeInsnNode) instruction);
             } else if (instruction instanceof LdcInsnNode) {
@@ -128,22 +145,27 @@ public final class XrefMap extends ProgressiveLoadTask {
         }
     }
 
-    private void addMethodReference(String owner, String name, String desc, MemberXref memberXref) {
-        if (!name.equals("<init>")) {
-            ClassInput classInput = getTrinity().getExecution().getClassInput(owner);
-            if (classInput != null) {
-                MethodInput methodInput = classInput.getMethod(name, desc);
-                if (methodInput != null && methodInput.getMethodHierarchy() != null) {
-                    for (MethodInput linkedMethod : methodInput.getMethodHierarchy().getLinkedMethods()) {
-                        this.addReference(linkedMethod.getOwningClass().getRealName(), linkedMethod.getName(), linkedMethod.getDescriptor(), memberXref);
-                    }
-                    return;
-                }
+    private void addMethodReference(MethodInsnNode instruction, MemberXref memberXref) {
+        Collection<MethodInput> targets = MemberResolver.resolveInvocationTargets(
+                execution, memberXref.getMethodInput().getOwningClass(), instruction);
+        if (targets.isEmpty()) {
+            putMemberReference(new MemberDetails(instruction.owner, instruction.name, instruction.desc), memberXref);
+        } else {
+            for (MethodInput target : targets) {
+                putMemberReference(target.getDetails(), memberXref);
             }
         }
-        this.addReference(owner, name, desc, memberXref);
+        putReferencedOwner(instruction.owner, memberXref);
     }
 
+    private void addFieldReference(FieldInsnNode instruction, MemberXref memberXref) {
+        FieldInput target = MemberResolver.resolveField(
+                execution, instruction.owner, instruction.name, instruction.desc);
+        putMemberReference(target == null
+                ? new MemberDetails(instruction.owner, instruction.name, instruction.desc)
+                : target.getDetails(), memberXref);
+        putReferencedOwner(instruction.owner, memberXref);
+    }
 
     private void processClassLiteralLdc(XrefWhere where, Type elementType) {
         if (elementType.getSort() != Type.OBJECT) {
@@ -228,19 +250,14 @@ public final class XrefMap extends ProgressiveLoadTask {
         putClassReference(NameUtil.internalToNormal(elementType.getClassName()), ClassXref.parameter(new XrefWhereMethod(methodInput)));
     }
 
-    /**
-     * Adds a reference to the map.
-     *
-     * @param owner      The referenced owner.
-     * @param name       The referenced target name.
-     * @param desc       The referenced target descriptor.
-     * @param referencer The method responsible for the reference.
-     */
-    private void addReference(String owner, String name, String desc, MemberXref referencer) {
-        owner = clearDescriptorFromOwner(owner);
+    private void putMemberReference(MemberDetails details, MemberXref referencer) {
+        this.memberReferences.put(new MemberDetails(clearDescriptorFromOwner(details.getOwner()),
+                details.getName(), details.getDesc()), referencer);
+    }
 
-        this.memberReferences.put(new MemberDetails(owner, name, desc), referencer);
-        putClassReference(owner, new ClassXref(referencer.getWhere(), referencer.getAccess(), referencer.getInvocation(), referencer.getKind()));
+    private void putReferencedOwner(String owner, MemberXref referencer) {
+        putClassReference(owner, new ClassXref(referencer.getWhere(), referencer.getAccess(),
+                referencer.getInvocation(), referencer.getKind()));
     }
 
     private void putClassReference(String owner, ClassXref ref) {

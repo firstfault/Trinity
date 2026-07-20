@@ -111,7 +111,7 @@ public final class FieldEditorWindow extends AbstractBytecodeEditorWindow {
         BytecodeEditorSupport.requireMemberName(newName, "Field name", false);
         BytecodeEditorSupport.requireFieldDescriptor(newDescriptor);
 
-        FieldInput conflict = owner.getField(newName, newDescriptor);
+        FieldInput conflict = owner.getDeclaredField(newName, newDescriptor);
         if (conflict != null && conflict != input) {
             throw new IllegalArgumentException("A field with this name and descriptor already exists");
         }
@@ -129,6 +129,7 @@ public final class FieldEditorWindow extends AbstractBytecodeEditorWindow {
 
         if (input == null) {
             owner.addField(node);
+            trinity.getExecution().refreshStructuralIndexes();
             trinity.getEventManager().postEvent(new EventClassModified(owner));
         } else {
             MemberDetails previousDetails = input.getDetails();
@@ -136,6 +137,7 @@ public final class FieldEditorWindow extends AbstractBytecodeEditorWindow {
             if (!originalName.equals(newName) || !originalDescriptor.equals(newDescriptor)) {
                 savedInput = owner.reindexField(input);
             }
+            trinity.getExecution().refreshStructuralIndexes();
             trinity.getEventManager().postEvent(new EventMemberModified(savedInput, previousDetails));
         }
     }

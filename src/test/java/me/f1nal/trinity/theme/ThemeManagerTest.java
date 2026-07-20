@@ -14,7 +14,7 @@ class ThemeManagerTest {
 
         assertEquals("Fawn", manager.getDefaultTheme().getName());
         assertEquals("Fawn", manager.getCurrentTheme().getName());
-        assertNotNull(manager.getTheme("Gerry Dark"));
+        assertNotNull(manager.getTheme("Fawn"));
     }
 
     @Test

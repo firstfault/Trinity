@@ -1,6 +1,7 @@
 package me.f1nal.trinity.execution;
 
 import me.f1nal.trinity.execution.hierarchy.ClassHierarchy;
+import me.f1nal.trinity.execution.hierarchy.MemberResolver;
 import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
@@ -53,10 +54,20 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     }
 
     public @Nullable MethodInput getMethod(String name, String desc) {
-        return methodList.get(this.getMemberKey(name, desc));
+        MethodInput declaredMethod = getDeclaredMethod(name, desc);
+        return declaredMethod != null ? declaredMethod : MemberResolver.resolveMethod(this, name, desc);
     }
 
     public @Nullable FieldInput getField(String name, String desc) {
+        FieldInput declaredField = getDeclaredField(name, desc);
+        return declaredField != null ? declaredField : MemberResolver.resolveField(this, name, desc);
+    }
+
+    public @Nullable MethodInput getDeclaredMethod(String name, String desc) {
+        return methodList.get(this.getMemberKey(name, desc));
+    }
+
+    public @Nullable FieldInput getDeclaredField(String name, String desc) {
         return fieldList.get(this.getMemberKey(name, desc));
     }
 
@@ -123,14 +134,10 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     public void reindexDeclaredMembers() {
         Map<org.objectweb.asm.tree.MethodNode, MethodInput> methodsByNode = new IdentityHashMap<>();
         Map<org.objectweb.asm.tree.FieldNode, FieldInput> fieldsByNode = new IdentityHashMap<>();
-        List<MethodInput> inheritedMethods = methodList.values().stream()
-                .filter(method -> method.getOwningClass() != this).distinct().toList();
-        methodList.values().stream().filter(method -> method.getOwningClass() == this)
-                .forEach(method -> methodsByNode.put(method.getNode(), method));
-        fieldList.values().stream().filter(field -> field.getOwningClass() == this)
-                .forEach(field -> fieldsByNode.put(field.getNode(), field));
-        methodList.entrySet().removeIf(entry -> entry.getValue().getOwningClass() == this);
-        fieldList.entrySet().removeIf(entry -> entry.getValue().getOwningClass() == this);
+        methodList.values().forEach(method -> methodsByNode.put(method.getNode(), method));
+        fieldList.values().forEach(field -> fieldsByNode.put(field.getNode(), field));
+        methodList.clear();
+        fieldList.clear();
         memberList.clear();
         getNode().methods.forEach(method -> {
             MethodInput replacement = new MethodInput(method, this);
@@ -147,8 +154,6 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
             if (source != null) preserveDisplayName(source, replacement);
             addInput(replacement);
         });
-        inheritedMethods.forEach(method -> memberList.putIfAbsent(
-                new MemberDetails(getRealName(), method.getName(), method.getDescriptor()), method));
     }
 
     private void removeInput(MemberInput<?> input) {
@@ -174,13 +179,6 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
         }
 
         memberList.put(query, input);
-    }
-
-    public void addInheritedMethod(MethodInput method) {
-        if (getMethod(method.getName(), method.getDescriptor()) != null) {
-            return;
-        }
-        addInput(new MemberDetails(this.getRealName(), method.getName(), method.getDescriptor()), method);
     }
 
     @Override
@@ -210,7 +208,13 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     }
 
     public MemberInput<?> getMember(MemberDetails memberDetails) {
-        return memberList.get(memberDetails);
+        MemberInput<?> declaredMember = memberList.get(memberDetails);
+        if (declaredMember != null) {
+            return declaredMember;
+        }
+        return memberDetails.getDesc().startsWith("(")
+                ? getMethod(memberDetails.getName(), memberDetails.getDesc())
+                : getField(memberDetails.getName(), memberDetails.getDesc());
     }
 
     /**
