@@ -5,7 +5,6 @@ import imgui.ImColor;
 import imgui.ImDrawList;
 import imgui.ImGui;
 import me.f1nal.trinity.Trinity;
-import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.events.EventMemberModified;
@@ -16,6 +15,7 @@ import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.util.ByteUtil;
 import me.f1nal.trinity.util.animation.Animation;
 import me.f1nal.trinity.util.animation.Easing;
+import org.objectweb.asm.commons.CodeSizeEvaluator;
 import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Type;
@@ -33,9 +33,11 @@ import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public final class ProjectNavigationBand implements IEventListener {
     private static final float BAND_HEIGHT = 14.F;
@@ -51,8 +53,11 @@ public final class ProjectNavigationBand implements IEventListener {
     private final Trinity trinity;
     private List<Segment> segments = List.of();
     private final Map<String, Animation> segmentOpacity = new HashMap<>();
+    private final Map<ClassInput, ClassSizeBreakdown> classSizeCache = new HashMap<>();
+    private final Set<ClassInput> invalidatedClasses = new HashSet<>();
     private long totalSize;
     private volatile boolean dirty = true;
+    private boolean rebuildClassCache = true;
     private Segment tooltip;
 
     public ProjectNavigationBand(Trinity trinity) {
@@ -116,20 +121,26 @@ public final class ProjectNavigationBand implements IEventListener {
         drawList.addRect(x, y, x + width, y + BAND_HEIGHT, BORDER_COLOR, 2.F);
     }
 
-    private void recalculate() {
+    private synchronized void recalculate() {
         Execution execution = trinity.getExecution();
-        long serializedClasses = 0L;
+        List<ClassInput> classes = new ArrayList<>(execution.getClassList());
+        if (rebuildClassCache) {
+            classSizeCache.clear();
+            invalidatedClasses.clear();
+            rebuildClassCache = false;
+        } else {
+            invalidatedClasses.forEach(classSizeCache::remove);
+            invalidatedClasses.clear();
+            classSizeCache.keySet().retainAll(new HashSet<>(classes));
+        }
+
+        long bytecode = 0L;
         long constants = 0L;
-        for (ClassInput classInput : new ArrayList<>(execution.getClassList())) {
-            long classSize;
-            try {
-                classSize = DataPool.writeClassNode(classInput.getNode()).length;
-            } catch (RuntimeException exception) {
-                classSize = Math.max(0, classInput.getClassTarget().getSizeInBytes());
-            }
-            long classConstants = Math.min(classSize, constantPayloadSize(classInput.getNode()));
-            serializedClasses += classSize;
-            constants += classConstants;
+        for (ClassInput classInput : classes) {
+            ClassSizeBreakdown size = classSizeCache.computeIfAbsent(classInput,
+                    input -> measureClass(input.getNode()));
+            bytecode += size.bytecode();
+            constants += size.constants();
         }
 
         long libraries = 0L;
@@ -143,9 +154,8 @@ public final class ProjectNavigationBand implements IEventListener {
             }
         }
 
-        long bytecode = Math.max(0L, serializedClasses - constants);
         this.segments = List.of(
-                new Segment("Executable bytecode", bytecode, BYTECODE_COLOR),
+                new Segment("Estimated executable bytecode", bytecode, BYTECODE_COLOR),
                 new Segment("Native libraries", libraries, LIBRARY_COLOR),
                 new Segment("Data resources", data, DATA_COLOR),
                 new Segment("Constants", constants, CONSTANT_COLOR));
@@ -160,8 +170,9 @@ public final class ProjectNavigationBand implements IEventListener {
                 || name.contains(".so.");
     }
 
-    private static long constantPayloadSize(ClassNode node) {
+    private static ClassSizeBreakdown measureClass(ClassNode node) {
         Map<String, Long> constants = new HashMap<>();
+        long bytecode = 0L;
         addAnnotations(constants, node.visibleAnnotations);
         addAnnotations(constants, node.invisibleAnnotations);
         addAnnotations(constants, node.visibleTypeAnnotations);
@@ -183,6 +194,7 @@ public final class ProjectNavigationBand implements IEventListener {
             addAnnotations(constants, field.invisibleTypeAnnotations);
         }
         for (MethodNode method : node.methods) {
+            bytecode += estimateMethodCodeSize(method);
             addConstant(constants, method.annotationDefault);
             addAnnotations(constants, method.visibleAnnotations);
             addAnnotations(constants, method.invisibleAnnotations);
@@ -209,7 +221,31 @@ public final class ProjectNavigationBand implements IEventListener {
                 }
             }
         }
-        return constants.values().stream().mapToLong(Long::longValue).sum();
+        return new ClassSizeBreakdown(bytecode,
+                constants.values().stream().mapToLong(Long::longValue).sum());
+    }
+
+    static long estimateExecutableBytecodeSize(ClassNode node) {
+        long size = 0L;
+        for (MethodNode method : node.methods) {
+            size += estimateMethodCodeSize(method);
+        }
+        return size;
+    }
+
+    private static long estimateMethodCodeSize(MethodNode method) {
+        if (method.instructions == null || method.instructions.size() == 0) return 0L;
+        try {
+            CodeSizeEvaluator evaluator = new CodeSizeEvaluator(null);
+            method.accept(evaluator);
+            return ((long) evaluator.getMinSize() + evaluator.getMaxSize() + 1L) / 2L;
+        } catch (RuntimeException exception) {
+            long size = 0L;
+            for (AbstractInsnNode instruction : method.instructions) {
+                if (instruction.getOpcode() >= 0) size++;
+            }
+            return size;
+        }
     }
 
     private static void addParameterAnnotations(Map<String, Long> constants, List<AnnotationNode>[] annotations) {
@@ -293,25 +329,32 @@ public final class ProjectNavigationBand implements IEventListener {
     }
 
     @Subscribe
-    public void onClassesLoaded(EventClassesLoaded event) {
+    public synchronized void onClassesLoaded(EventClassesLoaded event) {
+        rebuildClassCache = true;
         dirty = true;
     }
 
     @Subscribe
-    public void onClassModified(EventClassModified event) {
+    public synchronized void onClassModified(EventClassModified event) {
+        invalidatedClasses.add(event.getClassInput());
         dirty = true;
     }
 
     @Subscribe
-    public void onMemberModified(EventMemberModified event) {
+    public synchronized void onMemberModified(EventMemberModified event) {
+        invalidatedClasses.add(event.getClassInput());
         dirty = true;
     }
 
     @Subscribe
-    public void onPackageStructureReload(EventPackageStructureReload event) {
+    public synchronized void onPackageStructureReload(EventPackageStructureReload event) {
+        rebuildClassCache = true;
         dirty = true;
     }
 
     private record Segment(String name, long size, int color) {
+    }
+
+    private record ClassSizeBreakdown(long bytecode, long constants) {
     }
 }
