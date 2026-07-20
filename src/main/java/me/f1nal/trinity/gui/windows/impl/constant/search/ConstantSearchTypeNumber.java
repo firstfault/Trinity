@@ -145,10 +145,10 @@ public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
         @Override
         protected String convertConstantToText(Number value) {
             if (value instanceof Long) {
-                if (value.intValue() != this.value.get()) {
+                if (value.longValue() != this.value.get()) {
                     return null;
                 }
-                return value.intValue() + "L";
+                return value.longValue() + "L";
             }
             return null;
         }
