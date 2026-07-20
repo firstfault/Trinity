@@ -4,6 +4,7 @@ import imgui.ImGui;
 import imgui.flag.ImGuiDataType;
 import imgui.flag.ImGuiColorEditFlags;
 import imgui.flag.ImGuiKey;
+import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiSliderFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImFloat;
@@ -70,6 +71,11 @@ public class PreferencesFrame extends StaticWindow {
                 }
                 this.tooltip("If a cross reference gets viewed and it contains only one entry, automatically follow it in the decompiler.");
 
+                if (ImGui.checkbox("Navigation Notifications", preferencesFile.isNavigationNotifications())) {
+                    preferencesFile.setNavigationNotifications(!preferencesFile.isNavigationNotifications());
+                }
+                this.tooltip("Show notifications when navigating to classes, members, usages, or history entries.");
+
                 this.preferencesFile.setSearchMaxDisplay(searchMaxDisplayComboBox.draw());
                 this.tooltip("Limits the amount of cross references displayed in the Xref Viewer window.");
                 ImGui.endTabItem();
@@ -132,7 +138,7 @@ public class PreferencesFrame extends StaticWindow {
 
     private void drawKeyMappings() {
         KeyBindManager manager = Main.getKeyBindManager();
-        ImGui.textDisabled("Multiple key combinations supported. Escape cancels capture.");
+        ImGui.textDisabled("Keyboard and mouse combinations supported. Escape cancels capture.");
 
         for (String category : manager.getCategories()) {
             ImGui.separator();
@@ -178,16 +184,25 @@ public class PreferencesFrame extends StaticWindow {
             this.editingBind = null;
             return;
         }
-        for (int key = ImGuiKey.NamedKey_BEGIN; key <= ImGuiKey.Oem102; key++) {
-            if (Bindable.isModifierKey(key) || !ImGui.isKeyPressed(key, false)) continue;
-            Bindable changed = this.editingBind;
-            Bindable conflict = Main.getKeyBindManager().bind(changed, key,
-                    ImGui.getIO().getKeyCtrl(), ImGui.getIO().getKeyShift(),
-                    ImGui.getIO().getKeyAlt(), ImGui.getIO().getKeySuper());
-            this.persistBinding(conflict, changed);
-            this.editingBind = null;
+        for (int mouseButton = 0; mouseButton < ImGuiMouseButton.COUNT; mouseButton++) {
+            if (!ImGui.isMouseClicked(mouseButton)) continue;
+            this.finishBindingCapture(Bindable.mouseButtonCode(mouseButton));
             return;
         }
+        for (int key = ImGuiKey.NamedKey_BEGIN; key <= ImGuiKey.Oem102; key++) {
+            if (Bindable.isModifierKey(key) || !ImGui.isKeyPressed(key, false)) continue;
+            this.finishBindingCapture(key);
+            return;
+        }
+    }
+
+    private void finishBindingCapture(int inputCode) {
+        Bindable changed = this.editingBind;
+        Bindable conflict = Main.getKeyBindManager().bind(changed, inputCode,
+                ImGui.getIO().getKeyCtrl(), ImGui.getIO().getKeyShift(),
+                ImGui.getIO().getKeyAlt(), ImGui.getIO().getKeySuper());
+        this.persistBinding(conflict, changed);
+        this.editingBind = null;
     }
 
     private void persistBinding(Bindable conflict, Bindable changed) {

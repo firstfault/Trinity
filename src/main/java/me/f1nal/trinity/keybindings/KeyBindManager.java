@@ -33,6 +33,10 @@ public final class KeyBindManager {
             "decompiler.member", "View Xrefs", ImGuiKey.X);
     public final Bindable DECOMPILER_VIEW_MEMBER = register("decompiler.member.view", "Decompiler",
             "decompiler.member", "View Member", ImGuiKey.V);
+    public final Bindable DECOMPILER_NAVIGATE_BACK = register("decompiler.navigation.back", "Decompiler",
+            "decompiler.navigation", "Navigate Back", Bindable.mouseButtonCode(3));
+    public final Bindable DECOMPILER_NAVIGATE_FORWARD = register("decompiler.navigation.forward", "Decompiler",
+            "decompiler.navigation", "Navigate Forward", Bindable.mouseButtonCode(4));
 
     public Bindable register(String identifier, String category, String scope, String displayName, int defaultKey) {
         if (bindables.containsKey(identifier)) {

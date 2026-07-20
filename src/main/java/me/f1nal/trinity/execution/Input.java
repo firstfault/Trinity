@@ -5,6 +5,7 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.access.AccessFlagsMaskProvider;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
+import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.gui.windows.impl.cp.IRenameHandler;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
@@ -49,7 +50,7 @@ public abstract class Input<N> implements AccessFlagsMaskProvider, RenameHandler
                 () -> BytecodeEditorLauncher.edit(this));
         addXrefViewerMenuItem(trinity, builder);
         builder.menuItem("View Member", Main.getKeyBindManager().DECOMPILER_VIEW_MEMBER.getKeyName(),
-                () -> Main.getDisplayManager().openDecompilerView(this));
+                () -> Main.getDisplayManager().followDecompilerView(this, NavigationAction.FOLLOW_MEMBER));
 
         DisplayName displayName = getDisplayName();
         builder.menu("Copy...", copy -> {

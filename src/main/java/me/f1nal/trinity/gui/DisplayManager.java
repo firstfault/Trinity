@@ -20,6 +20,10 @@ import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
+import me.f1nal.trinity.gui.navigation.NavigationAction;
+import me.f1nal.trinity.gui.navigation.NavigationEntry;
+import me.f1nal.trinity.gui.navigation.NavigationHistory;
+import me.f1nal.trinity.gui.navigation.NavigationTarget;
 import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.gui.windows.impl.AboutWindow;
 import me.f1nal.trinity.gui.windows.impl.LoadingDatabasePopup;
@@ -34,6 +38,8 @@ import me.f1nal.trinity.gui.viewport.NotificationRenderer;
 import me.f1nal.trinity.gui.viewport.ProjectNavigationBand;
 import me.f1nal.trinity.gui.viewport.dnd.DragAndDropHandler;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
+import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
+import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.theme.TrinityStyle;
 import me.f1nal.trinity.util.Stopwatch;
@@ -60,6 +66,8 @@ public final class DisplayManager extends ImGuiApplication {
     private final PopupMenu popupMenu = new PopupMenu();
     private final FontManager fontManager = new FontManager();
     private final WindowManager windowManager = new WindowManager(this);
+    private final NavigationHistory navigationHistory = new NavigationHistory();
+    private NavigationTarget currentDecompilerTarget;
     private boolean initialized;
 
     public DisplayManager(String windowTitle) {
@@ -80,6 +88,8 @@ public final class DisplayManager extends ImGuiApplication {
 
     public void setDatabase(Trinity trinity) {
         Main.runLater(this.windowManager::resetAllWindows);
+        this.navigationHistory.clear();
+        this.currentDecompilerTarget = null;
 
         if (this.trinity != null) {
             this.trinity.getEventManager().setRegistered(false);
@@ -251,13 +261,94 @@ public final class DisplayManager extends ImGuiApplication {
     }
 
     public void openDecompilerView(Input<?> input) {
-        this.openDecompilerView(input, null);
+        this.navigateDecompilerView(input, null, NavigationAction.NAVIGATE);
     }
 
     public void openDecompilerView(Input<?> input, AbstractInsnNode instruction) {
+        this.navigateDecompilerView(input, instruction, NavigationAction.NAVIGATE);
+    }
+
+    public void followDecompilerView(Input<?> input, NavigationAction action) {
+        this.navigateDecompilerView(input, null, action);
+    }
+
+    public void followDecompilerView(Input<?> input, AbstractInsnNode instruction, NavigationAction action) {
+        this.navigateDecompilerView(input, instruction, action);
+    }
+
+    private void navigateDecompilerView(Input<?> input, AbstractInsnNode instruction, NavigationAction action) {
+        NavigationTarget target = NavigationTarget.capture(input, instruction);
+        boolean track = trinity != null && !trinity.getDatabase().isLoading();
+        if (track) {
+            ensureCurrentNavigationRecorded();
+            this.navigationHistory.record(target, action);
+        }
+        this.openDecompilerViewDirect(input, instruction);
+        this.currentDecompilerTarget = target;
+        if (track) {
+            showNavigationNotification(action.getNotificationPrefix() + " " + target.describe(trinity));
+        }
+    }
+
+    private void openDecompilerViewDirect(Input<?> input, AbstractInsnNode instruction) {
         ArchiveEntryViewerWindow<?> viewerWindow = ArchiveEntryViewerType.DECOMPILER.getWindow(input.getOwningClass().getClassTarget());
         this.windowManager.addClosableWindow(viewerWindow);
         ((DecompilerWindow) Objects.requireNonNull(viewerWindow)).setDecompileTarget(input, instruction);
+    }
+
+    public void trackCurrentDecompilerView(Input<?> input, AbstractInsnNode instruction) {
+        if (input != null) this.currentDecompilerTarget = NavigationTarget.capture(input, instruction);
+    }
+
+    public boolean navigateBack() {
+        ensureCurrentNavigationRecorded();
+        return this.navigationHistory.back()
+                .map(entry -> replayNavigation(entry, "Navigated back to"))
+                .orElse(false);
+    }
+
+    public boolean navigateForward() {
+        return this.navigationHistory.forward()
+                .map(entry -> replayNavigation(entry, "Navigated forward to"))
+                .orElse(false);
+    }
+
+    public boolean replayNavigation(int index) {
+        return this.navigationHistory.select(index)
+                .map(entry -> replayNavigation(entry, "Reopened"))
+                .orElse(false);
+    }
+
+    private boolean replayNavigation(NavigationEntry entry, String prefix) {
+        NavigationTarget.ResolvedNavigation resolved = entry.target().resolve(trinity);
+        if (resolved == null) {
+            showNavigationNotification("Navigation target is no longer available");
+            return false;
+        }
+        this.openDecompilerViewDirect(resolved.input(), resolved.instruction());
+        this.currentDecompilerTarget = entry.target();
+        showNavigationNotification(prefix + " " + entry.target().describe(trinity));
+        return true;
+    }
+
+    private void ensureCurrentNavigationRecorded() {
+        if (currentDecompilerTarget == null) return;
+        NavigationEntry current = navigationHistory.getCurrent();
+        if (current == null || !current.target().equals(currentDecompilerTarget)) {
+            navigationHistory.record(currentDecompilerTarget, NavigationAction.NAVIGATE);
+        }
+    }
+
+    private void showNavigationNotification(String message) {
+        if (!Main.getPreferences().isNavigationNotifications()) return;
+        Notification notification = new Notification(NotificationType.INFO,
+                new SimpleCaption("Navigation"), ColoredStringBuilder.create().fmt("{}", message).get());
+        notification.setExpireTime(2500L);
+        this.addNotification(notification);
+    }
+
+    public NavigationHistory getNavigationHistory() {
+        return navigationHistory;
     }
 
     public PopupMenu getPopupMenu() {

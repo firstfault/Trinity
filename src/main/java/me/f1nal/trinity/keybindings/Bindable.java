@@ -2,6 +2,7 @@ package me.f1nal.trinity.keybindings;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiKey;
+import imgui.flag.ImGuiMouseButton;
 import me.f1nal.trinity.appdata.keybindings.KeyBindingData;
 import org.lwjgl.glfw.GLFW;
 
@@ -10,6 +11,7 @@ import java.util.List;
 
 /** A registered action with a stable identifier and a configurable keyboard chord. */
 public final class Bindable {
+    private static final int MOUSE_BUTTON_CODE_BASE = -1000;
     private final String identifier;
     private final String category;
     private final String scope;
@@ -48,7 +50,9 @@ public final class Bindable {
                 && ImGui.getIO().getKeyShift() == chord.shift()
                 && ImGui.getIO().getKeyAlt() == chord.alt()
                 && ImGui.getIO().getKeySuper() == chord.superKey()
-                && ImGui.isKeyPressed(chord.keyCode());
+                && (isMouseButtonCode(chord.keyCode())
+                ? ImGui.isMouseClicked(getMouseButton(chord.keyCode()))
+                : ImGui.isKeyPressed(chord.keyCode()));
     }
 
     public boolean isBound() {
@@ -124,6 +128,9 @@ public final class Bindable {
     }
 
     private static String getKeyName(int keyCode) {
+        if (isMouseButtonCode(keyCode)) {
+            return "Mouse " + (getMouseButton(keyCode) + 1);
+        }
         if (keyCode >= ImGuiKey._0 && keyCode <= ImGuiKey._9) {
             return Integer.toString(keyCode - ImGuiKey._0);
         }
@@ -192,6 +199,7 @@ public final class Bindable {
     /** Converts key codes saved by the pre-1.92 GLFW-based binding system to named ImGui keys. */
     static int normalizeKeyCode(int keyCode) {
         if (keyCode == -1) return -1;
+        if (isMouseButtonCode(keyCode)) return keyCode;
         if (keyCode >= ImGuiKey.NamedKey_BEGIN && keyCode < ImGuiKey.NamedKey_END) return keyCode;
         if (keyCode >= GLFW.GLFW_KEY_0 && keyCode <= GLFW.GLFW_KEY_9) {
             return ImGuiKey._0 + keyCode - GLFW.GLFW_KEY_0;
@@ -256,6 +264,25 @@ public final class Bindable {
             case GLFW.GLFW_KEY_WORLD_1 -> ImGuiKey.Oem102;
             default -> -1;
         };
+    }
+
+    public static int mouseButtonCode(int mouseButton) {
+        if (mouseButton < 0 || mouseButton >= ImGuiMouseButton.COUNT) {
+            throw new IllegalArgumentException("Unsupported mouse button: " + mouseButton);
+        }
+        return MOUSE_BUTTON_CODE_BASE - mouseButton;
+    }
+
+    public static boolean isMouseButtonCode(int code) {
+        return code <= MOUSE_BUTTON_CODE_BASE
+                && code > MOUSE_BUTTON_CODE_BASE - ImGuiMouseButton.COUNT;
+    }
+
+    public static int getMouseButton(int code) {
+        if (!isMouseButtonCode(code)) {
+            throw new IllegalArgumentException("Not a mouse binding: " + code);
+        }
+        return MOUSE_BUTTON_CODE_BASE - code;
     }
 
     record KeyChord(int keyCode, boolean control, boolean shift, boolean alt, boolean superKey) {

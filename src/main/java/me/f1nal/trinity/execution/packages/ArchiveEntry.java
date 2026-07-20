@@ -2,6 +2,7 @@ package me.f1nal.trinity.execution.packages;
 
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.events.EventPackageStructureReload;
+import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.IconFamily;
@@ -38,7 +39,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
                 Main.getDisplayManager().getPopupMenu().show(this.createPopup(PopupItemBuilder.create()));
             } else if (clickType == MouseClickType.LEFT_CLICK) {
                 if (this.viewerTypes.length != 0) {
-                    Main.getWindowManager().addClosableWindow(this.viewerTypes[0].getWindow(this));
+                    this.openViewer(this.viewerTypes[0]);
                 }
             }
         });
@@ -97,7 +98,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         return builder.
                 menu("Open", (open) -> {
                     for (ArchiveEntryViewerType viewerType : this.getViewerTypes()) {
-                        open.menuItem(viewerType.getName(), () -> Main.getWindowManager().addClosableWindow(viewerType.getWindow(this)));
+                        open.menuItem(viewerType.getName(), () -> this.openViewer(viewerType));
                     }
                 }).
                 menu("Copy", (copy) -> {
@@ -110,6 +111,15 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
                 predicate(() -> this instanceof ResourceArchiveEntry,
                         items -> items.menuItem(FontAwesomeIcons.TrashAlt + " Delete", () -> Main.getTrinity().getExecution().deleteResource((ResourceArchiveEntry) this))).
                 menuItem(FontAwesomeIcons.FileDownload + " Extract", new ExtractArchiveEntryRunnable(this));
+    }
+
+    private void openViewer(ArchiveEntryViewerType viewerType) {
+        if (viewerType == ArchiveEntryViewerType.DECOMPILER
+                && this instanceof ClassTarget classTarget && classTarget.getInput() != null) {
+            Main.getDisplayManager().openDecompilerView(classTarget.getInput());
+            return;
+        }
+        Main.getWindowManager().addClosableWindow(viewerType.getWindow(this));
     }
 
     /**

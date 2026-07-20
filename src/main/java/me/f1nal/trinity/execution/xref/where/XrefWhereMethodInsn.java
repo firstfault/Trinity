@@ -2,6 +2,7 @@ package me.f1nal.trinity.execution.xref.where;
 
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.execution.MethodInput;
+import me.f1nal.trinity.gui.navigation.NavigationAction;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
 public class XrefWhereMethodInsn extends XrefWhereMethod {
@@ -17,7 +18,7 @@ public class XrefWhereMethodInsn extends XrefWhereMethod {
     }
 
     @Override
-    public void followInDecompiler() {
-        Main.getDisplayManager().openDecompilerView(this.getInput(), this.insnNode);
+    public void followInDecompiler(NavigationAction action) {
+        Main.getDisplayManager().followDecompilerView(this.getInput(), this.insnNode, action);
     }
 }

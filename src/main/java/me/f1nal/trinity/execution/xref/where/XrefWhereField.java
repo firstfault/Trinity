@@ -3,6 +3,7 @@ package me.f1nal.trinity.execution.xref.where;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
+import me.f1nal.trinity.gui.navigation.NavigationAction;
 
 public class XrefWhereField extends XrefWhere {
     private final FieldInput fieldInput;
@@ -28,7 +29,7 @@ public class XrefWhereField extends XrefWhere {
     }
 
     @Override
-    public void followInDecompiler() {
-        Main.getDisplayManager().openDecompilerView(this.fieldInput);
+    public void followInDecompiler(NavigationAction action) {
+        Main.getDisplayManager().followDecompilerView(this.fieldInput, action);
     }
 }

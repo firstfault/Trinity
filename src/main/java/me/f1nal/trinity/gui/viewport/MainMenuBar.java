@@ -26,6 +26,7 @@ import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.gui.windows.impl.project.settings.ProjectSettingsWindow;
 import me.f1nal.trinity.gui.windows.impl.refactor.GlobalRenameWindow;
+import me.f1nal.trinity.gui.windows.impl.navigation.NavigationHistoryWindow;
 import me.f1nal.trinity.gui.windows.impl.themes.ThemeEditorFrame;
 import me.f1nal.trinity.gui.windows.impl.xref.search.XrefSearchFrame;
 import me.f1nal.trinity.theme.CodeColorScheme;
@@ -54,6 +55,7 @@ public class MainMenuBar {
 
         windowsToolbar.put(ProjectBrowserFrame.class, "Project Browser");
         windowsToolbar.put(ClassStructureWindow.class, "Class Structure");
+        windowsToolbar.put(NavigationHistoryWindow.class, "Navigation History");
     }
 
     public void draw(ProjectNavigationBand navigationBand) {

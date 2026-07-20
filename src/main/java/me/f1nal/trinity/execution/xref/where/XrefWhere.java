@@ -10,6 +10,7 @@ import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.filter.kind.IKindType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
+import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerPreviewRenderer;
 import me.f1nal.trinity.util.GuiUtil;
 
@@ -26,7 +27,11 @@ public abstract class XrefWhere {
 
     public abstract PopupItemBuilder menuItem();
     public abstract String getText();
-    public abstract void followInDecompiler();
+    public final void followInDecompiler() {
+        followInDecompiler(NavigationAction.FOLLOW_XREF);
+    }
+
+    public abstract void followInDecompiler(NavigationAction action);
 
     public Input<?> getInput() {
         return null;

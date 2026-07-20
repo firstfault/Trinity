@@ -11,6 +11,7 @@ import me.f1nal.trinity.execution.AccessFlags;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
+import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.util.SystemUtil;
 import org.objectweb.asm.Type;
@@ -46,7 +47,7 @@ public class InvocationDetailsWindow extends ClosableWindow {
         if (target != null) {
             ImGui.sameLine();
             if (ImGui.button("View Target Method")) {
-                Main.getDisplayManager().openDecompilerView(target);
+                Main.getDisplayManager().followDecompilerView(target, NavigationAction.FOLLOW_MEMBER);
             }
         }
 

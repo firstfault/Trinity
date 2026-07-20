@@ -35,6 +35,7 @@ import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.popup.MenuBarProgress;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
+import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructure;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
@@ -62,6 +63,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private static final int SELECTION_MATCH_BORDER = ImColor.rgba(145, 145, 145, 220);
     private static final float STICKY_HOVER_ALPHA = 28.F;
     private ClassInput selectedClass;
+    private Input<?> navigationTarget;
+    private AbstractInsnNode navigationInstruction;
     /**
      * Notifies the selected class must be refreshed.
      */
@@ -149,6 +152,10 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     public void setDecompileTarget(ClassInput classInput) {
+        this.navigationTarget = classInput;
+        this.navigationInstruction = null;
+        this.autoscrollTo = null;
+        this.navigationHighlight = null;
         if (classInput == selectedClass) {
             return;
         }
@@ -162,6 +169,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     @Override
     protected void onFocusGain() {
         this.focusTime.reset();
+        Main.getDisplayManager().trackCurrentDecompilerView(this.navigationTarget, this.navigationInstruction);
         this.updateClassStructure();
     }
 
@@ -263,6 +271,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
 
         ImGui.endChild();
+        this.handleNavigationKeyMappings();
     }
 
     private void runControls() {
@@ -543,7 +552,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                     ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
 
                     if (focusTime.hasPassed(150L) && viewMember.hasPassed(250L) && (ImGui.isKeyPressed(ImGuiKey.B) || leftClick)) {
-                        Main.getDisplayManager().openDecompilerView(this.hoveredComponent.getViewMember());
+                        Main.getDisplayManager().followDecompilerView(
+                                this.hoveredComponent.getViewMember(), NavigationAction.FOLLOW_MEMBER);
                         viewMember.reset();
                     }
                 }
@@ -596,7 +606,19 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 target.getSearchAllOccurrences().run();
             }
         } else if (bindings.DECOMPILER_VIEW_MEMBER.isPressed()) {
-            if (input != null) Main.getDisplayManager().openDecompilerView(input);
+            if (input != null) {
+                Main.getDisplayManager().followDecompilerView(input, NavigationAction.FOLLOW_MEMBER);
+            }
+        }
+    }
+
+    private void handleNavigationKeyMappings() {
+        if (!ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows) || ImGui.isAnyItemActive()) return;
+        KeyBindManager bindings = Main.getKeyBindManager();
+        if (bindings.DECOMPILER_NAVIGATE_BACK.isPressed()) {
+            Main.getDisplayManager().navigateBack();
+        } else if (bindings.DECOMPILER_NAVIGATE_FORWARD.isPressed()) {
+            Main.getDisplayManager().navigateForward();
         }
     }
 
@@ -797,8 +819,14 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     public void setDecompileTarget(Input<?> input, AbstractInsnNode instruction) {
-        this.autoscrollTo = new DecompilerAutoScroll(input, instruction);
+        if (input instanceof ClassInput classInput && instruction == null) {
+            this.setDecompileTarget(classInput);
+            return;
+        }
         this.setDecompileTarget(input.getOwningClass());
+        this.navigationTarget = input;
+        this.navigationInstruction = instruction;
+        this.autoscrollTo = new DecompilerAutoScroll(input, instruction);
     }
 
     @Override

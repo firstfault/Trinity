@@ -26,6 +26,10 @@ class KeyBindManagerTest {
         assertEquals(ImGuiKey.E, manager.DECOMPILER_EDIT.getKeyCode());
         assertEquals(ImGuiKey.X, manager.DECOMPILER_VIEW_XREFS.getKeyCode());
         assertEquals(ImGuiKey.V, manager.DECOMPILER_VIEW_MEMBER.getKeyCode());
+        assertEquals(Bindable.mouseButtonCode(3), manager.DECOMPILER_NAVIGATE_BACK.getKeyCode());
+        assertEquals("Mouse 4", manager.DECOMPILER_NAVIGATE_BACK.getKeyName());
+        assertEquals(Bindable.mouseButtonCode(4), manager.DECOMPILER_NAVIGATE_FORWARD.getKeyCode());
+        assertEquals("Mouse 5", manager.DECOMPILER_NAVIGATE_FORWARD.getKeyName());
     }
 
     @Test
@@ -50,5 +54,16 @@ class KeyBindManagerTest {
         assertTrue(manager.ASSEMBLER_EDIT.isControl());
         assertTrue(manager.ASSEMBLER_EDIT.isShift());
         assertEquals("Ctrl+Shift+K", manager.ASSEMBLER_EDIT.getKeyName());
+    }
+
+    @Test
+    void persistsMouseButtonMappingsByStableIdentifier() {
+        KeyBindManager manager = new KeyBindManager();
+        manager.load(Set.of(new KeyBindingData(
+                Bindable.mouseButtonCode(4), "decompiler.navigation.back")));
+
+        assertEquals(Bindable.mouseButtonCode(4), manager.DECOMPILER_NAVIGATE_BACK.getKeyCode());
+        assertEquals("Mouse 5", manager.DECOMPILER_NAVIGATE_BACK.getKeyName());
+        assertFalse(manager.DECOMPILER_NAVIGATE_FORWARD.isBound());
     }
 }

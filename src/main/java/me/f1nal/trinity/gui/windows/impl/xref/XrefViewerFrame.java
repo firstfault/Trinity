@@ -11,6 +11,7 @@ import me.f1nal.trinity.gui.components.filter.kind.KindFilter;
 import me.f1nal.trinity.gui.components.general.table.TableColumn;
 import me.f1nal.trinity.gui.components.general.table.TableColumnRendererXrefWhere;
 import me.f1nal.trinity.gui.components.general.table.TableComponent;
+import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 
@@ -46,7 +47,7 @@ public class XrefViewerFrame extends ClosableWindow {
         if (Main.getPreferences().isAutoviewXref()) {
             this.close();
             for (AbstractXref xref : this.xrefViewList) {
-                Main.runLater(xref.getWhere()::followInDecompiler);
+                Main.runLater(() -> xref.getWhere().followInDecompiler(NavigationAction.FOLLOW_SINGLE_XREF));
                 break;
             }
         }
