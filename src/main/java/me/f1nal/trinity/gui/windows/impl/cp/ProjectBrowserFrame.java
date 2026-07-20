@@ -132,7 +132,8 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
                 continue;
             }
 
-            ProjectBrowserTreeNodePackage pkgNode = new ProjectBrowserTreeNodePackage(pkg);
+            ProjectBrowserTreeNodePackage pkgNode = new ProjectBrowserTreeNodePackage(
+                    this.createCompactPackageChain(pkg));
             node.addChild(pkgNode);
             packages.add(pkgNode);
         }
@@ -157,6 +158,17 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
             }*/
             node.addChild(entryNode);
         }
+    }
+
+    static List<Package> createCompactPackageChain(Package first) {
+        List<Package> chain = new ArrayList<>();
+        Package current = first;
+        chain.add(current);
+        while (current.getEntries().isEmpty() && current.getPackages().size() == 1) {
+            current = current.getPackages().get(0);
+            chain.add(current);
+        }
+        return chain;
     }
 
     private boolean isPackageSearchMatch(Package pkg) {

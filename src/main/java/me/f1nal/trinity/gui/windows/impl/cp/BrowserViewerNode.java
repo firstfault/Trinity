@@ -104,6 +104,10 @@ public class BrowserViewerNode {
     }
 
     public void draw() {
+        this.draw(null);
+    }
+
+    public void draw(String labelOverride) {
 //        final ImVec2 cursorPos = GuiUtil.getNextItemPosition();
 
 //        if (!ImGui.isRectVisible(cursorPos.x, cursorPos.y, cursorPos.x + 1.F, cursorPos.y + 20.F)) {
@@ -161,7 +165,8 @@ public class BrowserViewerNode {
                 return;
             }
         }
-        ImGui.text(StringUtil.limitStringLength(getLabel().get(), 128));
+        String displayLabel = labelOverride == null ? getLabel().get() : labelOverride;
+        ImGui.text(StringUtil.limitStringLength(displayLabel, 128));
 
         if (this.suffix != null && !this.suffix.isEmpty()) {
             ImGui.sameLine(0.F, 0.F);

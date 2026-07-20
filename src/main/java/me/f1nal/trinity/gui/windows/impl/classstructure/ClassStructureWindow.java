@@ -1,5 +1,6 @@
 package me.f1nal.trinity.gui.windows.impl.classstructure;
 
+import com.google.common.eventbus.Subscribe;
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
@@ -8,6 +9,8 @@ import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiTreeNodeFlags;
 import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.events.EventThemeChanged;
+import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.gui.components.MemorableCheckboxComponent;
 import me.f1nal.trinity.gui.components.filter.ListFilterComponent;
 import me.f1nal.trinity.gui.components.filter.SearchBarFilter;
@@ -18,7 +21,7 @@ import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.classstructure.nodes.ClassStructureNode;
 
-public class ClassStructureWindow extends StaticWindow {
+public class ClassStructureWindow extends StaticWindow implements IEventListener {
     private static final MemorableCheckboxComponent showFilter = new MemorableCheckboxComponent("classStructureShowFilter", "Show Filter", false);
     private ClassStructure classStructure;
     private ListFilterComponent<ClassStructureNode> filterComponent;
@@ -31,6 +34,14 @@ public class ClassStructureWindow extends StaticWindow {
         this.kindFilter.setExclude(new IKindType[]{StructureKind.CLASSES});
         this.windowFlags |= ImGuiWindowFlags.MenuBar;
         this.windowFlags |= ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
+        trinity.getEventManager().registerListener(this);
+    }
+
+    @Subscribe
+    public void onThemeChanged(EventThemeChanged event) {
+        if (this.classStructure != null) {
+            this.classStructure.getRootNode().refreshTheme();
+        }
     }
 
     public void setClassStructure(ClassStructure classStructure) {

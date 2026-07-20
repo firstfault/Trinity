@@ -3,6 +3,7 @@ package me.f1nal.trinity.theme;
 import com.google.common.io.Resources;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.appdata.ThemeFileNew;
+import me.f1nal.trinity.events.EventThemeChanged;
 import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.util.FileUtil;
 import me.f1nal.trinity.util.NameUtil;
@@ -17,10 +18,13 @@ import java.util.List;
 public class ThemeManager {
     private final List<Theme> themes = new ArrayList<>();
     private Theme currentTheme;
-    private Theme defaultTheme;
+    private final Theme defaultTheme;
 
     public ThemeManager() {
-        this.registerBuiltInTheme("Fawn");
+        this.themes.add(AccentTheme.dark());
+        this.themes.add(AccentTheme.tinted());
+        this.currentTheme = this.defaultTheme = this.themes.get(0);
+//        this.registerBuiltInTheme("Fawn");
     }
 
     private void registerBuiltInTheme(String name) {
@@ -28,10 +32,6 @@ public class ThemeManager {
             final String fileName = this.getThemeFileName(name);
             final URL resource = Resources.getResource("themes/" + fileName);
             final Theme theme = this.deserializeTheme(name, Resources.toByteArray(resource), false);
-
-            if (this.themes.isEmpty()) {
-                this.currentTheme = this.defaultTheme = theme;
-            }
 
             this.themes.add(theme);
         } catch (Throwable throwable) {
@@ -45,11 +45,30 @@ public class ThemeManager {
             return;
         }
         this.currentTheme = currentTheme;
-        for (ThemeColor color : this.currentTheme.getColors()) {
-            color.getCodeColor().setColor(CodeColorScheme.getRgb(color.getRgba()));
-        }
-        TrinityStyle.refresh(Main.getPreferences().getAccentColor());
+        AccentColor accentColor = Main.getPreferences().getAccentColor();
+        this.currentTheme.apply(accentColor);
+        TrinityStyle.refresh(accentColor);
         Main.getAppDataManager().getPreferences().setCurrentTheme(currentTheme);
+        this.markThemeChanged(accentColor);
+    }
+
+    public void applyAccentColor(AccentColor accentColor) {
+        if (this.currentTheme != null && this.currentTheme.isAccentAdaptive()) {
+            this.currentTheme.apply(accentColor);
+        }
+        TrinityStyle.refresh(accentColor);
+        this.markThemeChanged(accentColor);
+    }
+
+    /** Invalidates UI state that cached colors from the current palette. */
+    public void markThemeChanged() {
+        this.markThemeChanged(Main.getPreferences().getAccentColor());
+    }
+
+    private void markThemeChanged(AccentColor accentColor) {
+        if (Main.getEventBus() != null) {
+            Main.getEventBus().post(new EventThemeChanged(this.currentTheme, accentColor));
+        }
     }
 
     public Theme getCurrentTheme() {

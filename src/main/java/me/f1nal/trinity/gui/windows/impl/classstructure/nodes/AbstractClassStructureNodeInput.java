@@ -46,6 +46,17 @@ public abstract class AbstractClassStructureNodeInput<I extends Input> extends C
     protected abstract void appendType(ColoredStringBuilder text, String suffix);
     protected abstract void appendParameters(ColoredStringBuilder text);
 
+    public final List<ColoredString> createReadableSignature() {
+        return safeText(text -> {
+            AccessFlags accessFlags = new AccessFlags(
+                    new SimpleAccessFlagsMaskProvider(getInput().getAccessFlagsMask()));
+            appendAccessFlags(text, accessFlags);
+            appendType(text, " ");
+            text.text(getKind().getColor(), getText());
+            appendParameters(text);
+        });
+    }
+
     protected final void appendReturnType(ColoredStringBuilder text, String descriptor, String suffix) {
         final Type type = Type.getType(descriptor);
         final int sort = type.getSort();
@@ -73,13 +84,18 @@ public abstract class AbstractClassStructureNodeInput<I extends Input> extends C
     @Override
     protected BrowserViewerNode createBrowserViewerNode() {
         BrowserViewerNode node = super.createBrowserViewerNode();
+        this.refreshTheme(node);
+        return node;
+    }
+
+    @Override
+    protected void refreshTheme(BrowserViewerNode node) {
         AccessFlags accessFlags = new AccessFlags(new SimpleAccessFlagsMaskProvider(getInput().getAccessFlagsMask()));
         node.setPrefix(safeText(prefix -> {
             appendAccessFlags(prefix, accessFlags);
             appendType(prefix, " ");
         }));
         node.setSuffix(safeText(this::appendParameters));
-        return node;
     }
 
     private List<ColoredString> safeText(Consumer<ColoredStringBuilder> builder) {

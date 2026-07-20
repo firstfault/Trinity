@@ -30,7 +30,12 @@ public class ThemeEditorFrame extends StaticWindow {
         this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize;
         this.windowFlags |= ImGuiWindowFlags.MenuBar;
         this.themeManager = Main.getThemeManager();
-        this.theme = themeManager.getCurrentTheme();
+        this.theme = themeManager.getCurrentTheme().isVisibleInEditor()
+                ? themeManager.getCurrentTheme()
+                : themeManager.getThemes().stream()
+                        .filter(Theme::isVisibleInEditor)
+                        .findFirst()
+                        .orElseThrow();
     }
 
     @Override
@@ -40,6 +45,7 @@ public class ThemeEditorFrame extends StaticWindow {
         PopupMenu.style(false);
         if (ImGui.beginListBox("###ThemeManagerThemeSelector", 0.F, 300.F)) {
             for (Theme theme : this.themeManager.getThemes()) {
+                if (!theme.isVisibleInEditor()) continue;
                 if (ImGui.selectable(theme.getName(), this.theme == theme) && (this.modifiedTheme == null || this.isModifyingTheme(theme))) this.theme = theme;
                 if (ImGui.isItemClicked(1)) this.openPopup(theme);
                 if (this.themeManager.getCurrentTheme() == theme) {
@@ -183,6 +189,7 @@ public class ThemeEditorFrame extends StaticWindow {
             if (themeManager.getCurrentTheme() == theme) {
                 color.getCodeColor().setColor(CodeColorScheme.getRgb(color.getRgba()));
                 TrinityStyle.refresh(Main.getPreferences().getAccentColor());
+                themeManager.markThemeChanged();
             }
         }
     }

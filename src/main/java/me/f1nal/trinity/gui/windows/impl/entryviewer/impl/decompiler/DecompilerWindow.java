@@ -439,7 +439,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.cursor.updateScrollAnimation();
 
         float mousePosY = ImGui.getMousePosY() + ImGui.getScrollY() - ImGui.getWindowPosY();
-        float mousePosX = ImGui.getMousePosX() + ImGui.getScrollX();
+        float mousePosX = ImGui.getMousePosX();
 
         int lineNumberDigits = Math.max(MIN_LINE_NUMBER_DIGITS,
                 String.valueOf(decompiledClass.getLines().size() + 1).length());
@@ -470,6 +470,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                     text.render(decompiledClass.isComponentHighlighted(text.getComponent()));
                     ImGui.sameLine(0.F, 0.F);
                 } else {
+                    text.captureRenderedBounds();
                     textPositioned = false;
                 }
 
@@ -797,12 +798,11 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 continue;
             }
 
-            String text = line.getText();
-            float startX = line.pos.x + ImGui.calcTextSize(text.substring(0, result.start())).x;
-            float endX = line.pos.x + ImGui.calcTextSize(text.substring(0, result.end())).x;
-            float textHeight = ImGui.calcTextSize(text).y;
-            float heightAdjustment = Main.getPreferences().getDecompilerFont().getSize() % 0.5F == 0 ? 0.5F : 0.F;
-            ImGui.getWindowDrawList().addRectFilled(startX, line.pos.y - 2.F, endX, line.pos.y + textHeight + 2.F - heightAdjustment, CodeColorScheme.SEARCH_RESULT);
+            DecompilerLine.TextRangeBounds bounds = line.getRenderedRange(result.start(), result.end());
+            if (bounds != null) {
+                ImGui.getWindowDrawList().addRectFilled(bounds.minX() - 1.F, bounds.minY() - 1.F,
+                        bounds.maxX() + 1.F, bounds.maxY() + 1.F, CodeColorScheme.SEARCH_RESULT);
+            }
         }
     }
 
@@ -814,13 +814,12 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 continue;
             }
 
-            String text = line.getText();
-            float startX = line.pos.x + ImGui.calcTextSize(text.substring(0, result.start())).x;
-            float endX = line.pos.x + ImGui.calcTextSize(text.substring(0, result.end())).x;
-            float textHeight = ImGui.calcTextSize(text).y;
-            float heightAdjustment = Main.getPreferences().getDecompilerFont().getSize() % 0.5F == 0 ? 0.5F : 0.F;
-            ImGui.getWindowDrawList().addRect(startX, line.pos.y - 2.F, endX,
-                    line.pos.y + textHeight + 2.F - heightAdjustment, SELECTION_MATCH_BORDER, 0.F, 0, 1.F);
+            DecompilerLine.TextRangeBounds bounds = line.getRenderedRange(result.start(), result.end());
+            if (bounds != null) {
+                ImGui.getWindowDrawList().addRect(bounds.minX() - 1.F, bounds.minY() - 1.F,
+                        bounds.maxX() + 1.F, bounds.maxY() + 1.F,
+                        SELECTION_MATCH_BORDER, 0.F, 0, 1.F);
+            }
         }
     }
 

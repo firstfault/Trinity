@@ -5,18 +5,11 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ThemeManagerTest {
-    @Test
-    void registersFawnAsTheBuiltInDefault() {
-        ThemeManager manager = new ThemeManager();
-
-        assertEquals("Fawn", manager.getDefaultTheme().getName());
-        assertEquals("Fawn", manager.getCurrentTheme().getName());
-        assertNotNull(manager.getTheme("Fawn"));
-    }
-
     @Test
     void accentPaletteHasUniqueNamesAndColors() {
         assertEquals(AccentColor.values().length,

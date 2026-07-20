@@ -37,6 +37,22 @@ public class Theme implements INameable {
         return editable;
     }
 
+    /** Whether this theme should be exposed in the theme editor. */
+    public boolean isVisibleInEditor() {
+        return true;
+    }
+
+    /** Whether changing the accent color requires rebuilding this theme's palette. */
+    public boolean isAccentAdaptive() {
+        return false;
+    }
+
+    public void apply(AccentColor accentColor) {
+        for (ThemeColor color : this.colors) {
+            color.getCodeColor().setColor(CodeColorScheme.getRgb(color.getRgba()));
+        }
+    }
+
     @Override
     public String getName() {
         return name;

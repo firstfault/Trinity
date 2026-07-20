@@ -23,6 +23,7 @@ import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerGhostTextRenderer;
 import me.f1nal.trinity.gui.windows.impl.invocation.InvocationDetailsWindow;
+import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureSignatureFormatter;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
@@ -96,7 +97,12 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         component.memberKey = member.getClassName();
         component.setIdentifier(member, member.getClassName());
         component.setColorFunction(() -> member.isImport() || target == null ? CodeColorScheme.CLASS_REF : this.getClassKindColor(target.getKind()));
-        component.setTooltip(() -> ColoredStringBuilder.create().text(CodeColorScheme.CLASS_REF, target != null ? target.getDisplayOrRealName() : member.getClassName()).get());
+        component.setTooltip(() -> target != null && target.getInput() != null
+                ? ClassStructureSignatureFormatter.format(target.getInput())
+                : ColoredStringBuilder.create()
+                        .text(CodeColorScheme.CLASS_REF,
+                                target != null ? target.getDisplayOrRealName() : member.getClassName())
+                        .get());
 
         if (member.isKeepText() && originalText.equals("super")) {
             component.setColorFunction(() -> CodeColorScheme.KEYWORD);
@@ -218,7 +224,9 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         component.memberKey = memberDetails.toString();
         component.setIdentifier(field, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.FIELD_REF);
-        component.setTooltip(() -> ColoredStringBuilder.create()
+        component.setTooltip(() -> fieldInput != null
+                ? ClassStructureSignatureFormatter.format(fieldInput)
+                : ColoredStringBuilder.create()
                 .text(CodeColorScheme.CLASS_REF, fieldInput != null ? fieldInput.getOwningClass().getDisplayName().getName() : field.getOwner())
                 .text(CodeColorScheme.DISABLED, ".")
                 .text(CodeColorScheme.FIELD_REF, fieldInput != null ? fieldInput.getDisplayName().getName() : field.getName())
@@ -311,7 +319,9 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
         component.memberKey = memberDetails.toString();
         component.setIdentifier(method, memberDetails);
         component.setColorFunction(() -> CodeColorScheme.METHOD_REF);
-        component.setTooltip(() -> ColoredStringBuilder.create()
+        component.setTooltip(() -> methodInput != null
+                ? ClassStructureSignatureFormatter.format(methodInput)
+                : ColoredStringBuilder.create()
                 .text(CodeColorScheme.CLASS_REF, methodInput != null ? methodInput.getOwningClass().getDisplayName().getName() : method.getOwner())
                 .text(CodeColorScheme.DISABLED, ".")
                 .text(CodeColorScheme.METHOD_REF, methodInput != null ? methodInput.getDisplayName().getName() : method.getName())

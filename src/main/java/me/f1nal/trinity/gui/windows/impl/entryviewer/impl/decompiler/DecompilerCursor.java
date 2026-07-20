@@ -5,8 +5,6 @@ import imgui.ImVec2;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
-import me.f1nal.trinity.Main;
-import me.f1nal.trinity.gui.viewport.FontManager;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.animation.Animation;
@@ -49,6 +47,8 @@ public class DecompilerCursor {
      * Whether the current selection was created by dragging and should highlight matching text.
      */
     private boolean highlightSelectionMatches;
+    /** Whether a dragged selection stores caret boundaries instead of inclusive characters. */
+    private boolean selectionUsesBoundaries;
 
     public DecompilerCursor(DecompilerWindow window) {
         this.window = window;
@@ -62,10 +62,11 @@ public class DecompilerCursor {
         }
 
         if (this.draggingSelection) {
-            DecompilerCoordinates newCoordinates = this.getCoordinates(line, mousePosX, startX);
+            DecompilerCoordinates newCoordinates = this.getCoordinates(line, mousePosX, true);
             if (!this.coordinates.equals(newCoordinates)) {
                 if (!newCoordinates.equals(this.selectionEnd)) {
                     this.selectionEnd = newCoordinates;
+                    this.selectionUsesBoundaries = true;
                     this.highlightSelectionMatches = true;
                     this.blink.reset();
                 }
@@ -78,11 +79,12 @@ public class DecompilerCursor {
         if (clickCount >= 3) {
             this.selectLine(line);
         } else if (clickCount == 2) {
-            this.selectWord(this.getCoordinates(line, mousePosX, startX));
+            this.selectWord(this.getCoordinates(line, mousePosX, false));
         } else if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
-            this.setCoordinates(this.getCoordinates(line, mousePosX, startX));
+            this.setCoordinates(this.getCoordinates(line, mousePosX, true));
             this.draggingSelection = true;
             this.selectionEnd = null;
+            this.selectionUsesBoundaries = false;
             this.highlightSelectionMatches = false;
             this.blink.reset();
         }
@@ -139,6 +141,7 @@ public class DecompilerCursor {
         this.selectionEnd = null;
         this.draggingSelection = false;
         this.highlightSelectionMatches = false;
+        this.selectionUsesBoundaries = false;
         this.setCoordinates(coordinates);
         this.setScrollToCursor();
     }
@@ -146,27 +149,17 @@ public class DecompilerCursor {
     public void selectRange(DecompilerCoordinates from, DecompilerCoordinates to, boolean highlightMatches) {
         this.draggingSelection = false;
         this.highlightSelectionMatches = highlightMatches;
+        this.selectionUsesBoundaries = false;
         this.setCoordinates(from);
         this.selectionEnd = to;
     }
 
-    private DecompilerCoordinates getCoordinates(DecompilerLine line, float mousePosX, float startX) {
-        final String text = line.getText();
-
-        int characterPosition = -1;
-
-        for (int i = 0; i < text.length(); i++) {
-            final String substring = text.substring(0, i);
-            final float substringWidth = ImGui.calcTextSize(substring).x;
-
-            if (mousePosX <= startX + substringWidth) {
-                break;
-            }
-
-            characterPosition = i;
-        }
-
-        return new DecompilerCoordinates(line, Math.max(characterPosition, 0));
+    private DecompilerCoordinates getCoordinates(DecompilerLine line, float mousePosX,
+                                                 boolean nearestBoundary) {
+        int character = nearestBoundary
+                ? line.getCharacterAtRenderedX(mousePosX)
+                : line.getCharacterUnderRenderedX(mousePosX);
+        return new DecompilerCoordinates(line, character);
     }
 
     public void moveHorizontally(int delta) {
@@ -212,10 +205,11 @@ public class DecompilerCursor {
             coordinates = new DecompilerCoordinates(coordinates.getLine(), lineText.length());
         }
 
-        String substring = lineText.substring(0, coordinates.getCharacter());
-        float substringSizeX = ImGui.calcTextSize(substring).x + 3.F;
-
-        float cursorPositionX = cursorScreenPosX + lineNumberSpacing + substringSizeX - 0.5F;
+        Float renderedCharacterX = coordinates.getLine().getRenderedCharacterX(coordinates.getCharacter());
+        float cursorPositionX = renderedCharacterX == null
+                ? cursorScreenPosX + lineNumberSpacing
+                + ImGui.calcTextSize(lineText.substring(0, coordinates.getCharacter())).x
+                : renderedCharacterX;
         float cursorPositionY = cursorPosY + ImGui.getWindowPosY() - ImGui.getScrollY();
 
         ImGui.getWindowDrawList().addLine(cursorPositionX, cursorPositionY, cursorPositionX, cursorPositionY + textSize.y, this.selectionEnd == null ? CodeColorScheme.CURSOR : CodeColorScheme.CURSOR_SELECTION, 1.F);
@@ -319,30 +313,15 @@ public class DecompilerCursor {
         for (int i = startLine; i <= endLine; i++) {
             DecompilerLine line = lines.get(i);
             String text = line.getText();
-            ImVec2 pos = line.pos;
-
-            float xPos = pos.x;
-            float yPos = pos.y;
-            float endXPos;
-            ImVec2 textSize;
-
-            if (i == startLine) {
-                String substring = text.substring(0, from.getCharacter());
-                float substringWidth = (textSize = ImGui.calcTextSize(substring)).x;
-                xPos += substringWidth;
-            } else {
-                xPos = line.pos.x;
+            int rangeStart = i == startLine ? from.getCharacter() : 0;
+            int rangeEnd = i == endLine
+                    ? Math.min(text.length(), to.getCharacter() + (this.selectionUsesBoundaries ? 0 : 1))
+                    : text.length();
+            DecompilerLine.TextRangeBounds bounds = line.getRenderedRange(rangeStart, rangeEnd);
+            if (bounds != null) {
+                ImGui.getWindowDrawList().addRectFilled(bounds.minX() - 1.F, bounds.minY() - 1.F,
+                        bounds.maxX() + 1.F, bounds.maxY() + 1.F, CodeColorScheme.CURSOR_SELECTION);
             }
-
-            if (i == endLine) {
-                String substring = text.isEmpty() ? "" : text.substring(0, to.getCharacter() + 1);
-                float substringWidth = (textSize = ImGui.calcTextSize(substring)).x;
-                endXPos = line.pos.x + substringWidth;
-            } else {
-                endXPos = line.pos.x + (textSize = ImGui.calcTextSize(text)).x;
-            }
-
-            ImGui.getWindowDrawList().addRectFilled(xPos, yPos - 2.F, endXPos, yPos + textSize.y + 2.F - (Main.getPreferences().getDecompilerFont().getSize() % 0.5F == 0 ? 0.5F : 0), CodeColorScheme.CURSOR_SELECTION);
         }
     }
 
@@ -382,12 +361,14 @@ public class DecompilerCursor {
 
             if (i == startLine && i == endLine) {
                 int startCharacter = Math.min(from.getCharacter(), text.length());
-                int endCharacter = Math.min(to.getCharacter() + 1, text.length());
+                int endCharacter = Math.min(to.getCharacter()
+                        + (this.selectionUsesBoundaries ? 0 : 1), text.length());
                 result.append(text, startCharacter, endCharacter);
             } else if (i == startLine) {
                 result.append(text.substring(Math.min(from.getCharacter(), text.length())));
             } else if (i == endLine) {
-                result.append(text.substring(0, Math.min(to.getCharacter() + 1, text.length())));
+                result.append(text.substring(0, Math.min(to.getCharacter()
+                        + (this.selectionUsesBoundaries ? 0 : 1), text.length())));
             } else {
                 result.append(text);
             }

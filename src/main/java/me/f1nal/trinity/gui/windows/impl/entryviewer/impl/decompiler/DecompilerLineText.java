@@ -10,6 +10,8 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 public class DecompilerLineText {
     private final String text;
     private final DecompilerComponent component;
+    private ImVec2 renderedMin;
+    private ImVec2 renderedMax;
 
     public DecompilerLineText(String text, DecompilerComponent component) {
         this.text = text;
@@ -50,6 +52,26 @@ public class DecompilerLineText {
             }
         }
 
+        this.captureRenderedBounds();
         ImGui.popStyleColor();
+    }
+
+    public void captureRenderedBounds() {
+        ImVec2 min = ImGui.getItemRectMin();
+        ImVec2 max = ImGui.getItemRectMax();
+        this.renderedMin = new ImVec2(min.x, min.y);
+        this.renderedMax = new ImVec2(max.x, max.y);
+    }
+
+    public boolean hasRenderedBounds() {
+        return this.renderedMin != null && this.renderedMax != null;
+    }
+
+    public ImVec2 getRenderedMin() {
+        return renderedMin;
+    }
+
+    public ImVec2 getRenderedMax() {
+        return renderedMax;
     }
 }

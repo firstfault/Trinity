@@ -11,6 +11,7 @@ import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.MethodInput;
+import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureSignatureFormatter;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
@@ -66,8 +67,7 @@ public final class DecompilerPreviewRenderer {
 
     public void drawInputPreview(Input<?> input) {
         if (input instanceof ClassInput classInput) {
-            drawDetails(List.of(new ColoredString(classInput.getClassTarget().getDisplayOrRealName(),
-                    CodeColorScheme.CLASS_REF)));
+            drawDetails(ClassStructureSignatureFormatter.format(classInput));
             drawClassPreview(classInput, true);
         } else if (input instanceof MethodInput methodInput) {
             drawDetails(methodSignature(methodInput));
@@ -211,7 +211,12 @@ public final class DecompilerPreviewRenderer {
             ImGui.separator();
         }
         if (!declaration.isEmpty()) {
-            drawDecompilerLine(declaration, Integer.MAX_VALUE);
+            DecompilerComponent highlightedVariable = declaration.stream()
+                    .map(DecompilerLineText::getComponent)
+                    .filter(component -> isVariableDeclaration(component, variable))
+                    .findFirst()
+                    .orElse(null);
+            drawDecompilerLine(declaration, Integer.MAX_VALUE, highlightedVariable);
         }
         if (stackVariable) {
             if (!declaration.isEmpty()) {
@@ -363,20 +368,20 @@ public final class DecompilerPreviewRenderer {
         return whitespace;
     }
 
+    private static boolean isVariableDeclaration(DecompilerComponent component,
+                                                 DecompilerComponent.VariablePreview variable) {
+        DecompilerComponent.VariablePreview candidate = component.getPreviewVariable();
+        return candidate != null && candidate.declaration()
+                && candidate.index() == variable.index()
+                && candidate.methodInput().getDetails().equals(variable.methodInput().getDetails());
+    }
+
     private static List<ColoredString> methodSignature(MethodInput methodInput) {
-        return List.of(
-                new ColoredString(methodInput.getOwningClass().getDisplayName().getName(), CodeColorScheme.CLASS_REF),
-                new ColoredString(".", CodeColorScheme.DISABLED),
-                new ColoredString(methodInput.getDisplayName().getName(), CodeColorScheme.METHOD_REF),
-                new ColoredString(methodInput.getDescriptor(), CodeColorScheme.DISABLED));
+        return ClassStructureSignatureFormatter.format(methodInput);
     }
 
     private static List<ColoredString> fieldSignature(FieldInput fieldInput) {
-        return List.of(
-                new ColoredString(fieldInput.getOwningClass().getDisplayName().getName(), CodeColorScheme.CLASS_REF),
-                new ColoredString(".", CodeColorScheme.DISABLED),
-                new ColoredString(fieldInput.getDisplayName().getName(), CodeColorScheme.FIELD_REF),
-                new ColoredString(" " + fieldInput.getDescriptor(), CodeColorScheme.DISABLED));
+        return ClassStructureSignatureFormatter.format(fieldInput);
     }
 
     private record PreviewSegment(String text, int color, boolean highlighted) {

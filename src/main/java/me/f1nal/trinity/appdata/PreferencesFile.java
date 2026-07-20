@@ -76,7 +76,12 @@ public class PreferencesFile extends AppDataFile {
 
     public void setAccentColor(AccentColor accentColor) {
         this.accentColor = accentColor == null ? AccentColor.SAPPHIRE : accentColor;
-        TrinityStyle.applyAccent(this.accentColor);
+        ThemeManager themeManager = Main.getThemeManager();
+        if (themeManager == null) {
+            TrinityStyle.applyAccent(this.accentColor);
+        } else {
+            themeManager.applyAccentColor(this.accentColor);
+        }
     }
 
     public void setDecompilerEnumClass(boolean decompilerEnumClass) {

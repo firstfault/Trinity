@@ -66,6 +66,19 @@ public abstract class ClassStructureNode extends GenericTreeNode<ClassStructureN
         return strId;
     }
 
+    /** Rebuilds display fragments whose colors were captured when this node was first rendered. */
+    public final void refreshTheme() {
+        if (this.browserViewerNode != null) {
+            this.refreshTheme(this.browserViewerNode);
+        }
+        for (ClassStructureNode child : this.getChildren()) {
+            child.refreshTheme();
+        }
+    }
+
+    protected void refreshTheme(BrowserViewerNode node) {
+    }
+
     @Override
     public abstract StructureKind getKind();
 
