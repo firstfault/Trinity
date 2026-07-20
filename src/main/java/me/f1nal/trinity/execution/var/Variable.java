@@ -24,9 +24,20 @@ public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHand
     public String getName() {
         if (nameProperty != null) {
             String currentName = nameProperty.get();
-            if (!currentName.isBlank()) this.name = currentName;
+            if (!currentName.isBlank() && table.isNameAvailable(this, currentName)) {
+                this.name = currentName;
+            } else if (!currentName.equals(this.name)) {
+                nameProperty.set(this.name);
+            }
         }
         return name;
+    }
+
+    String getPendingName() {
+        if (this.nameProperty != null && !this.nameProperty.get().isBlank()) {
+            return this.nameProperty.get();
+        }
+        return this.name;
     }
 
     public ImString getNameProperty() {
@@ -41,7 +52,8 @@ public class Variable implements IDatabaseSavable<DatabaseVariable>, IRenameHand
     }
 
     public boolean setName(String newName) {
-        if (!this.isEditable() || newName == null || newName.isBlank()) return false;
+        if (!this.isEditable() || newName == null || newName.isBlank()
+                || !this.table.isNameAvailable(this, newName)) return false;
         this.name = newName;
         this.getNameProperty().set(newName);
         return true;

@@ -69,6 +69,15 @@ public class VariableTable {
         return null;
     }
 
+    boolean isNameAvailable(Variable target, String name) {
+        for (Variable variable : variableMap.values()) {
+            if (variable != target && variable.getPendingName().equals(name)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public Integer getIndex(Variable variable) {
         return variableMap.inverse().get(variable);
     }

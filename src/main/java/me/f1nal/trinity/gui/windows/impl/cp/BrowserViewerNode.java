@@ -108,6 +108,10 @@ public class BrowserViewerNode {
     }
 
     public void draw(String labelOverride) {
+        this.draw(labelOverride, Float.POSITIVE_INFINITY);
+    }
+
+    public void draw(String labelOverride, float maximumLabelRightX) {
 //        final ImVec2 cursorPos = GuiUtil.getNextItemPosition();
 
 //        if (!ImGui.isRectVisible(cursorPos.x, cursorPos.y, cursorPos.x + 1.F, cursorPos.y + 20.F)) {
@@ -166,11 +170,43 @@ public class BrowserViewerNode {
             }
         }
         String displayLabel = labelOverride == null ? getLabel().get() : labelOverride;
-        ImGui.text(StringUtil.limitStringLength(displayLabel, 128));
+        displayLabel = StringUtil.limitStringLength(displayLabel, 128);
+        if (Float.isFinite(maximumLabelRightX)) {
+            float suffixWidth = this.suffix == null ? 0.F : (float) this.suffix.stream()
+                    .mapToDouble(value -> ImGui.calcTextSize(value.getText()).x)
+                    .sum();
+            float availableWidth = maximumLabelRightX - ImGui.getCursorScreenPosX() - (float) suffixWidth;
+            displayLabel = fitLabel(displayLabel, availableWidth);
+        }
+        ImGui.text(displayLabel);
 
         if (this.suffix != null && !this.suffix.isEmpty()) {
             ImGui.sameLine(0.F, 0.F);
             ColoredString.drawText(this.suffix);
         }
+    }
+
+    private static String fitLabel(String label, float maximumWidth) {
+        if (maximumWidth <= 0.F || ImGui.calcTextSize(label).x <= maximumWidth) {
+            return maximumWidth <= 0.F ? "" : label;
+        }
+
+        String ellipsis = "...";
+        float ellipsisWidth = ImGui.calcTextSize(ellipsis).x;
+        if (ellipsisWidth > maximumWidth) {
+            return "";
+        }
+
+        int low = 0;
+        int high = label.length();
+        while (low < high) {
+            int middle = (low + high + 1) >>> 1;
+            if (ImGui.calcTextSize(label.substring(0, middle)).x + ellipsisWidth <= maximumWidth) {
+                low = middle;
+            } else {
+                high = middle - 1;
+            }
+        }
+        return label.substring(0, low) + ellipsis;
     }
 }

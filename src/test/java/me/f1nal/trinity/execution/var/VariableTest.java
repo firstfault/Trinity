@@ -32,7 +32,27 @@ class VariableTest {
         assertEquals("counter", variable.getName());
     }
 
+    @Test
+    void refusesAnotherVariableNameInTheSameMethod() {
+        VariableTable table = variableTable();
+        Variable first = table.getVariable(0);
+        Variable second = table.getVariable(1);
+        assertTrue(first.setName("counter"));
+        assertTrue(second.setName("value"));
+
+        assertFalse(second.setName("counter"));
+        assertEquals("value", second.getName());
+
+        second.getNameProperty().set("counter");
+        assertEquals("value", second.getName());
+        assertEquals("value", second.getNameProperty().get());
+    }
+
     private static Variable variable() {
+        return variableTable().getVariable(0);
+    }
+
+    private static VariableTable variableTable() {
         ClassNode classNode = new ClassNode(Opcodes.ASM9);
         classNode.name = "sample/Owner";
         classNode.superName = "java/lang/Object";
@@ -40,6 +60,6 @@ class VariableTest {
         ClassInput owner = new ClassInput(null, classNode, target);
         MethodInput method = new MethodInput(
                 new MethodNode(Opcodes.ASM9, Opcodes.ACC_STATIC, "test", "()V", null, null), owner);
-        return method.getVariableTable().getVariable(0);
+        return method.getVariableTable();
     }
 }
