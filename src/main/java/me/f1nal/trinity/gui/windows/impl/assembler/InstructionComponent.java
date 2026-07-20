@@ -126,7 +126,8 @@ public class InstructionComponent {
             float deltaY = dragging.getMousePos().y - ImGui.getMousePosY();
             float height = this.bounds.w - 0.5F;
             int dragDelta = (int) (Math.abs(deltaY) / height);
-            table.getAssemblerFrame().moveInstructionTo(this, dragging.getIndex() - (deltaY > 0.F ? dragDelta : -dragDelta));
+            int targetIndex = dragging.getVisibleIndex() - (deltaY > 0.F ? dragDelta : -dragDelta);
+            table.moveInstructionToVisibleIndex(this, targetIndex);
         }
 
         drawList.addText(x + 5.F, y, this.getTextColor(CodeColorScheme.DISABLED),

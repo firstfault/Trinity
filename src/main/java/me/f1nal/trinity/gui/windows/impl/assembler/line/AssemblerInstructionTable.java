@@ -32,6 +32,7 @@ public class AssemblerInstructionTable {
      * If non-null, then every instruction that isn't in this list gets a lower opacity.
      */
     private List<InstructionComponent> highlightedInstructions;
+    private List<InstructionComponent> visibleInstructions = List.of();
     public boolean draggingArrowNow;
 
     public AssemblerInstructionTable(AssemblerFrame assemblerFrame, InstructionList instructions, Instruction2SourceMapping sourceMapping) {
@@ -50,7 +51,8 @@ public class AssemblerInstructionTable {
 
     public void setDraggingInstruction(InstructionComponent draggingInstruction) {
         assemblerFrame.beginDragMutation();
-        assemblerFrame.draggingInstruction = new InstructionDrag(draggingInstruction, ImGui.getMousePos(), instructions.indexOf(draggingInstruction));
+        assemblerFrame.draggingInstruction = new InstructionDrag(draggingInstruction, ImGui.getMousePos(),
+                instructions.indexOf(draggingInstruction), visibleInstructions.indexOf(draggingInstruction));
     }
 
     public InstructionDrag getDraggingInstruction() {
@@ -141,6 +143,7 @@ public class AssemblerInstructionTable {
             if (component.getInstruction() instanceof LabelNode) continue;
             if (!hideMetadata || component.getInstruction().getOpcode() >= 0) visible.add(component);
         }
+        this.visibleInstructions = visible;
         List<InstructionComponent> selected = assemblerFrame.getSelectedInstructions().stream()
                 .filter(visible::contains).toList();
         if (!selected.isEmpty()) this.highlightedInstructions = selected;
@@ -180,6 +183,19 @@ public class AssemblerInstructionTable {
         }
 
         return Math.max(y - vMin.y, ImGui.getContentRegionAvailY());
+    }
+
+    public void moveInstructionToVisibleIndex(InstructionComponent instruction, int targetIndex) {
+        int currentIndex = visibleInstructions.indexOf(instruction);
+        if (currentIndex < 0 || visibleInstructions.isEmpty()) return;
+
+        targetIndex = Math.max(0, Math.min(targetIndex, visibleInstructions.size() - 1));
+        if (targetIndex == currentIndex) return;
+
+        InstructionComponent target = visibleInstructions.get(targetIndex);
+        int targetPosition = instructions.indexOf(target);
+        if (targetIndex > currentIndex) targetPosition++;
+        assemblerFrame.moveInstructionTo(instruction, targetPosition);
     }
 
     public boolean isInstructionHighlighted(InstructionComponent component) {

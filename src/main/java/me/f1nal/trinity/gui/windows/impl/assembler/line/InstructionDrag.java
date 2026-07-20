@@ -8,11 +8,13 @@ public class InstructionDrag {
     private final InstructionComponent component;
     private ImVec2 mousePos;
     private final int index;
+    private final int visibleIndex;
 
-    public InstructionDrag(InstructionComponent component, ImVec2 mousePos, int index) {
+    public InstructionDrag(InstructionComponent component, ImVec2 mousePos, int index, int visibleIndex) {
         this.component = component;
         this.mousePos = mousePos;
         this.index = index;
+        this.visibleIndex = visibleIndex;
     }
 
     public InstructionComponent getComponent() {
@@ -25,6 +27,10 @@ public class InstructionDrag {
 
     public int getIndex() {
         return index;
+    }
+
+    public int getVisibleIndex() {
+        return visibleIndex;
     }
 
     public void resetMousePos() {

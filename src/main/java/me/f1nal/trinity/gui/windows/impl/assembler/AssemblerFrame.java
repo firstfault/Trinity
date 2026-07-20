@@ -442,22 +442,20 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public boolean moveInstructionTo(InstructionComponent instruction, int position) {
-        if (position >= 0 && position <= this.instructions.size()) {
-            int instructionIndex = instructions.indexOf(instruction);
-            int groupStart = instructionIndex;
-            if (instruction.getInstruction().getOpcode() >= 0) {
-                while (groupStart > 0 && instructions.get(groupStart - 1).getInstruction().getOpcode() < 0) groupStart--;
-            }
-            List<InstructionComponent> group = new ArrayList<>(instructions.subList(groupStart, instructionIndex + 1));
-            if (position >= groupStart && position <= instructionIndex) return false;
-            instructions.subList(groupStart, instructionIndex + 1).clear();
-            int insertion = Math.min(position, instructions.size());
-            instructions.addAll(insertion, group);
-            this.instructions.queueIdReset();
-            decoder.rebuildReferenceArrows(instructions);
-            return true;
-        }
-        return false;
+        if (position < 0 || position > this.instructions.size()) return false;
+
+        int instructionIndex = instructions.indexOf(instruction);
+        if (instructionIndex < 0) return false;
+
+        int insertion = position;
+        if (insertion > instructionIndex) insertion--;
+        if (insertion == instructionIndex) return false;
+
+        instructions.remove(instructionIndex);
+        instructions.add(insertion, instruction);
+        this.instructions.queueIdReset();
+        decoder.rebuildReferenceArrows(instructions);
+        return true;
     }
 
     public void openInsertDialog(int index) {
