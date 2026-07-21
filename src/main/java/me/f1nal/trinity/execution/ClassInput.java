@@ -227,7 +227,7 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
 
     @Override
     public String getFullName() {
-        return getDisplayName().getName();
+        return getDisplaySimpleName();
     }
 
     @Override
@@ -284,6 +284,11 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
 
     @Override
     public void rename(Remapper remapper, String newName) {
+        remapper.renameClass(this.getClassTarget(), this.getClassTarget().getNameInCurrentPackage(newName));
+    }
+
+    @Override
+    public void renameFully(Remapper remapper, String newName) {
         remapper.renameClass(this.getClassTarget(), newName);
     }
 

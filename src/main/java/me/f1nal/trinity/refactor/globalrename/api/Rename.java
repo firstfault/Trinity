@@ -22,6 +22,6 @@ public final class Rename {
     }
 
     public void rename(Remapper remapper) {
-        this.handler.rename(remapper, newName);
+        this.handler.renameFully(remapper, newName);
     }
 }

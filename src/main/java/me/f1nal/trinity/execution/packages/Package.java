@@ -91,7 +91,7 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
             final int startLength = this.getPrettyPath().length() - this.getName().length();
             final int endLength = startLength + this.getName().length();
             this.addPackageRename(this, renames, newName, startLength, endLength);
-            renames.forEach((renameHandler, fullNewName) -> renameHandler.rename(remapper, fullNewName));
+            renames.forEach((renameHandler, fullNewName) -> renameHandler.renameFully(remapper, fullNewName));
         }
     }
 

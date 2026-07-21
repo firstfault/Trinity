@@ -152,6 +152,13 @@ public class MainMenuBar {
             if (ImGui.menuItem("About")) {
                 Main.getWindowManager().addStaticWindow(AboutWindow.class);
             }
+
+            ImGui.separator();
+
+            if (ImGui.menuItem(FontAwesomeIcons.SyncAlt + " Check for updates")) {
+                Main.checkForUpdatesNow();
+            }
+
             ImGui.endMenu();
         }
 
@@ -274,11 +281,7 @@ public class MainMenuBar {
         }
 
         ImGui.separator();
-        if (ImGui.menuItem(FontAwesomeIcons.SyncAlt + " Check for updates")) {
-            Main.checkForUpdatesNow();
-        }
 
-        ImGui.separator();
         if (ImGui.menuItem("Quit Trinity")) {
             displayManager.closeDatabase(() -> Main.exit());
         }

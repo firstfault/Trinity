@@ -23,6 +23,7 @@ import me.f1nal.trinity.remap.IDisplayNameProvider;
 import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.remap.RenameType;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.util.NameUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -65,15 +66,33 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
             @Override
             public void rename(Remapper remapper, String newName) {
                 if (getInput() != null) {
+                    remapper.renameClass(ClassTarget.this, getNameInCurrentPackage(newName));
+                }
+            }
+
+            @Override
+            public void renameFully(Remapper remapper, String newName) {
+                if (getInput() != null) {
                     remapper.renameClass(ClassTarget.this, newName);
                 }
             }
 
             @Override
             public String getFullName() {
-                return getDisplayOrRealName();
+                return getDisplaySimpleName();
             }
         };
+    }
+
+    String getNameInCurrentPackage(String newName) {
+        if (newName == null || newName.isBlank()) return newName;
+
+        String simpleName = NameUtil.getSimpleName(newName);
+        if (simpleName.isBlank()) return simpleName;
+
+        String currentName = this.getDisplayOrRealName();
+        int packageEnd = currentName.lastIndexOf('/');
+        return packageEnd == -1 ? simpleName : currentName.substring(0, packageEnd + 1) + simpleName;
     }
 
     /**

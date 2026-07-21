@@ -12,4 +12,9 @@ public interface RenameHandler {
     }
 
     void rename(Remapper remapper, String newName);
+
+    /** Applies a name that may contain an owning package or other qualification. */
+    default void renameFully(Remapper remapper, String newName) {
+        this.rename(remapper, newName);
+    }
 }
