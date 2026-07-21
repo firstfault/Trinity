@@ -58,6 +58,13 @@ public class FontSettings {
         }
     }
 
+    public void resetBuiltFonts() {
+        this.imFontMap.clear();
+        this.imFont = null;
+        this.iconFont = null;
+        this.builtSize = 0.F;
+    }
+
     public float getBuiltSize() {
         return builtSize;
     }
@@ -99,10 +106,7 @@ public class FontSettings {
         ImFloat fontSize = new ImFloat(this.getSize());
         if (ImGui.inputScalar("Font Size (px)", fontSize, 0.5F, 1.F, "%.1f")) {
             this.setSize(fontSize.get());
-        }
-
-        if (this.getBuiltSize() != this.getSize()) {
-            ImGui.textDisabled("Please restart Trinity for a clear version of the font.");
+            Main.getDisplayManager().getFontManager().requestRebuild();
         }
     }
 

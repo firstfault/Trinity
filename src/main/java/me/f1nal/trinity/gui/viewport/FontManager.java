@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 public class FontManager {
+    private static final long REBUILD_DEBOUNCE_NANOS = 150_000_000L;
     private static final List<String> FONT_RESOURCES = List.of(
             "inter-regular.ttf",
             "JetBrainsMonoNL-Regular.ttf",
@@ -33,13 +34,42 @@ public class FontManager {
     private final Map<String, byte[]> resourceCache = new HashMap<>();
     private final List<short[]> glyphRangeCache = new ArrayList<>();
     private ImFont codiconFont;
+    private volatile boolean rebuildRequested;
+    private volatile long rebuildAfter;
 
     public void setupFonts() {
-        List<ImFontConfig> fontConfigs = new ArrayList<>();
-
         // Finish every potentially large Java allocation before giving ImGui pointers into
         // these arrays. The atlas is built synchronously immediately after registration.
         FONT_RESOURCES.forEach(this::loadFromResources);
+        this.buildFontAtlas();
+    }
+
+    public void requestRebuild() {
+        this.rebuildRequested = true;
+        this.rebuildAfter = System.nanoTime() + REBUILD_DEBOUNCE_NANOS;
+    }
+
+    public boolean consumeRebuildRequest() {
+        if (!this.rebuildRequested || System.nanoTime() < this.rebuildAfter) return false;
+        this.rebuildRequested = false;
+
+        FontSettings defaultFont = Main.getPreferences().getDefaultFont();
+        FontSettings decompilerFont = Main.getPreferences().getDecompilerFont();
+        return defaultFont.getBuiltSize() != defaultFont.getSize()
+                || decompilerFont.getBuiltSize() != decompilerFont.getSize();
+    }
+
+    public void rebuildFonts() {
+        ImGui.getIO().getFonts().clear();
+        this.glyphRangeCache.clear();
+        Main.getPreferences().getDefaultFont().resetBuiltFonts();
+        Main.getPreferences().getDecompilerFont().resetBuiltFonts();
+        this.codiconFont = null;
+        this.buildFontAtlas();
+    }
+
+    private void buildFontAtlas() {
+        List<ImFontConfig> fontConfigs = new ArrayList<>();
 
         try {
             this.buildFonts(Main.getPreferences().getDefaultFont(), fontConfigs);

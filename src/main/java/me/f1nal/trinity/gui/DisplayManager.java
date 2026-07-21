@@ -118,6 +118,10 @@ public final class DisplayManager extends ImGuiApplication {
             this.initializeWindow();
             this.initialized = true;
         }
+
+        if (this.fontManager.consumeRebuildRequest()) {
+            this.rebuildFontAtlas(this.fontManager::rebuildFonts);
+        }
         
         super.startFrame();
     }

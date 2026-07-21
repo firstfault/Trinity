@@ -257,6 +257,15 @@ public abstract class ImGuiWindow {
         ImGui.newFrame();
     }
 
+    /** Rebuilds the CPU font atlas and replaces its OpenGL texture between frames. */
+    protected final void rebuildFontAtlas(Runnable rebuildAction) {
+        imGuiGl3.destroyFontsTexture();
+        rebuildAction.run();
+        if (!imGuiGl3.createFontsTexture()) {
+            throw new IllegalStateException("Unable to recreate the ImGui font texture");
+        }
+    }
+
     /**
      * Method called in the end of the main cycle.
      * It renders ImGui and swaps GLFW buffers to show an updated frame.
