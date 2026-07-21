@@ -35,6 +35,7 @@ public class BrowserViewerNode {
     private List<ColoredString> prefix;
     private List<ColoredString> suffix;
     private boolean defaultOpen;
+    private boolean leftClickOnRelease;
 
     public BrowserViewerNode(String icon, Supplier<Integer> color, Supplier<String> label, RenameHandler rename) {
         this(icon, IconFamily.DEFAULT, color, label, rename);
@@ -66,6 +67,10 @@ public class BrowserViewerNode {
 
     public void addMouseClickHandler(MouseClickEventHandler handler) {
         this.mouseEventList.add(handler);
+    }
+
+    public void setLeftClickOnRelease(boolean leftClickOnRelease) {
+        this.leftClickOnRelease = leftClickOnRelease;
     }
 
     public String getIcon() {
@@ -125,7 +130,10 @@ public class BrowserViewerNode {
 
             final MouseClickType[] clickTypes = MouseClickType.values();
             for (int i = 0; i < clickTypes.length; i++) {
-                if (ImGui.isMouseClicked(i)) {
+                boolean activated = i == 0 && this.leftClickOnRelease
+                        ? ImGui.isMouseReleased(i) && ImGui.getDragDropPayload() == null
+                        : ImGui.isMouseClicked(i);
+                if (activated) {
                     for (MouseClickEventHandler e : mouseEventList) {
                         e.handleClick(clickTypes[i]);
                     }

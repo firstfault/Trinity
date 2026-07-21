@@ -5,22 +5,29 @@ import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiStyleVar;
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.events.EventMemberModified;
 import me.f1nal.trinity.events.EventPackageStructureReload;
 import me.f1nal.trinity.events.api.IEventListener;
+import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.gui.components.filter.ListFilterComponent;
 import me.f1nal.trinity.gui.components.filter.SearchBarFilter;
 import me.f1nal.trinity.gui.components.filter.kind.KindFilter;
+import me.f1nal.trinity.gui.viewport.notifications.Notification;
+import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
+import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 
 import java.util.*;
 
 public class ProjectBrowserFrame extends StaticWindow implements IEventListener {
+    private static final String ENTRY_DRAG_PAYLOAD = "TRINITY_PROJECT_ENTRY";
     private final SearchBarFilter<IBrowserViewerNode> searchBarFilter = new SearchBarFilter<>(true);
     private final KindFilter<IBrowserViewerNode> kindFilter = new KindFilter<>(FileKind.values());
     private ListFilterComponent<IBrowserViewerNode> filterComponent;
@@ -94,13 +101,66 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
         ImGui.getStyle().setTouchExtraPadding(extraPadding.x, 3.F);
 
         if (ImGui.beginChild(getId("ViewTree"), 0.F, 0.F)) {
+            this.drawRootDropTarget();
             for (ProjectBrowserTreeNode<?> child : this.rootNode.getChildren()) {
                 child.draw(this);
             }
         }
         ImGui.endChild();
+        this.drawPackageDropTarget(this.trinity.getExecution().getRootPackage());
         ImGui.popStyleColor(2);
         ImGui.getStyle().setTouchExtraPadding(extraPadding.x, extraPadding.y);
+    }
+
+    private void drawRootDropTarget() {
+        ArchiveEntry draggedEntry = ImGui.getDragDropPayload(ENTRY_DRAG_PAYLOAD);
+        if (draggedEntry == null) return;
+
+        ImGui.selectable("/  Project root###ProjectBrowserRootDrop");
+        this.drawPackageDropTarget(this.trinity.getExecution().getRootPackage());
+    }
+
+    void drawEntryDragSource(ArchiveEntry entry) {
+        if (!ImGui.beginDragDropSource()) return;
+
+        ImGui.setDragDropPayload(ENTRY_DRAG_PAYLOAD, entry);
+        ImGui.text("Move " + entry.getDisplaySimpleName());
+        ImGui.endDragDropSource();
+    }
+
+    void drawPackageDropTarget(Package targetPackage) {
+        if (!ImGui.beginDragDropTarget()) return;
+
+        ArchiveEntry entry = ImGui.acceptDragDropPayload(ENTRY_DRAG_PAYLOAD);
+        if (entry != null) this.moveEntry(entry, targetPackage);
+        ImGui.endDragDropTarget();
+    }
+
+    private void moveEntry(ArchiveEntry entry, Package targetPackage) {
+        String destinationName = targetPackage.getChildrenPath(entry.getDisplaySimpleName());
+        if (destinationName.equals(entry.getDisplayOrRealName())) return;
+
+        if (this.isDestinationOccupied(entry, destinationName)) {
+            Main.getDisplayManager().addNotification(new Notification(NotificationType.WARNING,
+                    new SimpleCaption("Move Failed"), ColoredStringBuilder.create()
+                    .fmt("An entry named {} already exists in that package.", entry.getDisplaySimpleName()).get()));
+            return;
+        }
+
+        entry.getRenameHandler().renameFully(this.trinity.getRemapper(), destinationName);
+    }
+
+    private boolean isDestinationOccupied(ArchiveEntry movingEntry, String destinationName) {
+        String destinationPath = movingEntry instanceof ClassTarget ? destinationName + ".class" : destinationName;
+
+        boolean classCollision = this.trinity.getExecution().getClassTargetMap().values().stream()
+                .filter(target -> target != movingEntry && target.getInput() != null)
+                .anyMatch(target -> (target.getDisplayOrRealName() + ".class").equals(destinationPath));
+        if (classCollision) return true;
+
+        return this.trinity.getExecution().getResourceMap().keySet().stream()
+                .filter(path -> !(movingEntry.getRealName().equals(path)))
+                .anyMatch(destinationPath::equals);
     }
 
     public String getSearch() {

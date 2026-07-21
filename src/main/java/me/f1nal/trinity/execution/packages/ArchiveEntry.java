@@ -34,6 +34,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         this.browserViewerNode = new BrowserViewerNode(getIcon(), IconFamily.CODICON,
                 () -> this.getKind() == null ? this.getIconColor() : this.getKind().getColor(),
                 this::getDisplaySimpleName, this.getRenameHandler());
+        this.browserViewerNode.setLeftClickOnRelease(true);
         this.browserViewerNode.addMouseClickHandler(clickType -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
                 Main.getDisplayManager().getPopupMenu().show(this.createPopup(PopupItemBuilder.create()));

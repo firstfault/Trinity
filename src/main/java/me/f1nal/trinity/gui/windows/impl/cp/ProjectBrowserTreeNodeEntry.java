@@ -22,6 +22,8 @@ public class ProjectBrowserTreeNodeEntry extends ProjectBrowserTreeNode<ArchiveE
             flags |= ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen;
         }
         boolean open = ImGui.treeNodeEx("###Entry" + node.getRealName(), flags);
+        projectBrowserFrame.drawEntryDragSource(this.node);
+        projectBrowserFrame.drawPackageDropTarget(this.node.getPackage());
         float rowMinY = ImGui.getItemRectMinY();
         float rowMaxY = ImGui.getItemRectMaxY();
         SizeLayout sizeLayout = this.getSizeLayout();

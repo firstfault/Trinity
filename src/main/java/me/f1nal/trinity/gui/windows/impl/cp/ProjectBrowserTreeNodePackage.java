@@ -33,6 +33,7 @@ public class ProjectBrowserTreeNodePackage extends ProjectBrowserTreeNode<Packag
         boolean searching = !projectBrowserFrame.getSearch().isEmpty();
         ImGui.setNextItemOpen((this.isOpen() && (node.getParent() == null || node.getParent().isOpen())) || searching);
         boolean open = ImGui.treeNodeEx("###" + node.getInternalPath(), ImGuiTreeNodeFlags.SpanFullWidth);
+        projectBrowserFrame.drawPackageDropTarget(this.node);
         ImGui.sameLine(0.F, 0.F);
 
         node.getBrowserViewerNode().draw(this.displayName);
