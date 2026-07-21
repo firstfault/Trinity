@@ -72,7 +72,6 @@ public class Main {
         appDataManager = new AppDataManager();
         appDataManager.load();
         displayManager = new DisplayManager("Trinity: " + VERSION);
-        checkForUpdatesOnStartup();
         appDataManager.getState().setLastLaunchedVersion(VERSION);
         addShutdownHook(new ShutdownHook("Database Save", new DatabaseSaveShutdownHook()));
         ImGuiApplication.launch(displayManager);
@@ -80,7 +79,7 @@ public class Main {
         Main.exit();
     }
 
-    private static void checkForUpdatesOnStartup() {
+    public static void checkForUpdatesOnStartup() {
         if (!getPreferences().isCheckForUpdates()) return;
         checkForUpdates(false);
     }

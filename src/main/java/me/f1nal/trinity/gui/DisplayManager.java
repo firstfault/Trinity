@@ -156,6 +156,12 @@ public final class DisplayManager extends ImGuiApplication {
     }
 
     @Override
+    protected void preRun() {
+        super.preRun();
+        Main.checkForUpdatesOnStartup();
+    }
+
+    @Override
     protected void preProcess() {
         super.preProcess();
     }
