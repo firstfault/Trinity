@@ -57,6 +57,12 @@ public class PreferencesFrame extends StaticWindow {
                 }
 
                 this.drawAccentColor();
+
+                if (ImGui.checkbox("Check for updates", preferencesFile.isCheckForUpdates())) {
+                    preferencesFile.setCheckForUpdates(!preferencesFile.isCheckForUpdates());
+                }
+                this.tooltip("Check GitHub Releases for a newer Trinity version when the application starts.");
+
                 ImGui.spacing();
                 ImGui.separatorText("Interface font");
                 this.preferencesFile.getDefaultFont().drawControls();

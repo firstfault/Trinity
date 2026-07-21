@@ -53,13 +53,17 @@ Load one or several files into a workspace, edit their classes and members, and 
 Built-in refactoring / deobfuscation, custom themes, a built-in theme editor, configurable key mappings, among many others
 
 ## Building
-I haven't bothered with pre-built releases much - but this will come very soon. For now, I highly recommend running Trinity from source:
+
+Running Trinity requires Java 17 or newer. Gradle 8.4 builds require JDK 17-20; build and run with the checked-in wrapper:
+
 ```bash
 git clone https://github.com/firstfault/Trinity.git
 cd Trinity
 ./gradlew run
 ```
-However, there are [binaries (usually outdated) available which you can get from here](https://github.com/firstfault/Trinity/releases).
+
+The executable fat JAR is produced at `build/libs/Trinity.jar` by `./gradlew build`.
+Pre-built versions are available from [GitHub Releases](https://github.com/firstfault/Trinity/releases).
 
 ## Authors
 - [@final](https://www.github.com/firstfault)

@@ -27,6 +27,7 @@ public class PreferencesFile extends AppDataFile {
     private boolean decompilerNormalizeText = false;
     private boolean decompilerEnumClass = false;
     private boolean autoviewXref = false;
+    private boolean checkForUpdates = true;
     private boolean navigationNotifications = true;
     private boolean navigationHistoryVisible = false;
     private boolean assemblerHideMetadata = false;
@@ -142,6 +143,14 @@ public class PreferencesFile extends AppDataFile {
 
     public boolean isNavigationNotifications() {
         return navigationNotifications;
+    }
+
+    public boolean isCheckForUpdates() {
+        return checkForUpdates;
+    }
+
+    public void setCheckForUpdates(boolean checkForUpdates) {
+        this.checkForUpdates = checkForUpdates;
     }
 
     public void setNavigationNotifications(boolean navigationNotifications) {

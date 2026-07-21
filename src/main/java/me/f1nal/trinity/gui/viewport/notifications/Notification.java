@@ -19,6 +19,7 @@ public class Notification {
     private ImVec4 bounds;
     private final String id = ComponentId.getId(this.getClass());
     private final NotificationType type;
+    private Runnable clickAction;
 
     public Notification(NotificationType type, ICaption header, List<ColoredString> text) {
         this.header = header;
@@ -53,6 +54,7 @@ public class Notification {
         ImGui.end();
         ImGui.getStyle().setAlpha(oldAlpha);
         if (hoveringWindow && ImGui.isMouseClicked(0)) {
+            if (this.clickAction != null) this.clickAction.run();
             return -1.F;
         }
         return sizeY;
@@ -80,5 +82,9 @@ public class Notification {
 
     public List<ColoredString> getText() {
         return text;
+    }
+
+    public void setClickAction(Runnable clickAction) {
+        this.clickAction = clickAction;
     }
 }

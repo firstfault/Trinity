@@ -43,6 +43,7 @@ import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.theme.TrinityStyle;
+import me.f1nal.trinity.update.UpdateRelease;
 import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
 import org.lwjgl.glfw.GLFW;
@@ -245,6 +246,38 @@ public final class DisplayManager extends ImGuiApplication {
     public void addNotification(Notification notification) {
         notification.setStopwatch(new Stopwatch());
         this.notificationRenderer.add(notification);
+    }
+
+    public void showUpdateAvailable(UpdateRelease release) {
+        Notification notification = new Notification(NotificationType.INFO,
+                new SimpleCaption("Update Available"), ColoredStringBuilder.create()
+                .fmt("Trinity {} is available. You are running {}. Click to open the release.",
+                        release.version(), Main.VERSION).get());
+        notification.setExpireTime(5_000L);
+        notification.setClickAction(() -> SystemUtil.browseURL(release.url()));
+        this.addNotification(notification);
+    }
+
+    public void showUpToDate() {
+        this.showUpdateStatus(NotificationType.SUCCESS, "Trinity is up to date",
+                "You are running the latest available version (" + Main.VERSION + ").");
+    }
+
+    public void showUpdateCheckFailed() {
+        this.showUpdateStatus(NotificationType.WARNING, "Update Check Failed",
+                "Unable to reach GitHub Releases. Check your connection and try again.");
+    }
+
+    public void showUpdateCheckInProgress() {
+        this.showUpdateStatus(NotificationType.INFO, "Checking for Updates",
+                "An update check is already in progress.");
+    }
+
+    private void showUpdateStatus(NotificationType type, String title, String message) {
+        Notification notification = new Notification(type, new SimpleCaption(title),
+                ColoredStringBuilder.create().fmt("{}", message).get());
+        notification.setExpireTime(5_000L);
+        this.addNotification(notification);
     }
 
     public void openDatabase(String path) {

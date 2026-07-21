@@ -9,7 +9,9 @@ import me.f1nal.trinity.gui.DisplayManager;
 import me.f1nal.trinity.gui.backend.ImGuiApplication;
 import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.keybindings.KeyBindManager;
+import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.theme.ThemeManager;
+import me.f1nal.trinity.update.UpdateChecker;
 import com.google.common.collect.Queues;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -38,9 +40,17 @@ public class Main {
     private static ThemeManager themeManager;
     private static final List<ShutdownHook> shutdownHooks = new ArrayList<>();
     private static final Queue<FutureTask<?>> scheduledTasks = Queues.newArrayDeque();
+    private static final Object updateCheckLock = new Object();
+    private static boolean updateCheckRunning;
+    private static boolean reportUpdateCheckResult;
     private static Thread renderThread;
 
     public static void main(String[] args) throws IOException {
+        if (args.length == 1 && "--version".equals(args[0])) {
+            System.out.println(VERSION);
+            return;
+        }
+
         renderThread = Thread.currentThread();
         scheduler = new ScheduledThreadPoolExecutor(1);
         scheduler.setRemoveOnCancelPolicy(true);
@@ -62,11 +72,59 @@ public class Main {
         appDataManager = new AppDataManager();
         appDataManager.load();
         displayManager = new DisplayManager("Trinity: " + VERSION);
+        checkForUpdatesOnStartup();
         appDataManager.getState().setLastLaunchedVersion(VERSION);
         addShutdownHook(new ShutdownHook("Database Save", new DatabaseSaveShutdownHook()));
         ImGuiApplication.launch(displayManager);
         System.out.println("see you later!");
         Main.exit();
+    }
+
+    private static void checkForUpdatesOnStartup() {
+        if (!getPreferences().isCheckForUpdates()) return;
+        checkForUpdates(false);
+    }
+
+    public static void checkForUpdatesNow() {
+        checkForUpdates(true);
+    }
+
+    private static void checkForUpdates(boolean reportResult) {
+        boolean alreadyRunning;
+        synchronized (updateCheckLock) {
+            if (reportResult) reportUpdateCheckResult = true;
+            alreadyRunning = updateCheckRunning;
+            updateCheckRunning = true;
+        }
+        if (alreadyRunning) {
+            if (reportResult) displayManager.showUpdateCheckInProgress();
+            return;
+        }
+
+        UpdateChecker.checkAsync(VERSION).whenComplete((update, throwable) -> {
+            boolean shouldReport;
+            synchronized (updateCheckLock) {
+                shouldReport = reportUpdateCheckResult;
+                reportUpdateCheckResult = false;
+                updateCheckRunning = false;
+            }
+            if (throwable != null) {
+                Throwable cause = throwable.getCause() == null ? throwable : throwable.getCause();
+                Logging.debug("Unable to check for updates: {}", cause.getMessage());
+                if (shouldReport) Main.runLater(displayManager::showUpdateCheckFailed);
+                return;
+            }
+
+            Main.runLater(() -> {
+                if (update.isPresent()) {
+                    if (shouldReport || getPreferences().isCheckForUpdates()) {
+                        displayManager.showUpdateAvailable(update.get());
+                    }
+                } else if (shouldReport) {
+                    displayManager.showUpToDate();
+                }
+            });
+        });
     }
 
     public static ListenableFuture<Object> runLater(Runnable task) {

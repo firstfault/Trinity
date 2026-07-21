@@ -15,6 +15,7 @@ dependencies {
     implementation(project(":Decompiler"))
     implementation("org.jetbrains:annotations:24.1.0")
     implementation("com.google.guava:guava:33.6.0-jre")
+    implementation("com.google.code.gson:gson:2.14.0")
     implementation("at.yawk.lz4:lz4-java:1.8.1")
     implementation("com.thoughtworks.xstream:xstream:1.4.21")
     implementation("org.tukaani:xz:1.12")
@@ -26,8 +27,11 @@ dependencies {
     implementation("io.github.spair:imgui-java-app:1.92.0")
 }
 
-tasks.withType<JavaCompile> {
-    options.encoding = "UTF-8"
+allprojects {
+    tasks.withType<JavaCompile> {
+        options.encoding = "UTF-8"
+        options.release.set(17)
+    }
 }
 
 tasks.withType<Jar> {
