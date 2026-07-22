@@ -3,7 +3,6 @@
     <img src="screenshots/logo.png" width="200" alt="Trinity logo">
   </a>
   <h1>Trinity</h1>
-  <p><strong>One tool to rule them all.</strong></p>
   <p>A next-generation Java reverse-engineering workspace for exploring, understanding, and rewriting bytecode.</p>
 
   <p>
@@ -14,7 +13,7 @@
     <a href="https://github.com/firstfault/trinity/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/firstfault/trinity?style=flat-square&color=f4c542"></a>
   </p>
 
-  <sub>Self-Maintained Decompiler &middot; Text Assembler &middot; Extensive Cross-referencing &middot; Instant Refactoring</sub>
+  <sub>Decompiler &middot; Assembler &middot; Extensive Cross-referencing &middot; Instant Refactoring</sub>
 </div>
 
 ![Screenshot](screenshots/trinity.png)
@@ -71,15 +70,7 @@ Pre-built versions are available from [GitHub Releases](https://github.com/first
 ### Contributing
 Contributions are massively appreciated. Please feel free to open an issue or pull request if anything you need is missing.
 
-Please review the [planned features](PLANNED.md) before requesting a feature addition!
-
 ### Libraries Used
 - [ImGui](https://github.com/ocornut/imgui) with [Bindings](https://github.com/SpaiR/imgui-java)
 - [ObjectWeb ASM](https://asm.ow2.io/)
 - Modified version of [Fernflower Decompiler](https://www.jetbrains.com/)
-
-#### Who is this meant for?
-Hackers, hobbyists, professionals, everyone is welcome.
-
-#### Context
-Originally Trinity started out as an obfuscator with an interactive interface. Over time, I began using it as a decompiler, and eventually it evolved into this awesome tool.
