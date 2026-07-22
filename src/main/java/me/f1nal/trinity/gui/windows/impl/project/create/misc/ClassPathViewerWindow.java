@@ -18,6 +18,7 @@ public class ClassPathViewerWindow extends ClosableWindow {
 
     public ClassPathViewerWindow(String fileName, ClassPath classPath) {
         super("Class Path Viewer: " + fileName, 600, 430, null);
+        this.setDialog(true);
         this.classPath = classPath;
         List<ClassPathViewerElement> elements = new ArrayList<>();
         for (UnreadClassBytes classBytes : classPath.getClasses()) {

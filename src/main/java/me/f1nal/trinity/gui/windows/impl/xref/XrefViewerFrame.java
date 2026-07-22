@@ -22,16 +22,18 @@ public class XrefViewerFrame extends ClosableWindow {
     private final Collection<AbstractXref> xrefViewList;
     private final XrefBuilder builder;
     private final ListFilterComponent<AbstractXref> listFilterComponent;
+    private final SearchBarFilter<AbstractXref> searchFilter;
     private final TableComponent<AbstractXref> xrefTable = new TableComponent<>(null);
 
     public XrefViewerFrame(XrefBuilder builder, Trinity trinity, boolean autofollowXref) {
         super("", 680, 300, trinity);
 
         this.xrefViewList = builder.createXrefs();
-        this.listFilterComponent = new ListFilterComponent<>(this.xrefViewList, new SearchBarFilter<>(), new KindFilter<>(XrefKind.values()));
+        this.searchFilter = new SearchBarFilter<>();
+        this.listFilterComponent = new ListFilterComponent<>(this.xrefViewList,
+                this.searchFilter, new KindFilter<>(XrefKind.values()));
         this.builder = builder;
-        this.setCloseableByEscape(true);
-        this.setInitialPositionAtMouse();
+        this.setDialog(true);
 
         this.xrefTable.getColumns().add(new TableColumn<>("Access", AbstractXref::getAccessText));
         this.xrefTable.getColumns().add(new TableColumn<>("Invocation", AbstractXref::getInvocation));
@@ -65,6 +67,11 @@ public class XrefViewerFrame extends ClosableWindow {
         this.listFilterComponent.draw();
         this.xrefTable.setElementList(this.listFilterComponent.getFilteredList());
         this.xrefTable.draw(Math.max(1.F, ImGui.getContentRegionAvailY()));
+    }
+
+    @Override
+    protected void onOpen() {
+        this.searchFilter.getSearchBar().requestFocus();
     }
 
     @Override

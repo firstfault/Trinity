@@ -27,6 +27,7 @@ public class GlobalRenameWindow extends StaticWindow implements ICaption {
 
     public GlobalRenameWindow(Trinity trinity) {
         super("Global Rename", 0, 0, trinity);
+        this.setDialog(true);
         this.windowFlags |= ImGuiWindowFlags.NoResize;
         this.listBox = new ListBoxComponent<>(trinity.getRefactorManager().getGlobalRenameTypes());
     }

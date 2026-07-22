@@ -15,7 +15,7 @@ abstract class AbstractBytecodeEditorWindow extends ClosableWindow {
     protected AbstractBytecodeEditorWindow(String title, Trinity trinity) {
         super(title, 760.F, 650.F, trinity);
         this.windowFlags |= ImGuiWindowFlags.HorizontalScrollbar;
-        this.setCloseableByEscape(true);
+        this.setDialog(true);
     }
 
     @Override

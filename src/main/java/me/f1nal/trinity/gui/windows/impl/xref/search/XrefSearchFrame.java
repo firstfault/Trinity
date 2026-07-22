@@ -12,9 +12,12 @@ import me.f1nal.trinity.gui.windows.impl.xref.XrefViewerFrame;
 public class XrefSearchFrame extends StaticWindow {
     private final EnumComboBox<XrefSearchType> xrefTypeCombo;
     private static final MemorableCheckboxComponent closeFrame = new MemorableCheckboxComponent("closeFrameAfterXrefSearch", "Close After Search", false);
+    private XrefSearchType previousSearchType;
+    private boolean focusSearchInput;
 
     public XrefSearchFrame(Trinity trinity) {
         super("Search Xrefs", 400, -1, trinity);
+        this.setDialog(true);
         XrefSearchTypeClass xrefSearchTypeClass = new XrefSearchTypeClass(trinity);
         XrefSearchType[] xrefTypes = new XrefSearchType[]{xrefSearchTypeClass, new XrefSearchTypeMember(trinity, xrefSearchTypeClass.getClassSelectComponent())};
         this.windowFlags = ImGuiWindowFlags.AlwaysAutoResize;
@@ -24,6 +27,11 @@ public class XrefSearchFrame extends StaticWindow {
     @Override
     protected void renderFrame() {
         XrefSearchType type = xrefTypeCombo.draw();
+        if (this.focusSearchInput || type != this.previousSearchType) {
+            ImGui.setKeyboardFocusHere();
+            this.focusSearchInput = false;
+        }
+        this.previousSearchType = type;
         boolean result = type.draw();
         if (!result) ImGui.beginDisabled();
         if (ImGui.button("Search")) {
@@ -33,5 +41,10 @@ public class XrefSearchFrame extends StaticWindow {
         if (!result) ImGui.endDisabled();
         ImGui.sameLine();
         closeFrame.draw();
+    }
+
+    @Override
+    protected void onOpen() {
+        this.focusSearchInput = true;
     }
 }

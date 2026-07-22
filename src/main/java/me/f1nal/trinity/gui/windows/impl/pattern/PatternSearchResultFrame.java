@@ -18,6 +18,7 @@ import java.util.List;
 public final class PatternSearchResultFrame extends ClosableWindow {
     private static final int TITLE_LIMIT = 70;
     private final ListFilterComponent<PatternResultRow> filter;
+    private final SearchBarFilter<PatternResultRow> searchFilter;
     private final TableComponent<PatternResultRow> table = new TableComponent<>();
     private final long totalMatches;
     private final int retainedMatches;
@@ -28,7 +29,8 @@ public final class PatternSearchResultFrame extends ClosableWindow {
         String patternSummary = summary(patternSource, 80);
         List<PatternResultRow> rows = matches.stream()
                 .map(match -> new PatternResultRow(match, patternSummary)).toList();
-        this.filter = new ListFilterComponent<>(rows, new SearchBarFilter<>(true));
+        this.searchFilter = new SearchBarFilter<>(true);
+        this.filter = new ListFilterComponent<>(rows, this.searchFilter);
         this.totalMatches = totalMatches;
         this.retainedMatches = matches.size();
         this.table.getColumns().add(new TableColumn<>("Match", (column, row) -> {
@@ -45,8 +47,7 @@ public final class PatternSearchResultFrame extends ClosableWindow {
             font.popFont();
         }));
         this.table.getColumns().add(new TableColumn<>("Where", new TableColumnRendererXrefWhere<>()));
-        this.setCloseableByEscape(true);
-        this.setInitialPositionAtMouse();
+        this.setDialog(true);
     }
 
     @Override
@@ -59,6 +60,11 @@ public final class PatternSearchResultFrame extends ClosableWindow {
         }
         table.setElementList(filter.getFilteredList());
         table.draw(Math.max(1.F, ImGui.getContentRegionAvailY()));
+    }
+
+    @Override
+    protected void onOpen() {
+        this.searchFilter.getSearchBar().requestFocus();
     }
 
     private static String title(String source) {

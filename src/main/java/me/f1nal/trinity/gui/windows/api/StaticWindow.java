@@ -2,8 +2,8 @@ package me.f1nal.trinity.gui.windows.api;
 
 import imgui.ImGui;
 import imgui.flag.ImGuiCond;
+import imgui.flag.ImGuiFocusedFlags;
 import imgui.flag.ImGuiKey;
-import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import me.f1nal.trinity.Trinity;
 
@@ -39,9 +39,10 @@ public abstract class StaticWindow extends AbstractWindow {
             ImGui.setNextWindowSize(width, height, ImGuiCond.Always);
             setSize = true;
         }
+        this.applyOpeningPosition();
 
         String title = this.getImGuiWindowName();
-        int flags = this.windowFlags | (this.isDialog() ? ImGuiWindowFlags.NoDocking : 0);
+        int flags = this.applyDialogWindowFlags(this.windowFlags);
         boolean begin;
         if (this.isDialog()) {
             if (!ImGui.isPopupOpen(title)) ImGui.openPopup(title);
@@ -54,7 +55,9 @@ public abstract class StaticWindow extends AbstractWindow {
         if (begin) {
             this.rendered = true;
             renderFrame();
-            if (this.isDialog() && ImGui.isWindowFocused() && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
+            if (this.isDialog()
+                    && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
+                    && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
                 this.close();
             }
             this.renderChildWindows();

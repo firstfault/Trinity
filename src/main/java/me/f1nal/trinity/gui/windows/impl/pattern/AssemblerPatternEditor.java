@@ -48,6 +48,7 @@ final class AssemblerPatternEditor {
     private boolean editorFocused;
     private boolean autocompleteFocused;
     private boolean focusEditorNextFrame;
+    private int openingFocusFrames;
     private boolean autocompleteVisible;
     private boolean suggestionSelectionActive;
     private int selectedSuggestionIndex = -1;
@@ -69,13 +70,20 @@ final class AssemblerPatternEditor {
         editor.setText("");
     }
 
+    void requestFocus() {
+        // WindowManager raises a newly opened dialog for two frames. TextEditor focuses its own
+        // child window, so repeat the request once after the dialog-level focus settles.
+        this.openingFocusFrames = 3;
+    }
+
     EditorState draw(float height) {
         updatePalette();
-        if (focusEditorNextFrame) {
+        if (focusEditorNextFrame || openingFocusFrames > 0) {
             editor.setFocus();
             editorFocused = true;
             autocompleteDismissed = false;
             focusEditorNextFrame = false;
+            if (openingFocusFrames > 0) openingFocusFrames--;
         }
         boolean completionKeyConsumed = handleCompletionKeyboard();
         TextEditorCursorSelection selectionAfterCompletion = completionKeyConsumed
@@ -241,7 +249,9 @@ final class AssemblerPatternEditor {
         editor.setPaletteColor(TextEditorColor.preprocessor, CodeColorScheme.DISABLED);
         editor.setPaletteColor(TextEditorColor.identifier, CodeColorScheme.TEXT);
         editor.setPaletteColor(TextEditorColor.knownIdentifier, CodeColorScheme.CLASS_REF);
-        editor.setPaletteColor(TextEditorColor.background, CodeColorScheme.BACKGROUND);
+        // The pattern editor lives in a modal popup, whose surface uses PopupBg rather than
+        // WindowBg. Matching that surface avoids a mismatched rectangle behind the editor.
+        editor.setPaletteColor(TextEditorColor.background, CodeColorScheme.POPUP_BACKGROUND);
         editor.setPaletteColor(TextEditorColor.cursor, CodeColorScheme.CURSOR);
         editor.setPaletteColor(TextEditorColor.selection, CodeColorScheme.CURSOR_SELECTION);
         editor.setPaletteColor(TextEditorColor.lineNumber, CodeColorScheme.LINE_NUMBER);

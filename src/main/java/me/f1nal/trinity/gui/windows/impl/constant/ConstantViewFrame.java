@@ -16,6 +16,7 @@ import java.util.List;
 public class ConstantViewFrame extends ClosableWindow {
     private static final int MAXIMUM_TITLE_DESCRIPTION_LENGTH = 80;
     private final ListFilterComponent<ConstantViewCache> listFilterComponent;
+    private final SearchBarFilter<ConstantViewCache> searchFilter;
     private final TableComponent<ConstantViewCache> table = new TableComponent<>();
 
     public ConstantViewFrame(Trinity trinity, List<ConstantViewCache> constantList) {
@@ -25,11 +26,12 @@ public class ConstantViewFrame extends ClosableWindow {
     public ConstantViewFrame(Trinity trinity, List<ConstantViewCache> constantList,
                              String searchDescription) {
         super(createTitle(searchDescription), 680, 300, trinity);
-        this.listFilterComponent = new ListFilterComponent<>(constantList, new SearchBarFilter<>(), new KindFilter<>(XrefKind.values()));
+        this.searchFilter = new SearchBarFilter<>();
+        this.listFilterComponent = new ListFilterComponent<>(constantList,
+                this.searchFilter, new KindFilter<>(XrefKind.values()));
         this.table.getColumns().add(new TableColumn<>("Constant", ConstantViewCache::getConstant));
         this.table.getColumns().add(new TableColumn<>("Where", new TableColumnRendererXrefWhere<>()));
-        this.setCloseableByEscape(true);
-        this.setInitialPositionAtMouse();
+        this.setDialog(true);
     }
 
     private static String createTitle(String searchDescription) {
@@ -46,5 +48,10 @@ public class ConstantViewFrame extends ClosableWindow {
         this.listFilterComponent.draw();
         this.table.setElementList(this.listFilterComponent.getFilteredList());
         this.table.draw(Math.max(1.F, ImGui.getContentRegionAvailY()));
+    }
+
+    @Override
+    protected void onOpen() {
+        this.searchFilter.getSearchBar().requestFocus();
     }
 }

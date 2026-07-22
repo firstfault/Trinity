@@ -1,7 +1,9 @@
 package me.f1nal.trinity.gui.windows.api;
 
 import imgui.ImGui;
+import imgui.ImGuiViewport;
 import imgui.flag.ImGuiCond;
+import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.util.NameUtil;
 
@@ -10,6 +12,7 @@ public abstract class AbstractWindow {
     protected final float width, height;
     protected Trinity trinity;
     private boolean dialog;
+    private boolean centerOnNextOpen;
     private Runnable childWindowRenderer;
     /**
      * If this window is currently visible.
@@ -51,7 +54,18 @@ public abstract class AbstractWindow {
     }
 
     public void setVisible(boolean visible) {
+        boolean opening = visible && !this.visible;
         this.visible = visible;
+        if (opening) {
+            if (this.isDialog()) {
+                this.centerOnNextOpen = true;
+            }
+            this.onOpen();
+        }
+    }
+
+    /** Called whenever a previously closed window is opened. */
+    protected void onOpen() {
     }
 
     public final boolean isVisible() {
@@ -64,6 +78,23 @@ public abstract class AbstractWindow {
 
     protected final void setDialog(boolean dialog) {
         this.dialog = dialog;
+        if (dialog && !this.visible) {
+            this.centerOnNextOpen = true;
+        }
+    }
+
+    protected final int applyDialogWindowFlags(int flags) {
+        return this.isDialog() ? flags | ImGuiWindowFlags.NoDocking : flags;
+    }
+
+    protected final void applyOpeningPosition() {
+        if (!this.centerOnNextOpen) return;
+
+        ImGuiViewport viewport = ImGui.getMainViewport();
+        ImGui.setNextWindowDockID(0);
+        ImGui.setNextWindowPos(viewport.getWorkCenterX(), viewport.getWorkCenterY(),
+                ImGuiCond.Always, 0.5F, 0.5F);
+        this.centerOnNextOpen = false;
     }
 
     public void setTitle(String title) {

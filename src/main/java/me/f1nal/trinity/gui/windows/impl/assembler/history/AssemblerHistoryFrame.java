@@ -13,6 +13,7 @@ public class AssemblerHistoryFrame extends ClosableWindow {
 
     public AssemblerHistoryFrame(AssemblerFrame assemblerFrame) {
         super("Assembler History", 520, 150, assemblerFrame.getTrinity());
+        this.setDialog(true);
         this.assemblerFrame = assemblerFrame;
     }
 

@@ -12,6 +12,7 @@ public class SearchBar {
     private final ImString searchText;
     private final String id = ComponentId.getId(getClass());
     private boolean caseSensitive;
+    private boolean focusRequested;
     public int inputTextFlags = ImGuiInputTextFlags.None;
 
     public SearchBar(int length) {
@@ -28,7 +29,15 @@ public class SearchBar {
     }
 
     public boolean draw() {
+        if (this.focusRequested) {
+            ImGui.setKeyboardFocusHere();
+            this.focusRequested = false;
+        }
         return ImGui.inputText("###Search" + id, searchText, inputTextFlags);
+    }
+
+    public void requestFocus() {
+        this.focusRequested = true;
     }
 
     public boolean drawWithCaseSensitivityToggle() {

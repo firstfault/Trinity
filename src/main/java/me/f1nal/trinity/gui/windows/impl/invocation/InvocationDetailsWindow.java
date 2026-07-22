@@ -36,7 +36,7 @@ public class InvocationDetailsWindow extends ClosableWindow {
         this.caller = caller;
         this.target = target;
         this.windowFlags |= ImGuiWindowFlags.HorizontalScrollbar;
-        this.setCloseableByEscape(true);
+        this.setDialog(true);
     }
 
     @Override

@@ -14,6 +14,7 @@ import java.awt.*;
 public class AboutWindow extends StaticWindow {
     public AboutWindow(Trinity trinity) {
         super("About Trinity", 370, 100, trinity);
+        this.setDialog(true);
         this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize;
     }
 

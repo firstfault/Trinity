@@ -19,6 +19,7 @@ public class ExportJarWindow extends StaticWindow {
 
     public ExportJarWindow(Trinity trinity) {
         super("Export JAR", 500, 400, trinity);
+        this.setDialog(true);
         File path = trinity.getDatabase().getPath();
         this.outputFile = new FileSelectorComponent("Output File", new File(path.getParent(),
                 NameUtil.removeExtensions(trinity.getDatabase().getName()) + "-out.jar").getAbsolutePath(),

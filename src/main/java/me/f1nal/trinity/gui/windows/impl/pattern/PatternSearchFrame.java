@@ -28,10 +28,16 @@ public final class PatternSearchFrame extends StaticWindow implements IEventList
 
     public PatternSearchFrame(Trinity trinity) {
         super("Pattern Search", 680, 390, trinity);
+        this.setDialog(true);
         this.windowFlags = ImGuiWindowFlags.NoCollapse;
         this.editor = new AssemblerPatternEditor(trinity);
         this.compilation = InstructionPatternCompiler.compile("", includeMetadata.isChecked());
         trinity.getEventManager().registerListener(this);
+    }
+
+    @Override
+    protected void onOpen() {
+        this.editor.requestFocus();
     }
 
     @Override

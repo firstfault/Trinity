@@ -15,13 +15,13 @@ public class ProjectSettingsWindow extends StaticWindow {
 
     public ProjectSettingsWindow(Trinity trinity) {
         super("Project Settings", 300, 200, trinity);
+        this.setDialog(true);
 
         this.tabs = new ListBoxTabsComponent<>(List.of(
                 new ProjectSettingsGeneral(trinity),
                 new ProjectSettingsStatistics(trinity)
         ));
         this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize;
-        this.windowFlags |= ImGuiWindowFlags.NoDocking;
     }
 
     @Override

@@ -32,6 +32,7 @@ public class NewProjectFrame extends StaticWindow implements ICaption {
 
     public NewProjectFrame(Trinity trinity) {
         super("New Project", 0, 0, trinity);
+        this.setDialog(true);
 
         this.inputTab = new ProjectCreationInput(this);
         this.generalTab = new ProjectCreationGeneral();
