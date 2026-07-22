@@ -37,6 +37,8 @@ public final class KeyBindManager {
             "decompiler.navigation", "Navigate Back", Bindable.mouseButtonCode(3));
     public final Bindable DECOMPILER_NAVIGATE_FORWARD = register("decompiler.navigation.forward", "Decompiler",
             "decompiler.navigation", "Navigate Forward", Bindable.mouseButtonCode(4));
+    public final Bindable GLOBAL_SEARCH = register("application.global_search", "Global",
+            "application.global", "Open Global Search", ImGuiKey.Tab);
 
     public Bindable register(String identifier, String category, String scope, String displayName, int defaultKey) {
         if (bindables.containsKey(identifier)) {

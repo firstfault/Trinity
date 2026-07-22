@@ -6,39 +6,27 @@ import imgui.flag.ImGuiColorEditFlags;
 import imgui.flag.ImGuiStyleVar;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.appdata.RecentDatabaseEntry;
-import me.f1nal.trinity.database.DatabaseLoader;
 import me.f1nal.trinity.execution.loading.AsynchronousLoad;
 import me.f1nal.trinity.execution.loading.ProgressiveLoadTask;
 import me.f1nal.trinity.gui.DisplayManager;
+import me.f1nal.trinity.gui.actions.ApplicationAction;
+import me.f1nal.trinity.gui.actions.ApplicationActionRegistry;
 import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.IconFamily;
-import me.f1nal.trinity.gui.components.general.FileSelectorComponent;
 import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
-import me.f1nal.trinity.gui.windows.impl.*;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
-import me.f1nal.trinity.gui.windows.impl.constant.ConstantSearchFrame;
-import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewCache;
-import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewFrame;
-import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeString;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
-import me.f1nal.trinity.gui.windows.impl.project.settings.ProjectSettingsWindow;
-import me.f1nal.trinity.gui.windows.impl.pattern.PatternSearchFrame;
-import me.f1nal.trinity.gui.windows.impl.refactor.GlobalRenameWindow;
 import me.f1nal.trinity.gui.windows.impl.navigation.NavigationHistoryWindow;
-import me.f1nal.trinity.gui.windows.impl.themes.ThemeEditorFrame;
-import me.f1nal.trinity.gui.windows.impl.xref.search.XrefSearchFrame;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.theme.AccentColor;
 import me.f1nal.trinity.theme.Theme;
 import me.f1nal.trinity.theme.ThemeManager;
 import me.f1nal.trinity.util.GuiUtil;
 
-import java.awt.*;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,11 +36,12 @@ public class MainMenuBar {
     private static final float NAVIGATION_BAND_SPACE_RATIO = 0.4F;
     private static final float NAVIGATION_BAND_MIN_WIDTH = 40.F;
     private final DisplayManager displayManager;
+    private final ApplicationActionRegistry actionRegistry;
     private static final Map<Class<? extends StaticWindow>, String> windowsToolbar = new LinkedHashMap<>();
-    private FileSelectorComponent databaseOpenFileSelector;
 
-    public MainMenuBar(DisplayManager displayManager) {
+    public MainMenuBar(DisplayManager displayManager, ApplicationActionRegistry actionRegistry) {
         this.displayManager = displayManager;
+        this.actionRegistry = actionRegistry;
 
         windowsToolbar.put(ProjectBrowserFrame.class, "Project Browser");
         windowsToolbar.put(ClassStructureWindow.class, "Class Structure");
@@ -69,9 +58,7 @@ public class MainMenuBar {
         }
 
         if (ImGui.beginMenu("View")) {
-            if (ImGui.menuItem(FontAwesomeIcons.Cog + " Preferences")) {
-                getWindowManager().addStaticWindow(PreferencesFrame.class);
-            }
+            this.drawAction(ApplicationActionRegistry.PREFERENCES);
             ImGui.separator();
             if (ImGui.beginMenu( "Themes...")) {
                 ThemeManager themeManager = Main.getThemeManager();
@@ -97,9 +84,7 @@ public class MainMenuBar {
                 }
                 ImGui.endMenu();
             }
-            if (ImGui.menuItem(FontAwesomeIcons.PaintBrush + " Theme Editor")) {
-                getWindowManager().addStaticWindow(ThemeEditorFrame.class);
-            }
+            this.drawAction(ApplicationActionRegistry.THEME_EDITOR);
             ImGui.endMenu();
         }
         if (displayManager.getTrinity() != null) {
@@ -110,23 +95,11 @@ public class MainMenuBar {
 
                 ImGui.separator();
 */
-                if (ImGui.menuItem(FontAwesomeIcons.CodeBranch + " Cross-Reference Search")) {
-                    Main.getWindowManager().addStaticWindow(XrefSearchFrame.class);
-                }
-                if (ImGui.menuItem(FontAwesomeIcons.Search + " Constant Search")) {
-                    Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
-                }
-                if (ImGui.menuItem(FontAwesomeIcons.Code + " Pattern Search")) {
-                    Main.getWindowManager().addStaticWindow(PatternSearchFrame.class);
-                }
+                this.drawAction(ApplicationActionRegistry.XREF_SEARCH);
+                this.drawAction(ApplicationActionRegistry.CONSTANT_SEARCH);
+                this.drawAction(ApplicationActionRegistry.PATTERN_SEARCH);
                 ImGui.separator();
-                if (ImGui.menuItem("View All Strings")) {
-                    ConstantSearchTypeString typeString = new ConstantSearchTypeString(displayManager.getTrinity());
-                    List<ConstantViewCache> constantList = new ArrayList<>();
-                    typeString.populate(constantList);
-                    Main.getWindowManager().addClosableWindow(new ConstantViewFrame(
-                            displayManager.getTrinity(), constantList, typeString.getSearchDescription()));
-                }
+                this.drawAction(ApplicationActionRegistry.VIEW_ALL_STRINGS);
                 ImGui.endMenu();
             }
 
@@ -145,23 +118,17 @@ public class MainMenuBar {
             }
 
             if (ImGui.beginMenu("Refactor")) {
-                if (ImGui.menuItem(FontAwesomeIcons.Gavel + " Global Rename")) {
-                    getWindowManager().addStaticWindow(GlobalRenameWindow.class);
-                }
+                this.drawAction(ApplicationActionRegistry.GLOBAL_RENAME);
                 ImGui.endMenu();
             }
         }
 
         if (ImGui.beginMenu("Help")) {
-            if (ImGui.menuItem("About")) {
-                Main.getWindowManager().addStaticWindow(AboutWindow.class);
-            }
+            this.drawAction(ApplicationActionRegistry.ABOUT);
 
             ImGui.separator();
 
-            if (ImGui.menuItem(FontAwesomeIcons.SyncAlt + " Check for updates")) {
-                Main.checkForUpdatesNow();
-            }
+            this.drawAction(ApplicationActionRegistry.CHECK_UPDATES);
 
             ImGui.endMenu();
         }
@@ -235,24 +202,13 @@ public class MainMenuBar {
         ImGui.endDisabled();
         GuiUtil.tooltip("Save Project");
 
-        if (save) this.saveDatabase();
-    }
-
-    private void saveDatabase() {
-        if (displayManager.getTrinity() == null) return;
-        getWindowManager().addPopup(new SavingDatabasePopup(displayManager.getTrinity(), status -> {
-            DatabaseLoader.save.clear();
-        }));
+        if (save) displayManager.saveDatabase();
     }
 
     private void fileMenu() {
-        if (ImGui.menuItem(FontAwesomeIcons.Plus + " New Project...")) {
-            getWindowManager().addStaticWindow(NewProjectFrame.class);
-        }
+        this.drawAction(ApplicationActionRegistry.NEW_PROJECT, "...");
         ImGui.separator();
-        if (ImGui.menuItem(FontAwesomeIcons.FolderPlus + " Open Project...")) {
-            this.openLocalProject();
-        }
+        this.drawAction(ApplicationActionRegistry.OPEN_PROJECT, "...");
 
         if (ImGui.beginMenu(FontAwesomeIcons.Clock + " Recently Opened")) {
             this.recentlyOpened();
@@ -261,20 +217,16 @@ public class MainMenuBar {
 
         if (displayManager.getTrinity() != null) {
             ImGui.separator();
-            if (ImGui.menuItem(FontAwesomeIcons.FileExport + " Export JAR...")) {
-                getWindowManager().addStaticWindow(ExportJarWindow.class);
-            }
+            this.drawAction(ApplicationActionRegistry.EXPORT_JAR, "...");
             ImGui.beginDisabled();
             ImGui.menuItem("Quick Export");
             ImGui.endDisabled();
 
             ImGui.separator();
 
-            if (ImGui.menuItem(FontAwesomeIcons.Cogs + " Project Settings")) {
-                getWindowManager().addStaticWindow(ProjectSettingsWindow.class);
-            }
+            this.drawAction(ApplicationActionRegistry.PROJECT_SETTINGS);
 
-            if (ImGui.menuItem(FontAwesomeIcons.Save + " Save")) this.saveDatabase();
+            this.drawAction(ApplicationActionRegistry.SAVE_PROJECT);
 
             if (ImGui.menuItem(FontAwesomeIcons.TimesCircle + " Close")) {
                 displayManager.closeDatabase(() -> {
@@ -288,13 +240,6 @@ public class MainMenuBar {
 
         if (ImGui.menuItem("Quit Trinity")) {
             displayManager.closeDatabase(() -> Main.exit());
-        }
-    }
-
-    public void openLocalProject() {
-        File file = this.getDatabaseOpenFileSelector().openFileChooser();
-        if (file != null) {
-            displayManager.openDatabase(file.getAbsolutePath());
         }
     }
 
@@ -318,13 +263,13 @@ public class MainMenuBar {
         }
     }
 
-    public FileSelectorComponent getDatabaseOpenFileSelector() {
-        if (databaseOpenFileSelector == null) {
-            File path = displayManager.getTrinity() == null ? new File("") : displayManager.getTrinity().getDatabase().getPath();
-            if (!path.isDirectory() && path.getParentFile() != null) path = path.getParentFile();
-            databaseOpenFileSelector = new FileSelectorComponent("Database File Selector", path.getAbsolutePath(), FileSelectorComponent.TDB_FILE_FILTER, FileDialog.LOAD);
-        }
-        return databaseOpenFileSelector;
+    private void drawAction(String id) {
+        this.drawAction(id, "");
+    }
+
+    private void drawAction(String id, String suffix) {
+        ApplicationAction action = actionRegistry.get(id);
+        if (ImGui.menuItem(action.getMenuLabel() + suffix)) action.execute();
     }
 
     public WindowManager getWindowManager() {

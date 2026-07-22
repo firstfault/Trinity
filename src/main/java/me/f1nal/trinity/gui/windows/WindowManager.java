@@ -37,7 +37,7 @@ public class WindowManager {
      */
     private final Map<Class<? extends StaticWindow>, StaticWindow> staticWindowMap = new HashMap<>();
     private final InputManager inputHandler = new InputManager();
-    private ClosableWindow focusRequested;
+    private AbstractWindow focusRequested;
     private int focusFramesRemaining;
     private final Animation dialogDimAnimation = new Animation(Easing.EASE_IN_OUT_QUAD, 220L);
     private boolean resettingWindows;
@@ -82,7 +82,7 @@ public class WindowManager {
 
         if (!dialogVisible) this.drawDialogFadeOut();
 
-        ClosableWindow requested = this.focusRequested;
+        AbstractWindow requested = this.focusRequested;
         if (requested != null) {
             if (!requested.isVisible()) {
                 this.focusRequested = null;
@@ -182,7 +182,7 @@ public class WindowManager {
         window.setVisible(true);
     }
 
-    public void requestFocus(ClosableWindow window) {
+    public void requestFocus(AbstractWindow window) {
         this.focusRequested = window;
         this.focusFramesRemaining = 2;
     }
@@ -224,6 +224,14 @@ public class WindowManager {
         return (List<T>) getWindows(wnd -> type.isAssignableFrom(wnd.getClass()));
     }
 
+    public <T extends ClosableWindow> T getFocusedWindow(Class<T> type) {
+        return this.getWindowsOfType(type).stream()
+                .filter(ClosableWindow::isVisible)
+                .filter(ClosableWindow::isWindowFocused)
+                .findFirst()
+                .orElse(null);
+    }
+
     public List<ClosableWindow> getWindows(Predicate<ClosableWindow> predicate) {
         return this.closableWindows.stream().filter(predicate).collect(Collectors.toList());
     }
@@ -234,5 +242,11 @@ public class WindowManager {
 
     public List<ClosableWindow> getClosableWindows() {
         return closableWindows;
+    }
+
+    public boolean hasBlockingWindow() {
+        if (!this.popups.isEmpty()) return true;
+        return this.getAllWindows().stream()
+                .anyMatch(window -> window.isVisible() && window.isDialog());
     }
 }

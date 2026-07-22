@@ -74,6 +74,20 @@ public abstract class AbstractWindow {
         return title;
     }
 
+    /**
+     * Returns the complete ImGui identifier used to render this window.
+     */
+    public String getImGuiWindowName() {
+        return this.getTitle();
+    }
+
+    /**
+     * Returns whether ImGui has seen this window at least once.
+     */
+    public boolean hasRendered() {
+        return false;
+    }
+
     public float getWidth() {
         return width;
     }

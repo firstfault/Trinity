@@ -12,6 +12,7 @@ import me.f1nal.trinity.Trinity;
  */
 public abstract class StaticWindow extends AbstractWindow {
     private boolean setSize;
+    private boolean rendered;
     private String id;
     private final ImBoolean open = new ImBoolean(true);
     protected int windowFlags;
@@ -39,7 +40,7 @@ public abstract class StaticWindow extends AbstractWindow {
             setSize = true;
         }
 
-        String title = getTitle() + this.getId("###BeginWnd");
+        String title = this.getImGuiWindowName();
         int flags = this.windowFlags | (this.isDialog() ? ImGuiWindowFlags.NoDocking : 0);
         boolean begin;
         if (this.isDialog()) {
@@ -51,6 +52,7 @@ public abstract class StaticWindow extends AbstractWindow {
             begin = ImGui.begin(title, flags);
         }
         if (begin) {
+            this.rendered = true;
             renderFrame();
             if (this.isDialog() && ImGui.isWindowFocused() && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
                 this.close();
@@ -69,6 +71,16 @@ public abstract class StaticWindow extends AbstractWindow {
             this.open.set(true);
             this.close();
         }
+    }
+
+    @Override
+    public String getImGuiWindowName() {
+        return getTitle() + this.getId("###BeginWnd");
+    }
+
+    @Override
+    public boolean hasRendered() {
+        return rendered;
     }
 
     public boolean isCloseable() {

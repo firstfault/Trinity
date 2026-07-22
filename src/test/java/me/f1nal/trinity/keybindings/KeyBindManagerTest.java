@@ -30,6 +30,8 @@ class KeyBindManagerTest {
         assertEquals("Mouse 4", manager.DECOMPILER_NAVIGATE_BACK.getKeyName());
         assertEquals(Bindable.mouseButtonCode(4), manager.DECOMPILER_NAVIGATE_FORWARD.getKeyCode());
         assertEquals("Mouse 5", manager.DECOMPILER_NAVIGATE_FORWARD.getKeyName());
+        assertEquals(ImGuiKey.Tab, manager.GLOBAL_SEARCH.getKeyCode());
+        assertEquals("Tab", manager.GLOBAL_SEARCH.getKeyName());
     }
 
     @Test

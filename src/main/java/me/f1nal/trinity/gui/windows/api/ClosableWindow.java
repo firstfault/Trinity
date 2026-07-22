@@ -4,6 +4,7 @@ import imgui.ImGui;
 import imgui.ImGuiViewport;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCond;
+import imgui.flag.ImGuiFocusedFlags;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
@@ -22,6 +23,7 @@ public abstract class ClosableWindow extends AbstractWindow {
     private boolean sizeSet;
     protected int windowFlags;
     private boolean focusGained = false;
+    private boolean windowFocused;
     private boolean closeRequested;
     private boolean rendered;
     private PopupMenuBar menuBar;
@@ -64,6 +66,7 @@ public abstract class ClosableWindow extends AbstractWindow {
     @Override
     public void render() {
         if (!this.isVisible()) {
+            this.windowFocused = false;
             return;
         }
         if (!this.sizeSet) {
@@ -72,6 +75,7 @@ public abstract class ClosableWindow extends AbstractWindow {
         }
         boolean begin = this.beginWindow();
         this.rendered = true;
+        this.windowFocused = begin && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
 
         if (begin) {
             if (!focusGained) {
@@ -128,6 +132,11 @@ public abstract class ClosableWindow extends AbstractWindow {
         return focusGained;
     }
 
+    /** Returns whether this window or one of its children was focused on its latest rendered frame. */
+    public boolean isWindowFocused() {
+        return windowFocused;
+    }
+
     protected boolean beginWindow() {
         if (this.initialPositionX != null && this.initialPositionY != null) {
             ImGuiViewport viewport = ImGui.getMainViewport();
@@ -152,10 +161,12 @@ public abstract class ClosableWindow extends AbstractWindow {
         return ImGui.beginPopupModal(name, this.openState, flags);
     }
 
+    @Override
     public String getImGuiWindowName() {
         return this.getTitle() + "###" + getClass().getName() + id;
     }
 
+    @Override
     public boolean hasRendered() {
         return rendered;
     }

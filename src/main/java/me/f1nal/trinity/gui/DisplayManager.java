@@ -16,14 +16,17 @@ import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.packages.ArchiveEntryViewerType;
 import me.f1nal.trinity.gui.backend.ImGuiApplication;
+import me.f1nal.trinity.gui.actions.ApplicationActionRegistry;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.FontSettings;
+import me.f1nal.trinity.gui.components.general.FileSelectorComponent;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
 import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.navigation.NavigationEntry;
 import me.f1nal.trinity.gui.navigation.NavigationHistory;
 import me.f1nal.trinity.gui.navigation.NavigationTarget;
+import me.f1nal.trinity.gui.search.GlobalSearchOverlay;
 import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.gui.windows.impl.AboutWindow;
 import me.f1nal.trinity.gui.windows.impl.LoadingDatabasePopup;
@@ -52,6 +55,7 @@ import org.lwjgl.glfw.GLFWWindowCloseCallback;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.io.File;
+import java.awt.FileDialog;
 import java.util.*;
 import java.util.zip.ZipFile;
 
@@ -60,7 +64,6 @@ public final class DisplayManager extends ImGuiApplication {
      * Initial window title to be set when first creating the display.
      */
     private final String windowTitle;
-    private final MainMenuBar mainMenuBar = new MainMenuBar(this);
     private ProjectNavigationBand projectNavigationBand;
     private Trinity trinity;
     private final NotificationRenderer notificationRenderer = new NotificationRenderer();
@@ -68,7 +71,11 @@ public final class DisplayManager extends ImGuiApplication {
     private final PopupMenu popupMenu = new PopupMenu();
     private final FontManager fontManager = new FontManager();
     private final WindowManager windowManager = new WindowManager(this);
+    private final ApplicationActionRegistry actionRegistry = new ApplicationActionRegistry(this);
+    private final MainMenuBar mainMenuBar = new MainMenuBar(this, actionRegistry);
+    private final GlobalSearchOverlay globalSearchOverlay = new GlobalSearchOverlay(this, actionRegistry);
     private final NavigationHistory navigationHistory = new NavigationHistory(this::persistNavigationHistory);
+    private FileSelectorComponent databaseOpenFileSelector;
     private NavigationTarget currentDecompilerTarget;
     private boolean initialized;
 
@@ -99,6 +106,7 @@ public final class DisplayManager extends ImGuiApplication {
 
         this.trinity = trinity;
         this.projectNavigationBand = trinity == null ? null : new ProjectNavigationBand(trinity);
+        this.globalSearchOverlay.setTrinity(trinity);
 
         if (this.trinity != null) {
             this.trinity.getEventManager().setRegistered(true);
@@ -181,6 +189,7 @@ public final class DisplayManager extends ImGuiApplication {
         font.pushFont();
 
         Main.executeScheduledTasks();
+        this.globalSearchOverlay.handleActivationShortcut();
         this.mainMenuBar.draw(this.projectNavigationBand);
         this.setupDockspace();
         if (this.trinity == null && this.windowManager.getPopups().isEmpty()) this.homepage();
@@ -188,6 +197,7 @@ public final class DisplayManager extends ImGuiApplication {
         this.windowManager.draw();
         this.notificationRenderer.draw();
         this.dragAndDropHandler.draw();
+        this.globalSearchOverlay.draw();
 
         font.popFont();
     }
@@ -243,7 +253,7 @@ public final class DisplayManager extends ImGuiApplication {
         }
         ImGui.sameLine();
         if (ImGui.button(FontAwesomeIcons.FolderPlus + " Open Local Project")) {
-            mainMenuBar.openLocalProject();
+            this.openLocalProject();
         }
         ImGui.sameLine();
         if (ImGui.button(FontAwesomeIcons.Question + " About")) {
@@ -292,6 +302,28 @@ public final class DisplayManager extends ImGuiApplication {
 
     public void openDatabase(String path) {
         this.closeDatabase(() -> this.windowManager.addPopup(new LoadingDatabasePopup(null, new File(path))));
+    }
+
+    public void openLocalProject() {
+        File file = this.getDatabaseOpenFileSelector().openFileChooser();
+        if (file != null) this.openDatabase(file.getAbsolutePath());
+    }
+
+    private FileSelectorComponent getDatabaseOpenFileSelector() {
+        if (databaseOpenFileSelector == null) {
+            File path = this.trinity == null ? new File("") : this.trinity.getDatabase().getPath();
+            if (!path.isDirectory() && path.getParentFile() != null) path = path.getParentFile();
+            databaseOpenFileSelector = new FileSelectorComponent("Database File Selector",
+                    path.getAbsolutePath(), FileSelectorComponent.TDB_FILE_FILTER, FileDialog.LOAD);
+        }
+        return databaseOpenFileSelector;
+    }
+
+    public void saveDatabase() {
+        if (this.trinity == null) return;
+        this.windowManager.addPopup(new SavingDatabasePopup(this.trinity, status -> {
+            DatabaseLoader.save.clear();
+        }));
     }
 
     public void closeDatabase(Runnable after) {
@@ -430,5 +462,9 @@ public final class DisplayManager extends ImGuiApplication {
 
     public WindowManager getWindowManager() {
         return windowManager;
+    }
+
+    public ApplicationActionRegistry getActionRegistry() {
+        return actionRegistry;
     }
 }
