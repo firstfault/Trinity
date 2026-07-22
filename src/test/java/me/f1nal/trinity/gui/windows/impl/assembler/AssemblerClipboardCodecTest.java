@@ -1,5 +1,6 @@
 package me.f1nal.trinity.gui.windows.impl.assembler;
 
+import me.f1nal.trinity.execution.pattern.InstructionPatternCompiler;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
@@ -29,6 +30,7 @@ class AssemblerClipboardCodecTest {
         assertTrue(text.contains("ldc condy("));
         assertTrue(text.contains("tableswitch 0 1"));
         assertFalse(text.toLowerCase().contains("version"));
+        assertTrue(InstructionPatternCompiler.compile(text, true).valid());
     }
 
     @Test

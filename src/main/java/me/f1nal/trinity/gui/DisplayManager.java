@@ -333,7 +333,7 @@ public final class DisplayManager extends ImGuiApplication {
         NavigationTarget target = NavigationTarget.capture(input, instruction);
         boolean track = trinity != null && !trinity.getDatabase().isLoading();
         if (track) {
-            if (action != NavigationAction.FOLLOW_CONSTANT) {
+            if (action != NavigationAction.FOLLOW_CONSTANT && action != NavigationAction.FOLLOW_PATTERN) {
                 ensureCurrentNavigationRecorded();
             }
             this.navigationHistory.record(target, action, displayText);

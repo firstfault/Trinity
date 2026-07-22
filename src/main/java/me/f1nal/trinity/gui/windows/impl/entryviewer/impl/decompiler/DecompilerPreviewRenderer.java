@@ -17,6 +17,7 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public final class DecompilerPreviewRenderer {
     private static final int CLASS_PREVIEW_LINES = 7;
@@ -147,6 +148,33 @@ public final class DecompilerPreviewRenderer {
         drawMethodUsagePreview(methodInput, instruction, false, true, constantValue);
     }
 
+    public void drawMethodPatternUsagePreview(MethodInput methodInput,
+                                              List<AbstractInsnNode> instructions) {
+        drawDetails(methodSignature(methodInput));
+        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(methodInput.getOwningClass());
+        if (previewClass == null) return;
+
+        previewClass.applyPendingOutput();
+        DecompiledClass.PatternUsagePreview preview = previewClass.getMethodPatternUsagePreview(
+                methodInput, instructions, METHOD_USAGE_SURROUNDING_LINES);
+        if (preview.signature().isEmpty()) {
+            drawMethodPreview(methodInput, true);
+            return;
+        }
+
+        ImGui.separator();
+        int classIndent = getLeadingWhitespace(preview.signature());
+        for (List<DecompilerLineText> line : preview.lines()) {
+            classIndent = Math.min(classIndent, getLeadingWhitespace(line));
+        }
+        drawDecompilerLine(preview.signature(), classIndent);
+        if (preview.skippedLeading()) ImGui.textColored(CodeColorScheme.DISABLED, "...");
+        for (List<DecompilerLineText> line : preview.lines()) {
+            drawDecompilerLine(line, classIndent, preview.usageComponents());
+        }
+        if (preview.hasMoreLines()) ImGui.textColored(CodeColorScheme.DISABLED, "...");
+    }
+
     private void drawMethodUsagePreview(MethodInput methodInput, AbstractInsnNode instruction,
                                         boolean highlightOwnerClass, boolean highlightConstant,
                                         Object constantValue) {
@@ -236,14 +264,20 @@ public final class DecompilerPreviewRenderer {
     }
 
     private void drawDecompilerLine(List<DecompilerLineText> line, int leadingWhitespaceToTrim) {
-        drawDecompilerLine(line, leadingWhitespaceToTrim, null);
+        drawDecompilerLine(line, leadingWhitespaceToTrim, Set.of());
     }
 
     private void drawDecompilerLine(List<DecompilerLineText> line, int leadingWhitespaceToTrim,
                                     DecompilerComponent highlightedComponent) {
+        drawDecompilerLine(line, leadingWhitespaceToTrim,
+                highlightedComponent == null ? Set.of() : Set.of(highlightedComponent));
+    }
+
+    private void drawDecompilerLine(List<DecompilerLineText> line, int leadingWhitespaceToTrim,
+                                    Set<DecompilerComponent> highlightedComponents) {
         List<PreviewSegment> segments = line.stream()
                 .map(text -> new PreviewSegment(text.getText(), text.getComponent().getColor(),
-                        text.getComponent() == highlightedComponent))
+                        highlightedComponents.contains(text.getComponent())))
                 .toList();
         drawLine(segments, leadingWhitespaceToTrim);
     }

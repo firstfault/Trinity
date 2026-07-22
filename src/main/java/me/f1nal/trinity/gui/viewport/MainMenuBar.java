@@ -25,6 +25,7 @@ import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeStrin
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.gui.windows.impl.project.settings.ProjectSettingsWindow;
+import me.f1nal.trinity.gui.windows.impl.pattern.PatternSearchFrame;
 import me.f1nal.trinity.gui.windows.impl.refactor.GlobalRenameWindow;
 import me.f1nal.trinity.gui.windows.impl.navigation.NavigationHistoryWindow;
 import me.f1nal.trinity.gui.windows.impl.themes.ThemeEditorFrame;
@@ -114,6 +115,9 @@ public class MainMenuBar {
                 }
                 if (ImGui.menuItem(FontAwesomeIcons.Search + " Constant Search")) {
                     Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
+                }
+                if (ImGui.menuItem(FontAwesomeIcons.Code + " Pattern Search")) {
+                    Main.getWindowManager().addStaticWindow(PatternSearchFrame.class);
                 }
                 ImGui.separator();
                 if (ImGui.menuItem("View All Strings")) {

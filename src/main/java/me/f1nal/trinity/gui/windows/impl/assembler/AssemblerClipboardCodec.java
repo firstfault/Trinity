@@ -37,6 +37,15 @@ public final class AssemblerClipboardCodec {
         return String.join("\n", lines);
     }
 
+    /** Formats one instruction with the same canonical syntax used by assembler copy/paste. */
+    public static String formatInstruction(AbstractInsnNode instruction,
+                                           Function<LabelNode, String> labelNamer) {
+        LabelNames labels = new LabelNames(labelNamer);
+        if (instruction instanceof LabelNode label) labels.name(label);
+        collectReferencedLabels(instruction).forEach(labels::name);
+        return formatInstruction(instruction, labels);
+    }
+
     public static ParsedInstructions parse(String input, Function<String, LabelNode> existingLabelResolver) {
         List<SourceLine> sourceLines = sourceLines(input);
         Map<String, LabelNode> declared = new LinkedHashMap<>();
@@ -325,7 +334,8 @@ public final class AssemblerClipboardCodec {
         return output;
     }
 
-    private static List<String> tokenize(String input) {
+    /** Splits one assembler source line while preserving quoted and structured operands. */
+    public static List<String> tokenize(String input) {
         List<String> output = new ArrayList<>();
         int start = -1;
         int depth = 0;

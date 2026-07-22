@@ -531,6 +531,59 @@ public final class DecompiledClass {
                         highlightConstant, constantValue));
     }
 
+    public PatternUsagePreview getMethodPatternUsagePreview(MethodInput methodInput,
+                                                             List<AbstractInsnNode> instructions,
+                                                             int surroundingLines) {
+        if (instructions == null || instructions.isEmpty() || surroundingLines < 0) {
+            return PatternUsagePreview.EMPTY;
+        }
+        DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(methodInput.getDetails());
+        if (boundaries == null) return PatternUsagePreview.EMPTY;
+
+        Set<DecompilerComponent> highlighted = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (AbstractInsnNode instruction : instructions) {
+            DecompilerComponent component = findInstructionComponent(methodInput, instruction);
+            if (component != null) highlighted.add(component);
+        }
+        if (highlighted.isEmpty()) return PatternUsagePreview.EMPTY;
+
+        int startIndex = componentList.indexOf(boundaries.start());
+        int endIndex = componentList.indexOf(boundaries.end());
+        if (startIndex < 0 || endIndex < startIndex) return PatternUsagePreview.EMPTY;
+
+        Set<DecompilerComponent> methodComponentSet = Collections.newSetFromMap(new IdentityHashMap<>());
+        methodComponentSet.addAll(componentList.subList(startIndex, endIndex + 1));
+        List<List<DecompilerLineText>> methodLines = new ArrayList<>();
+        int signatureLine = -1;
+        int usageLine = -1;
+        String methodKey = methodInput.getDetails().toString();
+        for (DecompilerLine line : lines) {
+            List<DecompilerLineText> previewLine = line.getComponents().stream()
+                    .filter(text -> methodComponentSet.contains(text.getComponent()))
+                    .filter(text -> !text.getText().isEmpty())
+                    .toList();
+            if (previewLine.isEmpty()) continue;
+            if (signatureLine == -1 && previewLine.stream()
+                    .anyMatch(text -> methodKey.equals(text.getComponent().memberKey))) {
+                signatureLine = methodLines.size();
+            }
+            if (usageLine == -1 && previewLine.stream()
+                    .anyMatch(text -> highlighted.contains(text.getComponent()))) {
+                usageLine = methodLines.size();
+            }
+            methodLines.add(previewLine);
+        }
+        if (signatureLine == -1 || usageLine <= signatureLine) return PatternUsagePreview.EMPTY;
+
+        List<List<DecompilerLineText>> body = methodLines.subList(signatureLine + 1, methodLines.size());
+        int usageBodyLine = usageLine - signatureLine - 1;
+        int firstLine = Math.max(0, usageBodyLine - surroundingLines);
+        int lastLine = Math.min(body.size(), usageBodyLine + surroundingLines + 1);
+        return new PatternUsagePreview(methodLines.get(signatureLine),
+                List.copyOf(body.subList(firstLine, lastLine)), Set.copyOf(highlighted),
+                firstLine > 0, lastLine < body.size());
+    }
+
     private MethodUsagePreview createMethodUsagePreview(MethodInput methodInput,
                                                          AbstractInsnNode instruction,
                                                          int surroundingLines,
@@ -908,5 +961,13 @@ public final class DecompiledClass {
                                      boolean skippedLeading, boolean hasMoreLines) {
         private static final MethodUsagePreview EMPTY = new MethodUsagePreview(
                 List.of(), List.of(), null, false, false);
+    }
+
+    public record PatternUsagePreview(List<DecompilerLineText> signature,
+                                      List<List<DecompilerLineText>> lines,
+                                      Set<DecompilerComponent> usageComponents,
+                                      boolean skippedLeading, boolean hasMoreLines) {
+        private static final PatternUsagePreview EMPTY = new PatternUsagePreview(
+                List.of(), List.of(), Set.of(), false, false);
     }
 }
