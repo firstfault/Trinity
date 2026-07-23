@@ -36,6 +36,11 @@ public class WindowManager {
      * Map of all active {@link StaticWindow}, retrievable by their class.
      */
     private final Map<Class<? extends StaticWindow>, StaticWindow> staticWindowMap = new HashMap<>();
+    /**
+     * Dialogs in the order in which they were opened. ImGui modal popups must be
+     * rendered as a nested stack in this same order.
+     */
+    private final List<AbstractWindow> dialogOrder = new ArrayList<>();
     private final InputManager inputHandler = new InputManager();
     private AbstractWindow focusRequested;
     private int focusFramesRemaining;
@@ -49,9 +54,7 @@ public class WindowManager {
     public void draw() {
         ClosableWindow[] windows = closableWindows.toArray(new ClosableWindow[0]);
         StaticWindow[] staticWindows = staticWindowMap.values().toArray(new StaticWindow[0]);
-        List<AbstractWindow> dialogs = new ArrayList<>();
-        Arrays.stream(windows).filter(window -> window.isVisible() && window.isDialog()).forEach(dialogs::add);
-        Arrays.stream(staticWindows).filter(window -> window.isVisible() && window.isDialog()).forEach(dialogs::add);
+        List<AbstractWindow> dialogs = this.getVisibleDialogs(windows, staticWindows);
         boolean dialogVisible = !dialogs.isEmpty();
         this.dialogDimAnimation.run(dialogVisible ? DIALOG_DIM_ALPHA : 0.F);
 
@@ -66,15 +69,7 @@ public class WindowManager {
         if (dialogVisible) {
             ImGui.pushStyleColor(ImGuiCol.ModalWindowDimBg,
                     ImColor.rgba(0, 0, 0, Math.round(this.dialogDimAnimation.getValue())));
-            AbstractWindow popupHost = dialogs.get(dialogs.size() - 1);
-            popupHost.setChildWindowRenderer(this::drawPopups);
-            for (ClosableWindow frame : windows) {
-                if (frame.isDialog()) frame.render();
-            }
-            for (StaticWindow staticWindow : staticWindows) {
-                if (staticWindow.isDialog()) staticWindow.render();
-            }
-            popupHost.setChildWindowRenderer(null);
+            this.drawDialogStack(dialogs, 0);
             ImGui.popStyleColor();
         } else {
             this.drawPopups();
@@ -95,6 +90,35 @@ public class WindowManager {
                 }
             }
         }
+    }
+
+    private List<AbstractWindow> getVisibleDialogs(ClosableWindow[] windows, StaticWindow[] staticWindows) {
+        Set<AbstractWindow> available = Collections.newSetFromMap(new IdentityHashMap<>());
+        Arrays.stream(windows).filter(AbstractWindow::isDialog).forEach(available::add);
+        Arrays.stream(staticWindows).filter(AbstractWindow::isDialog).forEach(available::add);
+
+        synchronized (dialogOrder) {
+            dialogOrder.removeIf(window -> !available.contains(window) || !window.isVisible());
+            Arrays.stream(staticWindows)
+                    .filter(window -> window.isDialog() && window.isVisible() && !dialogOrder.contains(window))
+                    .forEach(dialogOrder::add);
+            Arrays.stream(windows)
+                    .filter(window -> window.isDialog() && window.isVisible() && !dialogOrder.contains(window))
+                    .forEach(dialogOrder::add);
+            return new ArrayList<>(dialogOrder);
+        }
+    }
+
+    private void drawDialogStack(List<AbstractWindow> dialogs, int index) {
+        if (index >= dialogs.size()) {
+            this.drawPopups();
+            return;
+        }
+
+        AbstractWindow dialog = dialogs.get(index);
+        dialog.setChildWindowRenderer(() -> this.drawDialogStack(dialogs, index + 1));
+        dialog.render();
+        dialog.setChildWindowRenderer(null);
     }
 
     private void drawDialogFadeOut() {
@@ -125,6 +149,7 @@ public class WindowManager {
             getAllWindows().stream().filter(abstractWindow -> !(abstractWindow instanceof PopupWindow)).forEach(AbstractWindow::close);
             closableWindows.clear();
             staticWindowMap.clear();
+            dialogOrder.clear();
         } finally {
             this.resettingWindows = false;
         }
@@ -175,11 +200,13 @@ public class WindowManager {
 
         if (windowAlreadyOpened != null) {
             windowAlreadyOpened.setVisible(true);
+            this.moveDialogToFront(windowAlreadyOpened);
             return;
         }
 
         this.closableWindows.add(window);
         window.setVisible(true);
+        this.moveDialogToFront(window);
     }
 
     public void requestFocus(AbstractWindow window) {
@@ -195,7 +222,16 @@ public class WindowManager {
     public <T extends StaticWindow> T addStaticWindow(Class<T> type) {
         T wnd = getStaticWindow(type);
         wnd.setVisible(true);
+        this.moveDialogToFront(wnd);
         return wnd;
+    }
+
+    private void moveDialogToFront(AbstractWindow window) {
+        if (!window.isDialog()) return;
+        synchronized (dialogOrder) {
+            dialogOrder.remove(window);
+            dialogOrder.add(window);
+        }
     }
 
     public <T extends StaticWindow> T getStaticWindow(Class<T> type) {
