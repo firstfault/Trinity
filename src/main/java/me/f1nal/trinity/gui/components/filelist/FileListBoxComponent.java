@@ -47,7 +47,7 @@ public class FileListBoxComponent<T extends ListedFile> implements ICaption {
         ImGui.text(this.label);
         listBoxComponent.draw(ImGui.getContentRegionAvailX(), 80.F);
         if (ImGui.button(FontAwesomeIcons.Plus + " Add")) {
-            this.addFile(fileSelectorComponent.openFileChooser());
+            for (File file : fileSelectorComponent.openFileChooserMultiple()) this.addFile(file);
         }
         ImGui.sameLine();
         if (GuiUtil.disabledWidget(listBoxComponent.getSelection() == null, () -> ImGui.button(FontAwesomeIcons.Trash + " Remove"))) {

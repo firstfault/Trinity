@@ -145,9 +145,9 @@ public final class ProjectNavigationBand implements IEventListener {
 
         long libraries = 0L;
         long data = 0L;
-        for (Map.Entry<String, byte[]> resource : new HashMap<>(execution.getResourceMap()).entrySet()) {
-            long size = resource.getValue() == null ? 0L : resource.getValue().length;
-            if (isNativeLibrary(resource.getKey())) {
+        for (me.f1nal.trinity.execution.packages.ResourceArchiveEntry resource : execution.getResources()) {
+            long size = resource.getBytes().length;
+            if (isNativeLibrary(resource.getRealName())) {
                 libraries += size;
             } else {
                 data += size;

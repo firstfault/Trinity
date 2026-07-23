@@ -1,8 +1,9 @@
 package me.f1nal.trinity.gui.windows.impl.project.create.tabs;
 
-import me.f1nal.trinity.database.ClassPath;
 import me.f1nal.trinity.database.inputs.AbstractProjectInputFile;
 import me.f1nal.trinity.database.inputs.ProjectInputFileFactory;
+import me.f1nal.trinity.database.inputs.ProjectInputSet;
+import me.f1nal.trinity.execution.packages.ProjectContainerKind;
 import me.f1nal.trinity.gui.components.filelist.FileListBoxComponent;
 import me.f1nal.trinity.gui.windows.api.AbstractWindow;
 import me.f1nal.trinity.gui.windows.impl.project.create.AbstractProjectCreationTab;
@@ -37,12 +38,16 @@ public class ProjectCreationInput extends AbstractProjectCreationTab {
         return fileListComponent;
     }
 
-    public ClassPath createClassPath() {
-        ClassPath classPath = new ClassPath();
+    public ProjectInputSet createProjectInput() {
+        ProjectInputSet projectInput = new ProjectInputSet();
         for (AbstractProjectInputFile inputFile : this.fileListComponent.getListBoxComponent().getElementList()) {
-            classPath.addClassPath(inputFile.getClassPath());
+            if (inputFile.getContainerKind() == ProjectContainerKind.JAR) {
+                projectInput.addJar(inputFile.getName(), inputFile.getClassPath());
+            } else {
+                projectInput.addLoose(inputFile.getClassPath());
+            }
         }
-        return classPath;
+        return projectInput;
     }
 
     @Override

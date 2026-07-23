@@ -1,6 +1,7 @@
 package me.f1nal.trinity.database.inputs;
 
 import me.f1nal.trinity.database.ClassPath;
+import me.f1nal.trinity.execution.packages.ProjectContainerKind;
 import me.f1nal.trinity.gui.components.filelist.ListedFile;
 import me.f1nal.trinity.util.IDescribable;
 
@@ -17,9 +18,7 @@ public abstract class AbstractProjectInputFile extends ListedFile implements IDe
         return classPath;
     }
 
-    public final void addInputs(ClassPath classPath) {
-        classPath.addClassPath(classPath);
-    }
+    public abstract ProjectContainerKind getContainerKind();
 
     @Override
     public String getDescription() {

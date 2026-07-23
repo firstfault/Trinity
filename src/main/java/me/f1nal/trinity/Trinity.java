@@ -1,7 +1,7 @@
 package me.f1nal.trinity;
 
-import me.f1nal.trinity.database.ClassPath;
 import me.f1nal.trinity.database.Database;
+import me.f1nal.trinity.database.inputs.ProjectInputSet;
 import me.f1nal.trinity.decompiler.Decompiler;
 import me.f1nal.trinity.events.api.EventManager;
 import me.f1nal.trinity.execution.Execution;
@@ -49,9 +49,9 @@ public final class Trinity {
      */
     private final RefactorManager refactorManager;
 
-    public Trinity(Database database, ClassPath classPath) throws IOException, MissingEntryPointException {
+    public Trinity(Database database, ProjectInputSet projectInput) throws IOException, MissingEntryPointException {
         this.database = database;
-        this.execution = new Execution(this, classPath);
+        this.execution = new Execution(this, projectInput);
         this.remapper = new Remapper(this.execution);
         this.eventManager = new EventManager();
         this.constantStatisticsCache = this.eventManager.registerListener(new ConstantStatisticsCache(this.execution));

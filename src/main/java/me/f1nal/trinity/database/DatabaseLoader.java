@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public class DatabaseLoader {
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
 
     public static final DatabaseSemaphore save = new DatabaseSemaphore((path) -> {
         Trinity trinity = Main.getTrinity();
@@ -62,6 +62,9 @@ public class DatabaseLoader {
         }
 
         final int version = dataInputStream.readInt();
+        if (version != DATABASE_VERSION) {
+            throw new IOException(String.format("Unsupported Trinity database version %d; expected %d", version, DATABASE_VERSION));
+        }
         final byte compressionTypeIndex = dataInputStream.readByte();
         final DatabaseCompressionType databaseCompressionType = DatabaseCompressionTypeManager.getType(compressionTypeIndex);
 

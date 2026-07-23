@@ -7,6 +7,7 @@ import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.database.object.DatabaseClassDisplayName;
 import me.f1nal.trinity.decompiler.struct.attr.StructInnerClassesAttribute;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
+import me.f1nal.trinity.execution.packages.ZipEntryMetadata;
 import me.f1nal.trinity.execution.xref.ClassXref;
 import me.f1nal.trinity.execution.xref.XrefKind;
 import me.f1nal.trinity.execution.xref.XrefMap;
@@ -39,7 +40,11 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
     private final List<ClassXref> references = new ArrayList<>();
 
     public ClassTarget(String realName, int size) {
-        super(size);
+        this(realName, size, ZipEntryMetadata.createDefault());
+    }
+
+    public ClassTarget(String realName, int size, ZipEntryMetadata metadata) {
+        super(size, metadata);
         this.realName = realName;
         this.displayName = new DisplayName(this.realName);
     }
@@ -128,7 +133,8 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
         if (this.getInput() == null) {
             return null;
         }
-        return DataPool.writeClassNode(this.getInput().getNode());
+        byte[] original = this.getInput().isRebuildRequired() ? null : this.getInput().getExportBytes();
+        return original == null ? DataPool.writeClassNode(this.getInput().getNode()) : original;
     }
 
     public void setInput(ClassInput input) {

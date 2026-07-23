@@ -22,6 +22,7 @@ public class ProjectInputFileFactory implements ListedFileFactory<AbstractProjec
             return null;
         }
 
+        if (bytes.length < 4) return null;
         final ByteBuffer headerBytes = ByteBuffer.wrap(bytes, 0, 4);
 
         if (headerBytes.getInt(0) == 0xcafebabe) {

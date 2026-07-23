@@ -31,11 +31,60 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     private final Map<MemberDetails, MemberInput<?>> memberList = new HashMap<>();
     private final ClassTarget classTarget;
     private final ClassHierarchy classHierarchy = new ClassHierarchy(this);
+    private volatile byte[] exportBytes;
+    private volatile boolean rebuildRequired;
+    private volatile String exportEntryName;
+    private volatile long bytecodeRevision;
 
     public ClassInput(Execution execution, ClassNode classNode, ClassTarget classTarget) {
+        this(execution, classNode, classTarget, null, classNode.name + ".class", true);
+    }
+
+    public ClassInput(Execution execution, ClassNode classNode, ClassTarget classTarget,
+                      byte[] exportBytes, String exportEntryName, boolean rebuildRequired) {
         super(classNode);
         this.execution = execution;
         this.classTarget = classTarget;
+        this.exportBytes = exportBytes == null ? null : exportBytes.clone();
+        this.exportEntryName = exportEntryName;
+        this.rebuildRequired = rebuildRequired || exportBytes == null;
+    }
+
+    public byte[] getExportBytes() {
+        byte[] bytes = exportBytes;
+        return bytes == null ? null : bytes.clone();
+    }
+
+    public String getExportEntryName() {
+        return rebuildRequired ? getNode().name + ".class" : exportEntryName;
+    }
+
+    public boolean isRebuildRequired() {
+        return rebuildRequired;
+    }
+
+    public void markRebuildRequired() {
+        bytecodeRevision++;
+        rebuildRequired = true;
+    }
+
+    public long getBytecodeRevision() {
+        return bytecodeRevision;
+    }
+
+    public void markRebuilt(byte[] bytes, String entryName, long expectedRevision) {
+        if (bytecodeRevision != expectedRevision) return;
+        this.exportBytes = Objects.requireNonNull(bytes).clone();
+        this.exportEntryName = Objects.requireNonNull(entryName);
+        this.rebuildRequired = false;
+        this.classTarget.getZipMetadata().setCrc(crc32(bytes));
+        this.classTarget.getZipMetadata().setCompressedSize(-1L);
+    }
+
+    private static long crc32(byte[] bytes) {
+        java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+        crc.update(bytes);
+        return crc.getValue();
     }
 
     public ClassHierarchy getClassHierarchy() {
@@ -84,6 +133,7 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
         }
         MethodInput input = new MethodInput(method, this);
         addInput(input);
+        markRebuildRequired();
         return input;
     }
 
@@ -96,6 +146,7 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
         }
         FieldInput input = new FieldInput(field, this);
         addInput(input);
+        markRebuildRequired();
         return input;
     }
 
@@ -262,6 +313,7 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
     @Override
     public void setAccessFlagsMask(int accessFlagsMask) {
         this.getNode().access = accessFlagsMask;
+        markRebuildRequired();
     }
 
     @Override

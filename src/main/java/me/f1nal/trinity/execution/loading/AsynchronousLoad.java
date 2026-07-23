@@ -13,8 +13,8 @@ import java.util.Objects;
 public class AsynchronousLoad extends Thread {
     private final List<ProgressiveLoadTask> taskQueue = new ArrayList<>();
     private boolean started;
-    private boolean finished;
-    private ProgressiveLoadTask currentTask;
+    private volatile boolean finished;
+    private volatile ProgressiveLoadTask currentTask;
     private final Trinity trinity;
 
     public AsynchronousLoad(Trinity trinity) {

@@ -17,10 +17,13 @@ public class ProjectBrowserTreeNodePackage extends ProjectBrowserTreeNode<Packag
     public ProjectBrowserTreeNodePackage(List<Package> packageChain) {
         super(lastPackage(packageChain));
         this.packageChain = List.copyOf(packageChain);
-        this.displayName = this.packageChain.stream()
-                .map(Package::getName)
-                .reduce((left, right) -> left + "/" + right)
-                .orElseThrow();
+        Package last = lastPackage(this.packageChain);
+        this.displayName = last.isArchive() && last.getContainer() != null
+                ? last.getContainer().getName()
+                : this.packageChain.stream()
+                    .map(Package::getName)
+                    .reduce((left, right) -> left + "/" + right)
+                    .orElseThrow();
     }
 
     private static Package lastPackage(List<Package> packageChain) {
@@ -32,11 +35,13 @@ public class ProjectBrowserTreeNodePackage extends ProjectBrowserTreeNode<Packag
     public void draw(ProjectBrowserFrame projectBrowserFrame) {
         boolean searching = !projectBrowserFrame.getSearch().isEmpty();
         ImGui.setNextItemOpen((this.isOpen() && (node.getParent() == null || node.getParent().isOpen())) || searching);
-        boolean open = ImGui.treeNodeEx("###" + node.getInternalPath(), ImGuiTreeNodeFlags.SpanFullWidth);
+        String containerId = node.getContainer() == null ? "legacy" : node.getContainer().getId().toString();
+        boolean open = ImGui.treeNodeEx("###" + containerId + ":" + node.getInternalPath(), ImGuiTreeNodeFlags.SpanFullWidth);
         projectBrowserFrame.drawPackageDropTarget(this.node);
         ImGui.sameLine(0.F, 0.F);
 
-        node.getBrowserViewerNode().draw(this.displayName);
+        node.getBrowserViewerNode().draw(node.isArchive() && node.getContainer() != null
+                ? node.getContainer().getName() : this.displayName);
 
         if (!searching && this.isOpen() != open) {
             this.setOpen(open);

@@ -8,11 +8,13 @@ import java.util.Map;
 public class PackageHierarchy {
     private final Package root;
     private final Database database;
+    private final ProjectContainer container;
     private final Map<String, Package> pathToPackage = new HashMap<>();
 
-    public PackageHierarchy(Package root, Database database) {
+    public PackageHierarchy(Package root, Database database, ProjectContainer container) {
         this.root = root;
         this.database = database;
+        this.container = container;
     }
 
     public Map<String, Package> getPathToPackage() {
@@ -21,5 +23,9 @@ public class PackageHierarchy {
 
     public Database getDatabase() {
         return database;
+    }
+
+    public ProjectContainer getContainer() {
+        return container;
     }
 }

@@ -22,7 +22,7 @@ public final class Remapper {
     public void renameClass(ClassTarget target, String newName) {
         if (isBlank(newName)) return;
         target.getDisplayName().setName(newName);
-        target.setPackage(execution.getRootPackage());
+        if (target.getContainer() != null) target.setPackage(target.getContainer().getRootPackage());
         target.save();
         Main.getEventBus().post(new EventRefreshDecompilerText(dc -> true));
     }

@@ -40,7 +40,8 @@ public final class GlobalSearchFileIndex implements IEventListener {
 
     private void rebuild() {
         List<SearchFile> rebuilt = new ArrayList<>();
-        if (trinity != null) this.collect(trinity.getExecution().getRootPackage(), rebuilt);
+        if (trinity != null) trinity.getExecution().getContainers()
+                .forEach(container -> this.collect(container.getRootPackage(), rebuilt));
         this.files = List.copyOf(rebuilt);
         this.dirty = false;
         this.revision++;

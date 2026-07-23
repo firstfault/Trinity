@@ -217,10 +217,7 @@ public class MainMenuBar {
 
         if (displayManager.getTrinity() != null) {
             ImGui.separator();
-            this.drawAction(ApplicationActionRegistry.EXPORT_JAR, "...");
-            ImGui.beginDisabled();
-            ImGui.menuItem("Quick Export");
-            ImGui.endDisabled();
+            this.drawAction(ApplicationActionRegistry.ADD_INPUT, "...");
 
             ImGui.separator();
 

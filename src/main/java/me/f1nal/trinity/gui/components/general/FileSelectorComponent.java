@@ -46,24 +46,35 @@ public class FileSelectorComponent {
     }
 
     public File openFileChooser() {
+        File[] files = this.openFileChooserMultiple(false);
+        return files.length == 0 ? null : files[0];
+    }
+
+    public File[] openFileChooserMultiple() {
+        return this.openFileChooserMultiple(true);
+    }
+
+    private File[] openFileChooserMultiple(boolean multiple) {
         FileDialog fd = new FileDialog((java.awt.Frame) null, "Choose a file", mode);
+        fd.setMultipleMode(multiple && mode == FileDialog.LOAD);
         fd.setDirectory(lastDirectory != null ? lastDirectory : getParentFromPath());
         fd.setFilenameFilter(this.filenameFilter);
         fd.setFile(path.get());
         fd.setVisible(true);
         if (fd.getDirectory() != null) this.lastDirectory = fd.getDirectory();
         if (fd.getFiles().length == 0) {
-            return null;
+            return new File[0];
         }
-        File file = fd.getFiles()[0];
+        File[] files = fd.getFiles();
+        File file = files[0];
         if (mode != FileDialog.SAVE && !file.exists()) {
-            return null;
+            return new File[0];
         }
         File directory = file.getParentFile();
         if (directory.exists() && directory.isDirectory()) {
             lastDirectory = directory.getAbsolutePath();
         }
-        return file;
+        return files;
     }
 
     private String getParentFromPath() {

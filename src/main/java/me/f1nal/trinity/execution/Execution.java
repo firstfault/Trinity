@@ -4,8 +4,7 @@ import com.google.common.collect.Streams;
 import com.google.common.graph.Traverser;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
-import me.f1nal.trinity.database.ClassPath;
-import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
+import me.f1nal.trinity.database.inputs.ProjectInputSet;
 import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
@@ -14,11 +13,11 @@ import me.f1nal.trinity.execution.hierarchy.ClassHierarchy;
 import me.f1nal.trinity.execution.loading.AsynchronousLoad;
 import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
 import me.f1nal.trinity.execution.packages.Package;
+import me.f1nal.trinity.execution.packages.ArchiveEntry;
+import me.f1nal.trinity.execution.packages.ProjectContainer;
+import me.f1nal.trinity.execution.packages.ProjectContainerKind;
 import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
 import me.f1nal.trinity.execution.xref.XrefMap;
-import me.f1nal.trinity.gui.viewport.notifications.Notification;
-import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
-import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.tree.ClassNode;
@@ -32,11 +31,7 @@ import java.util.stream.Collectors;
 public final class Execution {
     private final Map<String, ClassTarget> classTargetMap = new HashMap<>();
     private final List<ClassInput> classInputList = new ArrayList<>();
-    private final Map<String, byte[]> resourceMap = new HashMap<>();
-    /**
-     * Root package (this is the "project" package, with the project input being its children).
-     */
-    private final Package rootPackage;
+    private final List<ProjectContainer> containers = new ArrayList<>();
     /**
      * Reference map containing all references.
      */
@@ -45,20 +40,15 @@ public final class Execution {
     private final Trinity trinity;
     private boolean classesLoaded;
 
-    public Execution(Trinity trinity, ClassPath classPath) throws MissingEntryPointException {
+    public Execution(Trinity trinity, ProjectInputSet projectInput) throws MissingEntryPointException {
         this.trinity = trinity;
-        this.rootPackage = new Package(trinity.getDatabase());
         this.xrefMap = new XrefMap(this);
 
         this.asynchronousLoad = new AsynchronousLoad(this.getTrinity());
 
         // If this method returned false, we are creating a new database.
         if (!this.trinity.getDatabase().addLoadTasks(this.asynchronousLoad)) {
-            if (classPath.getWarnings() != 0) {
-                Main.getDisplayManager().addNotification(new Notification(NotificationType.WARNING, new SimpleCaption("Class Path"), ColoredStringBuilder.create()
-                        .fmt("Finished reading input with {} warnings", classPath.getWarnings()).get()));
-            }
-            this.asynchronousLoad.add(new ClassInputReaderLoadTask(classPath.createClassByteList(), classPath.resources));
+            this.asynchronousLoad.add(new ClassInputReaderLoadTask(projectInput));
         }
 
         this.asynchronousLoad.add(new ObjectHierarchyLoadTask(this));
@@ -75,33 +65,43 @@ public final class Execution {
 
     public ResourceArchiveEntry createResource(Package pkg, String fileName, byte[] content) {
         String path = pkg.getChildrenPath(fileName);
-        if (this.getResourceMap().containsKey(path)) {
+        ProjectContainer container = Objects.requireNonNull(pkg.getContainer(), "Package has no project container");
+        if (container.getResource(path) != null) {
             return null;
         }
-        this.getResourceMap().put(path, content);
         ResourceArchiveEntry archiveEntry = new ResourceArchiveEntry(path, content);
-        archiveEntry.setPackage(this.rootPackage);
+        archiveEntry.setPackage(container.getRootPackage());
         trinity.getEventManager().postEvent(new EventClassesLoaded());
         return archiveEntry;
     }
 
     public void deleteResource(ResourceArchiveEntry archiveEntry) {
-        if (this.getResourceMap().remove(archiveEntry.getRealName()) == null) {
+        if (archiveEntry.getContainer() == null || archiveEntry.getContainer().getResource(archiveEntry.getRealName()) != archiveEntry) {
             throw new RuntimeException("This archive entry does not exist so it cannot be removed: " + archiveEntry.getRealName());
         }
+        archiveEntry.getContainer().unregister(archiveEntry);
         archiveEntry.getPackage().remove(archiveEntry);
         trinity.getEventManager().postEvent(new EventClassesLoaded());
     }
 
     public void saveResource(ResourceArchiveEntry archiveEntry, byte[] bytes) {
         Package pkg = archiveEntry.getPackage();
+        var metadata = archiveEntry.getZipMetadata().copy();
         this.deleteResource(archiveEntry);
-        this.createResource(pkg, archiveEntry.getRealSimpleName(), bytes);
+        ArchiveEntry replacement = this.createResource(pkg, archiveEntry.getRealSimpleName(), bytes);
+        if (replacement != null) replacement.setZipMetadata(metadata);
     }
 
     public void renameResource(ResourceArchiveEntry archiveEntry, String newName) {
-        this.deleteResource(archiveEntry);
-        this.createResource(this.rootPackage, newName, archiveEntry.getBytes());
+        if (newName == null || newName.isBlank()) return;
+        ProjectContainer container = archiveEntry.getContainer();
+        if (container == null || container.getResource(newName) != null) return;
+        Package oldPackage = archiveEntry.getPackage();
+        container.unregister(archiveEntry);
+        oldPackage.remove(archiveEntry);
+        archiveEntry.setName(newName);
+        archiveEntry.setPackage(container.getRootPackage());
+        trinity.getEventManager().postEvent(new EventClassesLoaded());
     }
 
     public boolean isClassesLoaded() {
@@ -125,12 +125,14 @@ public final class Execution {
     }
 
     public Package getRootPackage() {
-        return rootPackage;
+        return getOrCreateLooseContainer().getRootPackage();
     }
 
     public List<Package> getAllPackages() {
         Traverser<Package> traverser = Traverser.forTree(Package::getPackages);
-        return Streams.stream(traverser.depthFirstPreOrder(this.rootPackage)).collect(Collectors.toList());
+        return containers.stream()
+                .flatMap(container -> Streams.stream(traverser.depthFirstPreOrder(container.getRootPackage())))
+                .collect(Collectors.toList());
     }
 
     public @Nullable ClassInput getClassInput(String className) {
@@ -197,7 +199,7 @@ public final class Execution {
         classNode.methods.forEach(method -> classInput.addInput(new MethodInput(method, classInput)));
         addClassTarget(classTarget);
         classInputList.add(classInput);
-        classTarget.setPackage(rootPackage);
+        classTarget.setPackage(pkg.getContainer().getRootPackage());
         trinity.getEventManager().postEvent(new EventClassesLoaded());
         return classInput;
     }
@@ -215,10 +217,12 @@ public final class Execution {
 
         classTargetMap.remove(oldName);
         classInput.getNode().name = newName;
+        classInput.markRebuildRequired();
         target.replaceRealName(newName);
         classInput.reindexDeclaredMembers();
         classTargetMap.put(newName, target);
-        target.setPackage(rootPackage);
+        ProjectContainer container = target.getContainer();
+        target.setPackage(container == null ? getRootPackage() : container.getRootPackage());
         trinity.getEventManager().postEvent(new EventClassesLoaded());
     }
 
@@ -253,7 +257,49 @@ public final class Execution {
         return trinity;
     }
 
-    public Map<String, byte[]> getResourceMap() {
-        return resourceMap;
+    public List<ProjectContainer> getContainers() {
+        return Collections.unmodifiableList(containers);
+    }
+
+    public void addContainer(ProjectContainer container) {
+        if (containers.stream().anyMatch(existing -> existing.getId().equals(container.getId()))) {
+            throw new IllegalArgumentException("Duplicate project container ID: " + container.getId());
+        }
+        containers.add(container);
+    }
+
+    public void removeContainer(ProjectContainer container) {
+        if (!containers.remove(container)) return;
+        for (ClassTarget target : new ArrayList<>(container.getClasses())) {
+            classTargetMap.remove(target.getRealName(), target);
+            if (target.getInput() != null) classInputList.remove(target.getInput());
+            container.unregister(target);
+            if (target.getPackage() != null) target.getPackage().remove(target);
+        }
+        for (ResourceArchiveEntry resource : new ArrayList<>(container.getResources())) {
+            container.unregister(resource);
+            if (resource.getPackage() != null) resource.getPackage().remove(resource);
+        }
+        trinity.getEventManager().postEvent(new EventClassesLoaded());
+    }
+
+    public ProjectContainer getContainer(UUID id) {
+        return containers.stream().filter(container -> container.getId().equals(id)).findFirst().orElse(null);
+    }
+
+    public ProjectContainer getOrCreateLooseContainer() {
+        ProjectContainer loose = containers.stream()
+                .filter(container -> container.getKind() == ProjectContainerKind.LOOSE)
+                .findFirst().orElse(null);
+        if (loose == null) {
+            loose = new ProjectContainer(UUID.randomUUID(), ProjectInputSet.LOOSE_FILES_NAME,
+                    ProjectContainerKind.LOOSE, trinity.getDatabase());
+            containers.add(loose);
+        }
+        return loose;
+    }
+
+    public Collection<ResourceArchiveEntry> getResources() {
+        return containers.stream().flatMap(container -> container.getResources().stream()).toList();
     }
 }

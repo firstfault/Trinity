@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.viewport.dnd;
 
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
+import me.f1nal.trinity.database.inputs.ProjectInputImporter;
 import org.lwjgl.glfw.GLFWDropCallback;
 import org.lwjgl.glfw.GLFWDropCallbackI;
 
@@ -44,6 +45,11 @@ public class DragAndDropHandler implements GLFWDropCallbackI {
                 Main.getDisplayManager().openDatabase(file.getAbsolutePath());
                 return;
             }
+        }
+
+        if (Main.getTrinity() != null) {
+            ProjectInputImporter.importFiles(Main.getTrinity(), List.copyOf(this.droppedFiles));
+            return;
         }
 
         NewProjectFrame newProject = Main.getWindowManager().addStaticWindow(NewProjectFrame.class);

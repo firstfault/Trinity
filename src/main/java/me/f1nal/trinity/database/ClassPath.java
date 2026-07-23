@@ -7,15 +7,21 @@ import me.f1nal.trinity.util.ByteUtil;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import me.f1nal.trinity.execution.packages.ArchiveDirectoryEntry;
+import me.f1nal.trinity.execution.packages.ZipEntryMetadata;
 
 public class ClassPath {
-    public List<UnreadClassBytes> classes = new ArrayList<>();
-    public Map<String, byte[]> resources = new HashMap<>();
+    private final List<UnreadClassBytes> classes = new ArrayList<>();
+    private final Map<String, byte[]> resources = new LinkedHashMap<>();
+    private final Map<String, ZipEntryMetadata> resourceMetadata = new HashMap<>();
+    private final List<ArchiveDirectoryEntry> directories = new ArrayList<>();
+    private String archiveComment;
     /**
      * Warnings related to class path loading.
      */
@@ -33,9 +39,11 @@ public class ClassPath {
 
             if (!jarEntry.isDirectory()) {
                 if (entryName.endsWith(".class")) {
-                    classes.add(new UnreadClassBytes(entryName, entryBytes));
+                    classes.add(new UnreadClassBytes(entryName, entryBytes,
+                            ZipEntryMetadata.fromZipEntry(jarEntry, classes.size() + resources.size()), false));
                 } else {
-                    resources.put(entryName, entryBytes);
+                    putResource(entryName, entryBytes,
+                            ZipEntryMetadata.fromZipEntry(jarEntry, classes.size() + resources.size()));
                 }
             }
 
@@ -59,9 +67,28 @@ public class ClassPath {
         return resources;
     }
 
+    public ZipEntryMetadata getResourceMetadata(String name) {
+        return resourceMetadata.getOrDefault(name, ZipEntryMetadata.createDefault());
+    }
+
+    public List<ArchiveDirectoryEntry> getDirectories() {
+        return directories;
+    }
+
+    public String getArchiveComment() {
+        return archiveComment;
+    }
+
+    public void setArchiveComment(String archiveComment) {
+        this.archiveComment = archiveComment;
+    }
+
     public void addClassPath(ClassPath classPath) {
         this.getClasses().addAll(classPath.getClasses());
-        this.getResources().putAll(classPath.getResources());
+        classPath.getResources().forEach((name, bytes) ->
+                this.putResource(name, bytes, classPath.getResourceMetadata(name)));
+        classPath.getDirectories().forEach(directory -> this.directories.add(
+                new ArchiveDirectoryEntry(directory.getName(), directory.getMetadata().copy())));
         this.warnings += classPath.warnings;
     }
 
@@ -76,10 +103,17 @@ public class ClassPath {
     public void clear() {
         this.getClasses().clear();
         this.getResources().clear();
+        this.resourceMetadata.clear();
+        this.directories.clear();
+        this.archiveComment = null;
         this.warnings = 0;
     }
 
     public void putResource(String entryName, byte[] entryBytes) {
+        putResource(entryName, entryBytes, ZipEntryMetadata.createDefault());
+    }
+
+    public void putResource(String entryName, byte[] entryBytes, ZipEntryMetadata metadata) {
         final byte[] currentResource = this.getResources().get(entryName);
 
         if (currentResource != null) {
@@ -88,5 +122,6 @@ public class ClassPath {
         }
 
         this.getResources().put(entryName, entryBytes);
+        this.resourceMetadata.put(entryName, metadata == null ? ZipEntryMetadata.createDefault() : metadata);
     }
 }

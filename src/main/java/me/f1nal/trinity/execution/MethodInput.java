@@ -112,6 +112,7 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
     @Override
     public void setAccessFlagsMask(int accessFlagsMask) {
         this.getNode().access = accessFlagsMask;
+        this.getOwningClass().markRebuildRequired();
     }
 
     @Override

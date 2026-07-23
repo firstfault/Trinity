@@ -7,6 +7,7 @@ public class EventClassModified {
 
     public EventClassModified(ClassInput classInput) {
         this.classInput = classInput;
+        this.classInput.markRebuildRequired();
     }
 
     public ClassInput getClassInput() {

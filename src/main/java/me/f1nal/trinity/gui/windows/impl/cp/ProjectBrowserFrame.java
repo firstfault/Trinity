@@ -32,7 +32,7 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
     private final KindFilter<IBrowserViewerNode> kindFilter = new KindFilter<>(FileKind.values());
     private ListFilterComponent<IBrowserViewerNode> filterComponent;
     private String search;
-    private ProjectBrowserTreeNodePackage rootNode;
+    private List<ProjectBrowserTreeNodePackage> rootNodes = List.of();
 
     public ProjectBrowserFrame(Trinity trinity) {
         super("Project Browser", 600, 460, trinity);
@@ -66,7 +66,8 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
 
     private List<IBrowserViewerNode> createViewerList() {
         List<IBrowserViewerNode> collection = new ArrayList<>();
-        this.addTreeToCollection(trinity.getExecution().getRootPackage(), collection);
+        trinity.getExecution().getContainers()
+                .forEach(container -> this.addTreeToCollection(container.getRootPackage(), collection));
         return collection;
     }
 
@@ -101,23 +102,11 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
         ImGui.getStyle().setTouchExtraPadding(extraPadding.x, 3.F);
 
         if (ImGui.beginChild(getId("ViewTree"), 0.F, 0.F)) {
-            this.drawRootDropTarget();
-            for (ProjectBrowserTreeNode<?> child : this.rootNode.getChildren()) {
-                child.draw(this);
-            }
+            for (ProjectBrowserTreeNodePackage root : this.rootNodes) root.draw(this);
         }
         ImGui.endChild();
-        this.drawPackageDropTarget(this.trinity.getExecution().getRootPackage());
         ImGui.popStyleColor(2);
         ImGui.getStyle().setTouchExtraPadding(extraPadding.x, extraPadding.y);
-    }
-
-    private void drawRootDropTarget() {
-        ArchiveEntry draggedEntry = ImGui.getDragDropPayload(ENTRY_DRAG_PAYLOAD);
-        if (draggedEntry == null) return;
-
-        ImGui.selectable("/  Project root###ProjectBrowserRootDrop");
-        this.drawPackageDropTarget(this.trinity.getExecution().getRootPackage());
     }
 
     void drawEntryDragSource(ArchiveEntry entry) {
@@ -137,20 +126,28 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
     }
 
     private void moveEntry(ArchiveEntry entry, Package targetPackage) {
-        String destinationName = targetPackage.getChildrenPath(entry.getDisplaySimpleName());
-        if (destinationName.equals(entry.getDisplayOrRealName())) return;
+        String destinationName = targetPackage.isArchive()
+                ? entry.getDisplayOrRealName()
+                : targetPackage.getChildrenPath(entry.getDisplaySimpleName());
+        boolean sameContainer = entry.getContainer() == targetPackage.getContainer();
+        if (sameContainer && destinationName.equals(entry.getDisplayOrRealName())) return;
 
-        if (this.isDestinationOccupied(entry, destinationName)) {
+        if (this.isDestinationOccupied(entry, targetPackage, destinationName)) {
             Main.getDisplayManager().addNotification(new Notification(NotificationType.WARNING,
                     new SimpleCaption("Move Failed"), ColoredStringBuilder.create()
                     .fmt("An entry named {} already exists in that package.", entry.getDisplaySimpleName()).get()));
             return;
         }
 
-        entry.getRenameHandler().renameFully(this.trinity.getRemapper(), destinationName);
+        if (entry.getContainer() != targetPackage.getContainer()) {
+            entry.setPackage(targetPackage.getContainer().getRootPackage());
+        }
+        if (!destinationName.equals(entry.getDisplayOrRealName())) {
+            entry.getRenameHandler().renameFully(this.trinity.getRemapper(), destinationName);
+        }
     }
 
-    private boolean isDestinationOccupied(ArchiveEntry movingEntry, String destinationName) {
+    private boolean isDestinationOccupied(ArchiveEntry movingEntry, Package targetPackage, String destinationName) {
         String destinationPath = movingEntry instanceof ClassTarget ? destinationName + ".class" : destinationName;
 
         boolean classCollision = this.trinity.getExecution().getClassTargetMap().values().stream()
@@ -158,9 +155,9 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
                 .anyMatch(target -> (target.getDisplayOrRealName() + ".class").equals(destinationPath));
         if (classCollision) return true;
 
-        return this.trinity.getExecution().getResourceMap().keySet().stream()
-                .filter(path -> !(movingEntry.getRealName().equals(path)))
-                .anyMatch(destinationPath::equals);
+        var resource = movingEntry instanceof me.f1nal.trinity.execution.packages.ResourceArchiveEntry
+                ? targetPackage.getContainer().getResource(destinationPath) : null;
+        return resource != null && resource != movingEntry;
     }
 
     public String getSearch() {
@@ -171,11 +168,15 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
 
     private void setNodeRoot() {
         this.filteredSet = new HashSet<>(this.filterComponent.getFilteredList());
-        Package rootPackage = trinity.getExecution().getRootPackage();
-        rootPackage.setOpenForced(true);
-        this.rootNode = new ProjectBrowserTreeNodePackage(rootPackage);
+        this.rootNodes = new ArrayList<>();
         List<ProjectBrowserTreeNodePackage> packages = new ArrayList<>();
-        packages.add(this.rootNode);
+        for (var container : trinity.getExecution().getContainers()) {
+            Package rootPackage = container.getRootPackage();
+            if (!this.isPackageSearchMatch(rootPackage) && !this.filteredSet.contains(rootPackage)) continue;
+            ProjectBrowserTreeNodePackage rootNode = new ProjectBrowserTreeNodePackage(rootPackage);
+            this.rootNodes.add(rootNode);
+            packages.add(rootNode);
+        }
 
         while (!packages.isEmpty()) {
             ProjectBrowserTreeNodePackage[] array = packages.toArray(ProjectBrowserTreeNodePackage[]::new);

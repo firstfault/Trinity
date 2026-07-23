@@ -41,7 +41,7 @@ public class DatabaseClassDisplayName extends AbstractDatabaseObject {
         }
         target.getDisplayName().setName(this.getDisplayName(), this.getRenameType());
         Main.runLater(() -> {
-            target.setPackage(trinity.getExecution().getRootPackage());
+            if (target.getContainer() != null) target.setPackage(target.getContainer().getRootPackage());
         });
         return true;
     }

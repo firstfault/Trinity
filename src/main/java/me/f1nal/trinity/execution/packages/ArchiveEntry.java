@@ -22,13 +22,20 @@ import java.util.Objects;
 
 public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler {
     private Package targetPackage;
+    private ProjectContainer container;
     private final String size;
     private final int sizeInBytes;
     private final BrowserViewerNode browserViewerNode;
     private final ArchiveEntryViewerType[] viewerTypes;
+    private ZipEntryMetadata zipMetadata;
 
     protected ArchiveEntry(int sizeInBytes) {
+        this(sizeInBytes, ZipEntryMetadata.createDefault());
+    }
+
+    protected ArchiveEntry(int sizeInBytes, ZipEntryMetadata zipMetadata) {
         this.sizeInBytes = sizeInBytes;
+        this.zipMetadata = zipMetadata == null ? ZipEntryMetadata.createDefault() : zipMetadata;
         this.size = ByteUtil.getHumanReadableByteCountSI(sizeInBytes);
         this.viewerTypes = Arrays.stream(ArchiveEntryViewerType.values()).filter(type -> type.getValid().test(this)).toArray(ArchiveEntryViewerType[]::new);
         this.browserViewerNode = new BrowserViewerNode(getIcon(), IconFamily.CODICON,
@@ -67,11 +74,21 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         return targetPackage;
     }
 
+    public ProjectContainer getContainer() {
+        return container;
+    }
+
+    void assignContainer(ProjectContainer container) {
+        this.container = container;
+    }
+
     public void setPackage(Package root) {
         Main.assertRenderThread();
+        ProjectContainer previousContainer = this.container;
         if (getPackage() != null) {
             getPackage().remove(this);
         }
+        if (previousContainer != null) previousContainer.unregister(this);
 
         String realName = this.getDisplayOrRealName();
         while (realName.contains("//")) realName = realName.replace("//", "/");
@@ -85,6 +102,11 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
             realName = realName.substring(index + 1);
         }
         this.targetPackage = targetPackage;
+        this.container = root.getPackageHierarchy().getContainer();
+        if (previousContainer != null && previousContainer != this.container) {
+            this.zipMetadata.setOrder(Integer.MAX_VALUE);
+        }
+        if (this.container != null) this.container.register(this);
         targetPackage.getEntries().add(this);
         this.targetPackage.getEntries().sort(Comparator.comparing(ArchiveEntry::getDisplaySimpleName));
         Main.getTrinity().getEventManager().postEvent(new EventPackageStructureReload());
@@ -150,6 +172,14 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         return sizeInBytes;
     }
 
+    public ZipEntryMetadata getZipMetadata() {
+        return zipMetadata;
+    }
+
+    public void setZipMetadata(ZipEntryMetadata zipMetadata) {
+        this.zipMetadata = Objects.requireNonNull(zipMetadata);
+    }
+
     @Override
     public boolean matches(String searchTerm) {
         return getDisplaySimpleName().contains(searchTerm);
@@ -165,11 +195,13 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ArchiveEntry that = (ArchiveEntry) o;
-        return Objects.equals(getRealName(), that.getRealName());
+        return Objects.equals(getRealName(), that.getRealName())
+                && Objects.equals(container == null ? null : container.getId(),
+                        that.container == null ? null : that.container.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getRealName());
+        return Objects.hash(getRealName(), container == null ? null : container.getId());
     }
 }

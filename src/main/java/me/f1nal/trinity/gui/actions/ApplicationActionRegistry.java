@@ -1,10 +1,10 @@
 package me.f1nal.trinity.gui.actions;
 
 import me.f1nal.trinity.gui.DisplayManager;
+import me.f1nal.trinity.database.inputs.ProjectInputImporter;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.AboutWindow;
-import me.f1nal.trinity.gui.windows.impl.ExportJarWindow;
 import me.f1nal.trinity.gui.windows.impl.PreferencesFrame;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.constant.ConstantSearchFrame;
@@ -30,7 +30,7 @@ public final class ApplicationActionRegistry {
     public static final String NEW_PROJECT = "project.new";
     public static final String OPEN_PROJECT = "project.open";
     public static final String SAVE_PROJECT = "project.save";
-    public static final String EXPORT_JAR = "project.export_jar";
+    public static final String ADD_INPUT = "project.add_input";
     public static final String PROJECT_SETTINGS = "project.settings";
     public static final String PREFERENCES = "application.preferences";
     public static final String THEME_EDITOR = "application.theme_editor";
@@ -65,9 +65,9 @@ public final class ApplicationActionRegistry {
         this.register(SAVE_PROJECT, "Save Project", "Save the active Trinity database", "Project",
                 FontAwesomeIcons.Save, List.of("save database"), this::hasProject,
                 displayManager::saveDatabase);
-        this.register(EXPORT_JAR, "Export JAR", "Export the active project as a JAR", "Project",
-                FontAwesomeIcons.FileExport, List.of("build jar", "write jar"), this::hasProject,
-                () -> this.openStatic(ExportJarWindow.class));
+        this.register(ADD_INPUT, "Add Input", "Add JAR, ZIP, or class files to the active project", "Project",
+                FontAwesomeIcons.FileImport, List.of("import jar", "add jar", "add class"), this::canAddInput,
+                () -> ProjectInputImporter.chooseAndImport(displayManager.getTrinity()));
         this.register(PROJECT_SETTINGS, "Project Settings", "Configure the active project", "Project",
                 FontAwesomeIcons.Cogs, List.of("database settings"), this::hasProject,
                 () -> this.openStatic(ProjectSettingsWindow.class));
@@ -133,6 +133,10 @@ public final class ApplicationActionRegistry {
 
     private boolean hasProject() {
         return displayManager.getTrinity() != null;
+    }
+
+    private boolean canAddInput() {
+        return hasProject() && displayManager.getTrinity().getExecution().getAsynchronousLoad().isFinished();
     }
 
     private <T extends StaticWindow> void openStatic(Class<T> type) {

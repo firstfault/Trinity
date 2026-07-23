@@ -4,6 +4,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.database.Database;
 import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.object.DatabasePackage;
+import me.f1nal.trinity.events.EventPackageStructureReload;
 import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.components.IconFamily;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
@@ -13,6 +14,10 @@ import me.f1nal.trinity.gui.windows.impl.cp.BrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.IBrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
+import me.f1nal.trinity.gui.windows.impl.ExportJarWindow;
+import me.f1nal.trinity.gui.windows.impl.project.RemoveProjectContainerPopup;
+import me.f1nal.trinity.gui.windows.impl.project.EditJarWindow;
+import me.f1nal.trinity.execution.packages.other.ExportLooseFilesRunnable;
 import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.SystemUtil;
@@ -36,8 +41,16 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
 
     public Package(Database database) {
         this("RootPackage", null);
-        this.packageHierarchy = new PackageHierarchy(this, database);
+        this.packageHierarchy = new PackageHierarchy(this, database, null);
         this.addToHierarchy();
+        this.updateBrowserViewerNode();
+    }
+
+    public Package(ProjectContainer container, Database database) {
+        this("RootPackage", null);
+        this.packageHierarchy = new PackageHierarchy(this, database, container);
+        this.addToHierarchy();
+        this.updateBrowserViewerNode();
     }
 
     private Package(String name, Package parent) {
@@ -51,12 +64,25 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
             this.addToHierarchy();
         }
         this.browserViewerNode = new BrowserViewerNode(null, IconFamily.CODICON,
-                this.isArchive() ? () -> CodeColorScheme.ARCHIVE_REF : () -> CodeColorScheme.PACKAGE,
+                () -> this.isArchive() && this.getContainer() != null && this.getContainer().isJar()
+                        ? CodeColorScheme.ARCHIVE_REF : CodeColorScheme.PACKAGE,
                 this::getDisplayName,
                 this::rename);
         this.browserViewerNode.addMouseClickHandler(clickType -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
-                PopupItemBuilder popup = PopupItemBuilder.create().
+                PopupItemBuilder popup = PopupItemBuilder.create();
+                ProjectContainer container = this.getContainer();
+                if (this.isArchive() && container != null && container.isJar()) {
+                    popup.menuItem("Edit JAR...", () -> Main.getWindowManager()
+                            .addClosableWindow(new EditJarWindow(Main.getTrinity(), container)))
+                            .menuItem("Export JAR...", () -> Main.getWindowManager()
+                            .addClosableWindow(new ExportJarWindow(Main.getTrinity(), container)))
+                            .separator();
+                } else if (this.isArchive() && container != null) {
+                    popup.menuItem("Export Directory...", new ExportLooseFilesRunnable(container))
+                            .separator();
+                }
+                popup.
                         menu("Copy", (copy) -> {
                             copy.menuItem("Full Path", () -> SystemUtil.copyToClipboard(this.getPrettyPath().replace('.', '/')))
                                     .menuItem("Name", () -> SystemUtil.copyToClipboard(this.getDisplayName()));
@@ -72,6 +98,10 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
                         });
 
                 if (browserViewerNode.isRenameAvailable()) popup.menuItem("Rename", () -> this.getBrowserViewerNode().beginRenaming());
+                if (this.isArchive() && container != null && container.isJar()) {
+                    popup.separator().menuItem("Remove Archive...", () -> Main.getWindowManager()
+                            .addPopup(new RemoveProjectContainerPopup(Main.getTrinity(), container)));
+                }
 
                 Main.getDisplayManager().getPopupMenu().show(popup);
             }
@@ -85,7 +115,12 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
         }
 
         if (this.isArchive()) {
-            this.packageHierarchy.getDatabase().setName(newName);
+            ProjectContainer container = this.packageHierarchy.getContainer();
+            if (container != null) {
+                container.setName(newName);
+                Main.getTrinity().getEventManager().postEvent(new EventPackageStructureReload());
+            }
+            else if (this.packageHierarchy.getDatabase() != null) this.packageHierarchy.getDatabase().setName(newName);
         } else {
             final Map<RenameHandler, String> renames = new HashMap<>();
             final int startLength = this.getPrettyPath().length() - this.getName().length();
@@ -101,7 +136,10 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
     }
 
     private String getDisplayName() {
-        return this.isArchive() ? packageHierarchy.getDatabase().getName() : this.getName();
+        if (!this.isArchive()) return this.getName();
+        ProjectContainer container = packageHierarchy.getContainer();
+        if (container != null) return container.getName();
+        return packageHierarchy.getDatabase() == null ? this.getName() : packageHierarchy.getDatabase().getName();
     }
 
     public boolean isArchive() {
@@ -109,7 +147,11 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
     }
 
     private void updateBrowserViewerNode() {
-        this.browserViewerNode.setIcon(this.isArchive() ? CodiconIcons.ARCHIVE
+        ProjectContainer container = this.packageHierarchy == null ? null : this.packageHierarchy.getContainer();
+        this.browserViewerNode.setIcon(this.isArchive()
+                ? container != null && container.getKind() == ProjectContainerKind.LOOSE
+                    ? CodiconIcons.FOLDER
+                    : CodiconIcons.ARCHIVE
                 : this.isOpen() ? CodiconIcons.FOLDER_OPENED : CodiconIcons.FOLDER);
     }
 
@@ -137,10 +179,15 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
 
     public void setOpenForced(boolean open) {
         this.open = open;
+        this.updateBrowserViewerNode();
     }
 
     public PackageHierarchy getPackageHierarchy() {
         return packageHierarchy;
+    }
+
+    public ProjectContainer getContainer() {
+        return packageHierarchy.getContainer();
     }
 
     private String createPath() {
@@ -189,11 +236,15 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
 
     public void remove(ArchiveEntry classTarget) {
         archiveEntries.remove(classTarget);
+        this.pruneIfEmpty();
+    }
 
-        if (archiveEntries.isEmpty()) {
-            packageHierarchy.getPathToPackage().remove(this.getInternalPath());
-            if (parent != null) parent.getPackages().remove(this);
-        }
+    private void pruneIfEmpty() {
+        if (!archiveEntries.isEmpty() || !packages.isEmpty() || parent == null) return;
+        packageHierarchy.getPathToPackage().remove(this.getInternalPath());
+        Package oldParent = parent;
+        oldParent.getPackages().remove(this);
+        oldParent.pruneIfEmpty();
     }
 
     public Package createPackage(String name) {
@@ -216,7 +267,9 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
 
     @Override
     public DatabasePackage createDatabaseObject() {
-        return new DatabasePackage(this.getInternalPath(), this.isOpen());
+        ProjectContainer container = this.getContainer();
+        if (container == null) return null;
+        return new DatabasePackage(container.getId().toString(), this.getInternalPath(), this.isOpen());
     }
 
     @Override
@@ -226,12 +279,12 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
 
     @Override
     public boolean matches(String searchTerm) {
-        return name.contains(searchTerm);
+        return getDisplayName().contains(searchTerm);
     }
 
     @Override
     public boolean matchesIgnoreCase(String searchTerm) {
-        return name.toLowerCase(Locale.ROOT).contains(searchTerm.toLowerCase(Locale.ROOT));
+        return getDisplayName().toLowerCase(Locale.ROOT).contains(searchTerm.toLowerCase(Locale.ROOT));
     }
 
     public String getChildrenPath(String fileName) {

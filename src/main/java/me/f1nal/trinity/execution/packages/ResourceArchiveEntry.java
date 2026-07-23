@@ -15,7 +15,11 @@ public class ResourceArchiveEntry extends ArchiveEntry {
     private final byte[] bytes;
     
     public ResourceArchiveEntry(String name, byte[] bytes) {
-        super(bytes.length);
+        this(name, bytes, ZipEntryMetadata.createDefault());
+    }
+
+    public ResourceArchiveEntry(String name, byte[] bytes, ZipEntryMetadata metadata) {
+        super(bytes.length, metadata);
         this.name = name;
         final String extension = NameUtil.getExtension(name);
         this.type = extension == null ? "Binary File" : extension;

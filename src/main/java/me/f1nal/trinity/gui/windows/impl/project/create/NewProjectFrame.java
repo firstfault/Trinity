@@ -5,6 +5,8 @@ import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.Database;
+import me.f1nal.trinity.database.inputs.ProjectInputSet;
+import me.f1nal.trinity.database.inputs.ProjectInputValidator;
 import me.f1nal.trinity.database.compression.DatabaseCompressionType;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
@@ -92,10 +94,17 @@ public class NewProjectFrame extends StaticWindow implements ICaption {
         final String projectName = this.generalTab.getProjectName().getText();
         final File databaseFile = this.generalTab.getDatabasePath().getFile();
         final DatabaseCompressionType compressionType = this.generalTab.getCompressionTypeCombo().getSelected();
+        ProjectInputSet projectInput = this.inputTab.createProjectInput();
+        List<String> inputProblems = ProjectInputValidator.validate(projectInput);
+        if (!inputProblems.isEmpty()) {
+            Main.getDisplayManager().addNotification(new Notification(NotificationType.ERROR, this,
+                    ColoredStringBuilder.create().fmt("Invalid project input: {}", inputProblems.get(0)).get()));
+            return;
+        }
         final Database database = new Database(projectName, databaseFile, compressionType);
         final Trinity trinity;
         try {
-            trinity = new Trinity(database, this.inputTab.createClassPath());
+            trinity = new Trinity(database, projectInput);
         } catch (IOException | MissingEntryPointException e) {
             Main.getDisplayManager().addNotification(new Notification(NotificationType.ERROR, this, ColoredStringBuilder.create()
                     .fmt("Failed to load new Trinity: {}", e).get()));

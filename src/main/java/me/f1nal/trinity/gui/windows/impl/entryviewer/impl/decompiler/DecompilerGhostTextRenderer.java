@@ -25,12 +25,13 @@ public class DecompilerGhostTextRenderer implements Runnable {
     private final Trinity trinity;
     private final Input<?> input;
     private final String indent;
+    private final int xrefsCount;
 
     public DecompilerGhostTextRenderer(Trinity trinity, Input<?> input) {
         this.trinity = trinity;
         this.input = input;
 
-        final int xrefsCount = input.createXrefBuilder(trinity.getExecution().getXrefMap()).createXrefs().size();
+        this.xrefsCount = input.createXrefBuilder(trinity.getExecution().getXrefMap()).createXrefs().size();
         this.text.add(xrefsCount == 0 ? "no usages" : (xrefsCount + " usage" + (xrefsCount == 1 ? "" : "s")));
 
         if (input instanceof MethodInput) {
@@ -74,7 +75,7 @@ public class DecompilerGhostTextRenderer implements Runnable {
             if (hovered) {
                 ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
 
-                if (ImGui.isMouseClicked(0)) {
+                if (this.xrefsCount > 0 && ImGui.isMouseClicked(0)) {
                     Main.getWindowManager().addClosableWindow(new XrefViewerFrame(this.input.createXrefBuilder(this.trinity.getExecution().getXrefMap()), trinity));
                 }
             }

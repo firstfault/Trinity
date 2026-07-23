@@ -15,6 +15,7 @@ public final class EventMemberModified {
     public EventMemberModified(MemberInput<?> memberInput, MemberDetails previousDetails) {
         this.memberInput = memberInput;
         this.previousDetails = previousDetails;
+        this.memberInput.getOwningClass().markRebuildRequired();
     }
 
     public MemberInput<?> getMemberInput() {

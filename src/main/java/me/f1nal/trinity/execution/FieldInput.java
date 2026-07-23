@@ -18,6 +18,7 @@ public class FieldInput extends MemberInput<FieldNode> implements IDatabaseSavab
     @Override
     public void setAccessFlagsMask(int accessFlagsMask) {
         getNode().access = accessFlagsMask;
+        this.getOwningClass().markRebuildRequired();
     }
 
     @Override
