@@ -4,6 +4,7 @@ import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.MethodInput;
+import me.f1nal.trinity.execution.constant.InvokeDynamicConstants;
 import me.f1nal.trinity.execution.xref.XrefKind;
 import me.f1nal.trinity.execution.xref.where.*;
 import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewCache;
@@ -38,9 +39,16 @@ public abstract class LdcConstantSearcher<T> {
                         }
                     } else if (insnNode instanceof InvokeDynamicInsnNode) {
                         InvokeDynamicInsnNode indy = (InvokeDynamicInsnNode) insnNode;
-                        for (Object bsmArg : indy.bsmArgs) {
-                            this.addConstantView(list, bsmArg,
-                                    new XrefWhereMethodInsn(methodInput, indy, bsmArg), XrefKind.LITERAL);
+                        List<Object> constants = InvokeDynamicConstants.resolve(indy);
+                        for (int i = 0; i < constants.size(); i++) {
+                            Object constant = constants.get(i);
+                            int occurrence = 0;
+                            for (int j = 0; j < i; j++) {
+                                if (java.util.Objects.equals(constants.get(j), constant)) occurrence++;
+                            }
+                            this.addConstantView(list, constant,
+                                    new XrefWhereMethodInsn(methodInput, indy, constant, occurrence),
+                                    XrefKind.LITERAL);
                         }
                     } else if (insnNode instanceof IntInsnNode) {
                         int value = ((IntInsnNode) insnNode).operand;

@@ -11,21 +11,28 @@ public class XrefWhereMethodInsn extends XrefWhereMethod {
     private final AbstractInsnNode insnNode;
     private final boolean previewConstant;
     private final Object constantValue;
+    private final int constantOccurrence;
 
     public XrefWhereMethodInsn(MethodInput methodInput, AbstractInsnNode insnNode) {
-        this(methodInput, insnNode, false, null);
+        this(methodInput, insnNode, false, null, 0);
     }
 
     public XrefWhereMethodInsn(MethodInput methodInput, AbstractInsnNode insnNode, Object constantValue) {
-        this(methodInput, insnNode, true, constantValue);
+        this(methodInput, insnNode, constantValue, 0);
+    }
+
+    public XrefWhereMethodInsn(MethodInput methodInput, AbstractInsnNode insnNode,
+                               Object constantValue, int constantOccurrence) {
+        this(methodInput, insnNode, true, constantValue, constantOccurrence);
     }
 
     private XrefWhereMethodInsn(MethodInput methodInput, AbstractInsnNode insnNode,
-                                boolean previewConstant, Object constantValue) {
+                                boolean previewConstant, Object constantValue, int constantOccurrence) {
         super(methodInput);
         this.insnNode = insnNode;
         this.previewConstant = previewConstant;
         this.constantValue = constantValue;
+        this.constantOccurrence = constantOccurrence;
     }
 
     public AbstractInsnNode getInsnNode() {
@@ -36,7 +43,8 @@ public class XrefWhereMethodInsn extends XrefWhereMethod {
     protected void drawPreview(DecompilerPreviewRenderer renderer, Input<?> input,
                                boolean highlightOwnerClass) {
         if (previewConstant) {
-            renderer.drawMethodConstantUsagePreview(getInput(), insnNode, constantValue);
+            renderer.drawMethodConstantUsagePreview(
+                    getInput(), insnNode, constantValue, constantOccurrence);
         } else {
             renderer.drawMethodUsagePreview(getInput(), insnNode, highlightOwnerClass);
         }

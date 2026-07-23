@@ -117,8 +117,8 @@ public final class ConstantStatisticsCache implements IEventListener {
                     addConstant(constants, InstructionUtil.decodeConstLoad(opcode));
                 }
             } else if (instruction instanceof InvokeDynamicInsnNode dynamic) {
-                for (Object argument : dynamic.bsmArgs) {
-                    addConstant(constants, argument);
+                for (Object constant : InvokeDynamicConstants.resolve(dynamic)) {
+                    addConstant(constants, constant);
                 }
             } else if (instruction instanceof IntInsnNode operand) {
                 addConstant(constants, operand.operand);

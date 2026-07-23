@@ -5,6 +5,7 @@ import me.f1nal.trinity.decompiler.output.DecompilerMemberReader;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.MethodInput;
+import me.f1nal.trinity.execution.constant.InvokeDynamicConstants;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerComponent;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerLine;
@@ -274,7 +275,7 @@ public final class DecompiledClass {
         if (targetMember == null) {
             for (Object constant : getInstructionConstants(targetInstruction)) {
                 DecompilerComponent component = findInstructionConstantComponent(
-                        methodInput, targetInstruction, constant);
+                        methodInput, targetInstruction, constant, 0);
                 if (component != null) {
                     return component;
                 }
@@ -518,17 +519,18 @@ public final class DecompiledClass {
                                                      int surroundingLines,
                                                      boolean highlightOwnerClass,
                                                      boolean highlightConstant,
-                                                     Object constantValue) {
+                                                     Object constantValue,
+                                                     int constantOccurrence) {
         if (instruction == null || surroundingLines < 0) {
             return MethodUsagePreview.EMPTY;
         }
         MethodUsagePreviewKey key = new MethodUsagePreviewKey(
                 methodInput.getDetails(), instruction, surroundingLines, highlightOwnerClass,
-                highlightConstant, constantValue);
+                highlightConstant, constantValue, constantOccurrence);
         return methodUsagePreviewCache.computeIfAbsent(key,
                 ignored -> createMethodUsagePreview(
                         methodInput, instruction, surroundingLines, highlightOwnerClass,
-                        highlightConstant, constantValue));
+                        highlightConstant, constantValue, constantOccurrence));
     }
 
     public PatternUsagePreview getMethodPatternUsagePreview(MethodInput methodInput,
@@ -589,9 +591,11 @@ public final class DecompiledClass {
                                                          int surroundingLines,
                                                          boolean highlightOwnerClass,
                                                          boolean highlightConstant,
-                                                         Object constantValue) {
+                                                         Object constantValue,
+                                                         int constantOccurrence) {
         DecompilerComponent usageComponent = highlightConstant
-                ? findInstructionConstantComponent(methodInput, instruction, constantValue)
+                ? findInstructionConstantComponent(
+                        methodInput, instruction, constantValue, constantOccurrence)
                 : findInstructionComponent(methodInput, instruction);
         DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(methodInput.getDetails());
         if (usageComponent == null || boundaries == null) {
@@ -650,13 +654,19 @@ public final class DecompiledClass {
 
     private DecompilerComponent findInstructionConstantComponent(MethodInput methodInput,
                                                                  AbstractInsnNode targetInstruction,
-                                                                 Object constantValue) {
+                                                                 Object constantValue,
+                                                                 int targetOccurrence) {
         int occurrence = 0;
         boolean targetFound = false;
         for (AbstractInsnNode instruction : methodInput.getInstructions()) {
             List<Object> constants = getInstructionConstants(instruction);
             if (instruction == targetInstruction) {
-                targetFound = constants.stream().anyMatch(value -> constantsEqual(value, constantValue));
+                int matches = 0;
+                for (Object value : constants) {
+                    if (constantsEqual(value, constantValue)) matches++;
+                }
+                targetFound = targetOccurrence >= 0 && targetOccurrence < matches;
+                if (targetFound) occurrence += targetOccurrence;
                 break;
             }
             for (Object value : constants) {
@@ -708,7 +718,7 @@ public final class DecompiledClass {
             }
         }
         if (instruction instanceof InvokeDynamicInsnNode dynamic) {
-            return Arrays.asList(dynamic.bsmArgs);
+            return InvokeDynamicConstants.resolve(dynamic);
         }
         if (instruction instanceof IntInsnNode integer) {
             return List.of(integer.operand);
@@ -934,7 +944,8 @@ public final class DecompiledClass {
 
     private record MethodUsagePreviewKey(MemberDetails details, AbstractInsnNode instruction,
                                          int surroundingLines, boolean highlightOwnerClass,
-                                         boolean highlightConstant, Object constantValue) {
+                                         boolean highlightConstant, Object constantValue,
+                                         int constantOccurrence) {
     }
 
     private record VariablePreviewKey(MemberDetails method, int variableIndex) {

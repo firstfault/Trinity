@@ -144,8 +144,9 @@ public final class DecompilerPreviewRenderer {
     }
 
     public void drawMethodConstantUsagePreview(MethodInput methodInput, AbstractInsnNode instruction,
-                                               Object constantValue) {
-        drawMethodUsagePreview(methodInput, instruction, false, true, constantValue);
+                                               Object constantValue, int constantOccurrence) {
+        drawMethodUsagePreview(methodInput, instruction, false, true,
+                constantValue, constantOccurrence);
     }
 
     public void drawMethodPatternUsagePreview(MethodInput methodInput,
@@ -178,6 +179,13 @@ public final class DecompilerPreviewRenderer {
     private void drawMethodUsagePreview(MethodInput methodInput, AbstractInsnNode instruction,
                                         boolean highlightOwnerClass, boolean highlightConstant,
                                         Object constantValue) {
+        drawMethodUsagePreview(methodInput, instruction, highlightOwnerClass,
+                highlightConstant, constantValue, 0);
+    }
+
+    private void drawMethodUsagePreview(MethodInput methodInput, AbstractInsnNode instruction,
+                                        boolean highlightOwnerClass, boolean highlightConstant,
+                                        Object constantValue, int constantOccurrence) {
         drawDetails(methodSignature(methodInput));
         DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(methodInput.getOwningClass());
         if (previewClass == null) {
@@ -187,7 +195,7 @@ public final class DecompilerPreviewRenderer {
         previewClass.applyPendingOutput();
         DecompiledClass.MethodUsagePreview preview = previewClass.getMethodUsagePreview(
                 methodInput, instruction, METHOD_USAGE_SURROUNDING_LINES,
-                highlightOwnerClass, highlightConstant, constantValue);
+                highlightOwnerClass, highlightConstant, constantValue, constantOccurrence);
         if (preview.signature().isEmpty()) {
             drawMethodPreview(methodInput, true);
             return;
