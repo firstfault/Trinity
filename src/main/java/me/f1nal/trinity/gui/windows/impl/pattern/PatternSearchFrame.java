@@ -14,6 +14,7 @@ import me.f1nal.trinity.execution.pattern.PatternDiagnostic;
 import me.f1nal.trinity.execution.pattern.PatternSearchSession;
 import me.f1nal.trinity.gui.components.MemorableCheckboxComponent;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
+import me.f1nal.trinity.gui.windows.impl.pattern.PatternReplaceFrame;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 public final class PatternSearchFrame extends StaticWindow implements IEventListener {
@@ -66,6 +67,10 @@ public final class PatternSearchFrame extends StaticWindow implements IEventList
             cancel = ImGui.button("Cancel");
         }
 
+        ImGui.sameLine();
+        if (ImGui.button("Search & Replace")) {
+            Main.getWindowManager().addStaticWindow(PatternReplaceFrame.class);
+        }
         ImGui.sameLine();
         boolean metadataBefore = includeMetadata.isChecked();
         includeMetadata.draw();

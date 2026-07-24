@@ -14,6 +14,7 @@ import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeStrin
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
 import me.f1nal.trinity.gui.windows.impl.navigation.NavigationHistoryWindow;
 import me.f1nal.trinity.gui.windows.impl.pattern.PatternSearchFrame;
+import me.f1nal.trinity.gui.windows.impl.pattern.PatternReplaceFrame;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.gui.windows.impl.project.settings.ProjectSettingsWindow;
 import me.f1nal.trinity.gui.windows.impl.refactor.GlobalRenameWindow;
@@ -42,6 +43,7 @@ public final class ApplicationActionRegistry {
     public static final String XREF_SEARCH = "inspect.xref_search";
     public static final String CONSTANT_SEARCH = "inspect.constant_search";
     public static final String PATTERN_SEARCH = "inspect.pattern_search";
+    public static final String PATTERN_REPLACE = "inspect.pattern_replace";
     public static final String VIEW_ALL_STRINGS = "inspect.all_strings";
     public static final String GLOBAL_RENAME = "refactor.global_rename";
     public static final String NAVIGATE_BACK = "navigation.back";
@@ -104,6 +106,9 @@ public final class ApplicationActionRegistry {
         this.register(PATTERN_SEARCH, "Pattern Search", "Find bytecode instruction patterns", "Inspect",
                 FontAwesomeIcons.Code, List.of("instruction search", "bytecode pattern"), this::hasProject,
                 () -> this.openStatic(PatternSearchFrame.class));
+        this.register(PATTERN_REPLACE, "Search & Replace", "Find and replace bytecode instruction patterns", "Inspect",
+                FontAwesomeIcons.ExchangeAlt, List.of("bytecode replace", "pattern replace", "instruction replace"), this::hasProject,
+                () -> this.openStatic(PatternReplaceFrame.class));
         this.register(VIEW_ALL_STRINGS, "View All Strings", "List every string constant in the project", "Inspect",
                 FontAwesomeIcons.Font, List.of("strings", "string constants"), this::hasProject,
                 this::viewAllStrings);
