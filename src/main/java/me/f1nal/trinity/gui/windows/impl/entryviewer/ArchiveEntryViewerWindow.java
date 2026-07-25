@@ -14,7 +14,7 @@ import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.util.ByteUtil;
 
 public abstract class ArchiveEntryViewerWindow<T extends ArchiveEntry> extends ClosableWindow {
-    private final T archiveEntry;
+    private T archiveEntry;
     private boolean docked;
 
     public ArchiveEntryViewerWindow(Trinity trinity, T archiveEntry) {
@@ -68,6 +68,10 @@ public abstract class ArchiveEntryViewerWindow<T extends ArchiveEntry> extends C
 
     public T getArchiveEntry() {
         return archiveEntry;
+    }
+
+    protected void setArchiveEntry(T archiveEntry) {
+        this.archiveEntry = archiveEntry;
     }
 
     @Override

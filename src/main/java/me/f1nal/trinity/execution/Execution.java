@@ -8,11 +8,13 @@ import me.f1nal.trinity.database.ClassPath;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.events.EventClassesLoaded;
+import me.f1nal.trinity.execution.dex.DexIndex;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
 import me.f1nal.trinity.execution.hierarchy.ObjectHierarchyLoadTask;
 import me.f1nal.trinity.execution.hierarchy.ClassHierarchy;
 import me.f1nal.trinity.execution.loading.AsynchronousLoad;
 import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
+import me.f1nal.trinity.execution.loading.tasks.DexInputReaderLoadTask;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
 import me.f1nal.trinity.execution.xref.XrefMap;
@@ -41,6 +43,7 @@ public final class Execution {
      * Reference map containing all references.
      */
     private final XrefMap xrefMap;
+    private final DexIndex dexIndex;
     private final AsynchronousLoad asynchronousLoad;
     private final Trinity trinity;
     private boolean classesLoaded;
@@ -49,6 +52,7 @@ public final class Execution {
         this.trinity = trinity;
         this.rootPackage = new Package(trinity.getDatabase());
         this.xrefMap = new XrefMap(this);
+        this.dexIndex = new DexIndex(this);
 
         this.asynchronousLoad = new AsynchronousLoad(this.getTrinity());
 
@@ -59,6 +63,9 @@ public final class Execution {
                         .fmt("Finished reading input with {} warnings", classPath.getWarnings()).get()));
             }
             this.asynchronousLoad.add(new ClassInputReaderLoadTask(classPath.createClassByteList(), classPath.resources));
+            if (!classPath.getDexFiles().isEmpty()) {
+                this.asynchronousLoad.add(new DexInputReaderLoadTask(classPath.getDexFiles()));
+            }
         }
 
         this.asynchronousLoad.add(new ObjectHierarchyLoadTask(this));
@@ -251,6 +258,10 @@ public final class Execution {
 
     public Trinity getTrinity() {
         return trinity;
+    }
+
+    public DexIndex getDexIndex() {
+        return dexIndex;
     }
 
     public Map<String, byte[]> getResourceMap() {

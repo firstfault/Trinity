@@ -7,16 +7,24 @@ group = "me.f1nal"
 
 repositories {
     mavenCentral()
+    google()
 }
 
 dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     implementation(project(":Decompiler"))
+    implementation(project(":Application"))
+    implementation(project(":MCP"))
     implementation("org.jetbrains:annotations:24.1.0")
     implementation("com.google.guava:guava:33.6.0-jre")
     implementation("com.google.code.gson:gson:2.14.0")
-    implementation("at.yawk.lz4:lz4-java:1.8.1")
+    implementation("at.yawk.lz4:lz4-java:1.10.1")
+    implementation("com.android.tools.smali:smali-dexlib2:3.0.9")
+    implementation("com.android.tools.smali:smali-baksmali:3.0.9")
+    implementation("com.android.tools.smali:smali:3.0.9")
+    implementation("io.github.skylot:jadx-core:1.5.6")
+    implementation("io.github.skylot:jadx-dex-input:1.5.6")
     implementation("com.thoughtworks.xstream:xstream:1.4.21")
     implementation("org.tukaani:xz:1.12")
     implementation("org.ow2.asm:asm:9.9.1")

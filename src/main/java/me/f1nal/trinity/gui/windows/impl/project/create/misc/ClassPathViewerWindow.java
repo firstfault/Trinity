@@ -4,6 +4,7 @@ import imgui.ImGui;
 import imgui.flag.ImGuiWindowFlags;
 import me.f1nal.trinity.database.ClassPath;
 import me.f1nal.trinity.database.inputs.UnreadClassBytes;
+import me.f1nal.trinity.database.inputs.UnreadDexBytes;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.general.ListBoxComponent;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
@@ -22,6 +23,10 @@ public class ClassPathViewerWindow extends ClosableWindow {
         List<ClassPathViewerElement> elements = new ArrayList<>();
         for (UnreadClassBytes classBytes : classPath.getClasses()) {
             elements.add(new ClassPathViewerElement(classBytes.getEntryName(), classBytes.getBytes().length, () -> classPath.getClasses().remove(classBytes)));
+        }
+        for (UnreadDexBytes dexBytes : classPath.getDexFiles()) {
+            elements.add(new ClassPathViewerElement(dexBytes.getEntryName(), dexBytes.getBytes().length,
+                    () -> classPath.getDexFiles().remove(dexBytes)));
         }
         classPath.getResources().forEach((name, bytes) -> {
             elements.add(new ClassPathViewerElement(name, bytes.length, () -> classPath.getResources().remove(name) != null));

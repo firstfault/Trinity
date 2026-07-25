@@ -11,6 +11,7 @@ public enum FileKind implements IKindType {
     INTERFACES("Interface", "Interface", () -> CodeColorScheme.FILE_INTERFACE),
     ENUM("Enum", "Enum Class", () -> CodeColorScheme.FILE_ENUM),
     ANNOTATION("Annotation", "Annotation Class", () -> CodeColorScheme.FILE_ANNOTATION),
+    DEX("DEX", "DEX Class", () -> CodeColorScheme.FILE_CLASS),
     RESOURCE("Resource", "Resource File", () -> CodeColorScheme.FILE_RESOURCE),
     ;
 

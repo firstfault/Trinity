@@ -1,20 +1,19 @@
 package me.f1nal.trinity.database;
 
 import me.f1nal.trinity.database.inputs.UnreadClassBytes;
+import me.f1nal.trinity.database.inputs.UnreadDexBytes;
 import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.util.ByteUtil;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 public class ClassPath {
     public List<UnreadClassBytes> classes = new ArrayList<>();
+    public List<UnreadDexBytes> dexFiles = new ArrayList<>();
     public Map<String, byte[]> resources = new HashMap<>();
     /**
      * Warnings related to class path loading.
@@ -25,26 +24,13 @@ public class ClassPath {
 
     }
 
-    public ClassPath(ZipInputStream zipInputStream) throws IOException {
-        ZipEntry jarEntry;
-        while ((jarEntry = zipInputStream.getNextEntry()) != null) {
-            String entryName = jarEntry.getName();
-            byte[] entryBytes = zipInputStream.readAllBytes();
-
-            if (!jarEntry.isDirectory()) {
-                if (entryName.endsWith(".class")) {
-                    classes.add(new UnreadClassBytes(entryName, entryBytes));
-                } else {
-                    resources.put(entryName, entryBytes);
-                }
-            }
-
-            zipInputStream.closeEntry();
-        }
-    }
 
     public List<byte[]> createClassByteList() {
         return this.classes.stream().map(UnreadClassBytes::getBytes).collect(Collectors.toCollection(() -> new ArrayList<>(this.classes.size())));
+    }
+
+    public List<UnreadDexBytes> getDexFiles() {
+        return dexFiles;
     }
 
     public void addClass(UnreadClassBytes classBytes) {
@@ -61,6 +47,7 @@ public class ClassPath {
 
     public void addClassPath(ClassPath classPath) {
         this.getClasses().addAll(classPath.getClasses());
+        this.getDexFiles().addAll(classPath.getDexFiles());
         this.getResources().putAll(classPath.getResources());
         this.warnings += classPath.warnings;
     }
@@ -75,6 +62,7 @@ public class ClassPath {
 
     public void clear() {
         this.getClasses().clear();
+        this.getDexFiles().clear();
         this.getResources().clear();
         this.warnings = 0;
     }

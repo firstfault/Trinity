@@ -121,6 +121,7 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
     }
 
     void drawEntryDragSource(ArchiveEntry entry) {
+        if (entry.getRenameHandler() == null) return;
         if (!ImGui.beginDragDropSource()) return;
 
         ImGui.setDragDropPayload(ENTRY_DRAG_PAYLOAD, entry);

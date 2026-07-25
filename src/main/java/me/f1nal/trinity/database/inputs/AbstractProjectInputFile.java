@@ -23,6 +23,8 @@ public abstract class AbstractProjectInputFile extends ListedFile implements IDe
 
     @Override
     public String getDescription() {
-        return classPath.getClasses().size() + " classes, " + classPath.getResources().size() + " resources";
+        return String.format("%d JVM classes, %d DEX files, %d resources",
+                classPath.getClasses().size(), classPath.getDexFiles().size(),
+                classPath.getResources().size());
     }
 }
