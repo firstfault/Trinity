@@ -22,9 +22,8 @@ public class DatabaseCompressionTypeLZMA2 extends DatabaseCompressionType {
 
     @Override
     public byte[] decompress(InputStream stream) throws IOException {
-        XZInputStream xzInputStream = new XZInputStream(stream);
-        byte[] bytes = xzInputStream.readAllBytes();
-        xzInputStream.close();
-        return bytes;
+        try (XZInputStream xzInputStream = new XZInputStream(stream)) {
+            return readDecompressed(xzInputStream);
+        }
     }
 }

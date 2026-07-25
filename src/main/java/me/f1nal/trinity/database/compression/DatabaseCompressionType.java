@@ -1,6 +1,7 @@
 package me.f1nal.trinity.database.compression;
 
 import me.f1nal.trinity.util.IDescribable;
+import me.f1nal.trinity.util.FileUtil;
 import me.f1nal.trinity.util.INameable;
 
 import java.io.IOException;
@@ -8,6 +9,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 public abstract class DatabaseCompressionType implements INameable, IDescribable {
+    public static final int MAX_DECOMPRESSED_BYTES = 512 * 1024 * 1024;
+
     private final String name;
     private final String description;
 
@@ -26,4 +29,8 @@ public abstract class DatabaseCompressionType implements INameable, IDescribable
 
     public abstract void compress(OutputStream stream, byte[] bytes) throws IOException;
     public abstract byte[] decompress(InputStream stream) throws IOException;
+
+    protected final byte[] readDecompressed(InputStream stream) throws IOException {
+        return FileUtil.readAllBytes(stream, MAX_DECOMPRESSED_BYTES, "Decompressed database");
+    }
 }

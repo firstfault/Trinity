@@ -21,9 +21,8 @@ public class DatabaseCompressionTypeLZ4 extends DatabaseCompressionType {
 
     @Override
     public byte[] decompress(InputStream stream) throws IOException {
-        LZ4FrameInputStream xzInputStream = new LZ4FrameInputStream(stream);
-        byte[] bytes = xzInputStream.readAllBytes();
-        xzInputStream.close();
-        return bytes;
+        try (LZ4FrameInputStream lz4InputStream = new LZ4FrameInputStream(stream)) {
+            return readDecompressed(lz4InputStream);
+        }
     }
 }

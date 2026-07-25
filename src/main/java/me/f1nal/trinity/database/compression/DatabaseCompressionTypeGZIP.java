@@ -20,9 +20,8 @@ public class DatabaseCompressionTypeGZIP extends DatabaseCompressionType {
 
     @Override
     public byte[] decompress(InputStream stream) throws IOException {
-        GZIPInputStream gzipInputStream = new GZIPInputStream(stream);
-        byte[] bytes = gzipInputStream.readAllBytes();
-        gzipInputStream.close();
-        return bytes;
+        try (GZIPInputStream gzipInputStream = new GZIPInputStream(stream)) {
+            return readDecompressed(gzipInputStream);
+        }
     }
 }
