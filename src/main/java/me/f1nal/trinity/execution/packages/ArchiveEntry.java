@@ -16,7 +16,6 @@ import me.f1nal.trinity.util.ByteUtil;
 import me.f1nal.trinity.util.SystemUtil;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -68,6 +67,10 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
     }
 
     public void setPackage(Package root) {
+        setPackage(root, true);
+    }
+
+    public void setPackage(Package root, boolean notify) {
         Main.assertRenderThread();
         if (getPackage() != null) {
             getPackage().remove(this);
@@ -85,9 +88,10 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
             realName = realName.substring(index + 1);
         }
         this.targetPackage = targetPackage;
-        targetPackage.getEntries().add(this);
-        this.targetPackage.getEntries().sort(Comparator.comparing(ArchiveEntry::getDisplaySimpleName));
-        Main.getTrinity().getEventManager().postEvent(new EventPackageStructureReload());
+        targetPackage.add(this);
+        if (notify) {
+            Main.getTrinity().getEventManager().postEvent(new EventPackageStructureReload());
+        }
     }
 
     /**

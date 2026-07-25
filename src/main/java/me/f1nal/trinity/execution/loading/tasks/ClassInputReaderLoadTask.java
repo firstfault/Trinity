@@ -55,7 +55,10 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
 
         tasks.add(() -> {
             resourceMap.forEach((name, bytes) -> getTrinity().getExecution().getResourceMap().put(name, bytes));
-            getTrinity().getExecution().getResourceMap().forEach((name, bytes) -> new ResourceArchiveEntry(name, bytes).setPackage(getTrinity().getExecution().getRootPackage()));
+            getTrinity().getExecution().getResourceMap().forEach((name, bytes) -> {
+                ResourceArchiveEntry entry = new ResourceArchiveEntry(name, bytes);
+                entry.setPackage(getTrinity().getExecution().getRootPackage(), false);
+            });
         });
 
         Main.runLater(() -> {
@@ -80,7 +83,7 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
         ClassInput classInput = new ClassInput(execution, classNode, classTarget);
         classTarget.setInput(classInput);
         tasks.add(() -> {
-            classTarget.setPackage(execution.getRootPackage());
+            classTarget.setPackage(execution.getRootPackage(), false);
             execution.getClassList().add(classInput);
         });
         classInput.getNode().methods.forEach(method -> classInput.addInput(new MethodInput(method, classInput)));
