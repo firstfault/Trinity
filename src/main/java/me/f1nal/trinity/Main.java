@@ -4,12 +4,14 @@ import imgui.app.Application;
 import me.f1nal.trinity.appdata.AppDataManager;
 import me.f1nal.trinity.appdata.PreferencesFile;
 import me.f1nal.trinity.appdata.shutdown.ShutdownHook;
+import me.f1nal.trinity.adapter.LiveTrinityApplication;
 import me.f1nal.trinity.database.semaphore.DatabaseSaveShutdownHook;
 import me.f1nal.trinity.gui.DisplayManager;
 import me.f1nal.trinity.gui.backend.ImGuiApplication;
 import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.keybindings.KeyBindManager;
 import me.f1nal.trinity.logging.Logging;
+import me.f1nal.trinity.mcp.TrinityMcpServer;
 import me.f1nal.trinity.theme.ThemeManager;
 import me.f1nal.trinity.update.UpdateChecker;
 import com.google.common.collect.Queues;
@@ -21,6 +23,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -38,6 +41,7 @@ public class Main {
     private static ScheduledThreadPoolExecutor scheduler;
     private static KeyBindManager keyBindManager;
     private static ThemeManager themeManager;
+    private static TrinityMcpServer mcpServer;
     private static final List<ShutdownHook> shutdownHooks = new ArrayList<>();
     private static final Queue<FutureTask<?>> scheduledTasks = Queues.newArrayDeque();
     private static final Object updateCheckLock = new Object();
@@ -72,11 +76,31 @@ public class Main {
         appDataManager = new AppDataManager();
         appDataManager.load();
         displayManager = new DisplayManager("Trinity: " + VERSION);
+        startMcpServer();
         appDataManager.getState().setLastLaunchedVersion(VERSION);
         addShutdownHook(new ShutdownHook("Database Save", new DatabaseSaveShutdownHook()));
         ImGuiApplication.launch(displayManager);
         System.out.println("see you later!");
         Main.exit();
+    }
+
+    private static void startMcpServer() {
+        if (!Boolean.parseBoolean(System.getProperty("trinity.mcp.enabled", "true"))) {
+            Logging.info("Built-in MCP server is disabled");
+            return;
+        }
+
+        String host = System.getProperty("trinity.mcp.host", "127.0.0.1");
+        int port = Integer.getInteger("trinity.mcp.port", 7331);
+        try {
+            mcpServer = new TrinityMcpServer(new LiveTrinityApplication(), host, port);
+            mcpServer.start();
+            addShutdownHook(new ShutdownHook("MCP Server", mcpServer::close));
+            Logging.info("MCP server listening at {}", mcpServer.endpoint());
+        } catch (Exception exception) {
+            mcpServer = null;
+            Logging.error("Unable to start MCP server: {}", exception.getMessage());
+        }
     }
 
     public static void checkForUpdatesOnStartup() {
@@ -127,7 +151,11 @@ public class Main {
     }
 
     public static ListenableFuture<Object> runLater(Runnable task) {
-        ListenableFutureTask<Object> future = ListenableFutureTask.create(Executors.callable(task));
+        return callLater(Executors.callable(task));
+    }
+
+    public static <T> ListenableFuture<T> callLater(Callable<T> task) {
+        ListenableFutureTask<T> future = ListenableFutureTask.create(task);
         synchronized (scheduledTasks) {
             scheduledTasks.add(future);
         }
@@ -172,12 +200,7 @@ public class Main {
         synchronized (scheduledTasks) {
             while (!scheduledTasks.isEmpty()) {
                 FutureTask<?> task = scheduledTasks.poll();
-                try {
-                    task.run();
-                    task.get();
-                } catch (Throwable e) {
-                    throw new RuntimeException(e);
-                }
+                task.run();
             }
         }
     }
@@ -197,5 +220,9 @@ public class Main {
         if (Thread.currentThread() != renderThread) {
             throw new RuntimeException("Not on render thread");
         }
+    }
+
+    public static boolean isRenderThread() {
+        return Thread.currentThread() == renderThread;
     }
 }

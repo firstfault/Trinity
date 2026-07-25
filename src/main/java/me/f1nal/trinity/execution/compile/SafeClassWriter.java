@@ -47,12 +47,17 @@ import java.util.function.Function;
  */
 public class SafeClassWriter extends ClassWriter {
     private final Function<String, ClassNode> classNodeRetriever;
-    private final Console console;
+    private final WarningSink warnings;
 
     public SafeClassWriter(final int flags, Function<String, ClassNode> classNodeRetriever, Console console) {
+        this(flags, classNodeRetriever, console::warn);
+    }
+
+    public SafeClassWriter(final int flags, Function<String, ClassNode> classNodeRetriever,
+                           WarningSink warnings) {
         super(flags);
         this.classNodeRetriever = classNodeRetriever;
-        this.console = console;
+        this.warnings = warnings;
     }
 
     @Override
@@ -99,10 +104,10 @@ public class SafeClassWriter extends ClassWriter {
                 }
             }
         } catch (TypeNotPresentException e) {
-            console.warn("Unable to find common super class between {} and {} because {} isn't in the class path. Fallback to java/lang/Object", type1, type2, e.typeName());
+            warnings.warn("Unable to find common super class between {} and {} because {} isn't in the class path. Fallback to java/lang/Object", type1, type2, e.typeName());
             return "java/lang/Object";
         } catch (IOException e) {
-            console.warn("Unable to find common super class between {} and {}. Fallback to java/lang/Object", type1, type2);
+            warnings.warn("Unable to find common super class between {} and {}. Fallback to java/lang/Object", type1, type2);
             return "java/lang/Object";
         }
     }
@@ -185,6 +190,11 @@ public class SafeClassWriter extends ClassWriter {
             throw new TypeNotPresentException(type, new NullPointerException(String.format("typeInfo for %s", type)));
         }
         return typeInfo;
+    }
+
+    @FunctionalInterface
+    public interface WarningSink {
+        void warn(String format, String... arguments);
     }
 }
 
