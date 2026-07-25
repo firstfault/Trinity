@@ -57,6 +57,17 @@ class AssemblerClipboardCodecTest {
     }
 
     @Test
+    void reusesExistingDeclaredLabelsForWholeMethodReplacement() {
+        LabelNode existing = new LabelNode();
+
+        AssemblerClipboardCodec.ParsedInstructions parsed = AssemblerClipboardCodec.parse(
+                "label \"start\"\nreturn", name -> name.equals("start") ? existing : null);
+
+        assertSame(existing, parsed.instructions().get(0));
+        assertEquals("start", parsed.labelNames().get(existing));
+    }
+
+    @Test
     void createsADeclaredTargetWhenAnExternalLabelDoesNotExist() {
         AssemblerClipboardCodec.ParsedInstructions parsed = AssemblerClipboardCodec.parse(
                 "goto \"missing\"", ignored -> null);
