@@ -10,7 +10,6 @@ import me.f1nal.trinity.gui.components.general.FileSelectorComponent;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.util.NameUtil;
 
-import java.awt.*;
 import java.io.File;
 
 public class ExportJarWindow extends ClosableWindow {
@@ -34,7 +33,8 @@ public class ExportJarWindow extends ClosableWindow {
         if (baseName.isBlank()) baseName = "archive";
         this.outputFile = new FileSelectorComponent("Output File", new File(parent,
                 baseName + "-out.jar").getAbsolutePath(),
-                (dir, name) -> name.toLowerCase().endsWith(".jar"), FileDialog.SAVE);
+                (dir, name) -> name.toLowerCase().endsWith(".jar"),
+                FileSelectorComponent.Mode.SAVE, "jar");
     }
 
     @Override

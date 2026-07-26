@@ -5,25 +5,40 @@ import imgui.type.ImString;
 import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.util.GuiUtil;
 
-import java.awt.*;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.util.Arrays;
 
 public class FileSelectorComponent {
     public static final FilenameFilter TDB_FILE_FILTER = (f, n) -> n.toLowerCase().endsWith(".tdb");
+
+    public enum Mode {
+        OPEN,
+        SAVE
+    }
 
     private final String label;
     private final ImString path = new ImString(256);
     private String lastDirectory;
     private final FilenameFilter filenameFilter;
-    private final int mode;
+    private final Mode mode;
+    private final NativeFilePicker.Filter nativeFilter;
     private final String componentId = ComponentId.getId(this.getClass());
 
-    public FileSelectorComponent(String label, String path, FilenameFilter filenameFilter, int mode) {
+    public FileSelectorComponent(
+            String label,
+            String path,
+            FilenameFilter filenameFilter,
+            Mode mode,
+            String... extensions
+    ) {
         this.label = label;
         this.path.set(path);
         this.filenameFilter = filenameFilter;
         this.mode = mode;
+        this.nativeFilter = extensions.length == 0
+                ? null
+                : new NativeFilePicker.Filter("Supported files", extensions);
     }
 
     public void draw() {
@@ -55,31 +70,38 @@ public class FileSelectorComponent {
     }
 
     private File[] openFileChooserMultiple(boolean multiple) {
-        FileDialog fd = new FileDialog((java.awt.Frame) null, "Choose a file", mode);
-        fd.setMultipleMode(multiple && mode == FileDialog.LOAD);
-        fd.setDirectory(lastDirectory != null ? lastDirectory : getParentFromPath());
-        fd.setFilenameFilter(this.filenameFilter);
-        fd.setFile(path.get());
-        fd.setVisible(true);
-        if (fd.getDirectory() != null) this.lastDirectory = fd.getDirectory();
-        if (fd.getFiles().length == 0) {
-            return new File[0];
+        String initialDirectory = lastDirectory != null ? lastDirectory : getParentFromPath();
+        File[] files;
+        if (mode == Mode.SAVE) {
+            File selected = NativeFilePicker.saveFile(initialDirectory, getFileNameFromPath(), nativeFilter);
+            files = selected == null ? new File[0] : new File[]{selected};
+        } else if (multiple) {
+            files = NativeFilePicker.openFiles(initialDirectory, nativeFilter);
+        } else {
+            File selected = NativeFilePicker.openFile(initialDirectory, nativeFilter);
+            files = selected == null ? new File[0] : new File[]{selected};
         }
-        File[] files = fd.getFiles();
-        File file = files[0];
-        if (mode != FileDialog.SAVE && !file.exists()) {
-            return new File[0];
-        }
-        File directory = file.getParentFile();
-        if (directory.exists() && directory.isDirectory()) {
-            lastDirectory = directory.getAbsolutePath();
+
+        files = Arrays.stream(files)
+                .filter(file -> mode == Mode.SAVE || file.exists())
+                .filter(file -> mode == Mode.SAVE || filenameFilter == null
+                        || filenameFilter.accept(file.getParentFile(), file.getName()))
+                .toArray(File[]::new);
+        if (files.length != 0) {
+            File directory = files[0].getAbsoluteFile().getParentFile();
+            if (directory != null && directory.isDirectory()) lastDirectory = directory.getAbsolutePath();
         }
         return files;
     }
 
     private String getParentFromPath() {
-        File file = new File(path.get());
-        if (!file.isDirectory()) return file.getParentFile().getAbsolutePath();
-        return file.getAbsolutePath();
+        File file = new File(path.get()).getAbsoluteFile();
+        File directory = file.isDirectory() ? file : file.getParentFile();
+        return directory == null ? null : directory.getAbsolutePath();
+    }
+
+    private String getFileNameFromPath() {
+        File file = new File(path.get()).getAbsoluteFile();
+        return file.isDirectory() ? null : file.getName();
     }
 }

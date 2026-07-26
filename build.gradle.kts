@@ -25,6 +25,11 @@ dependencies {
     implementation("org.ow2.asm:asm-tree:9.9.1")
     implementation("org.ow2.asm:asm-util:9.9.1")
     implementation("io.github.spair:imgui-java-app:1.92.0")
+    implementation("org.lwjgl:lwjgl-nfd:3.4.1")
+    implementation("org.lwjgl:lwjgl-nfd:3.4.1:natives-linux")
+    implementation("org.lwjgl:lwjgl-nfd:3.4.1:natives-windows")
+    implementation("org.lwjgl:lwjgl-nfd:3.4.1:natives-macos")
+    implementation("org.lwjgl:lwjgl-nfd:3.4.1:natives-macos-arm64")
 }
 
 allprojects {

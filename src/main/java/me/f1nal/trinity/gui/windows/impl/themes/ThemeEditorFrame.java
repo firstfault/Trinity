@@ -13,7 +13,6 @@ import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.theme.*;
 import me.f1nal.trinity.util.GuiUtil;
 
-import java.awt.*;
 import java.io.File;
 import java.util.List;
 
@@ -67,7 +66,10 @@ public class ThemeEditorFrame extends StaticWindow {
         PopupItemBuilder popup = PopupItemBuilder.create();
         popup.menuItem("Export...", () -> {
             AppDataManager appDataManager = Main.getAppDataManager();
-            FileSelectorComponent selector = new FileSelectorComponent("ExportTheme", appDataManager.getThemeFile(theme).getAbsolutePath(), (dir, name) -> name.toLowerCase().endsWith(".theme"), FileDialog.SAVE);
+            FileSelectorComponent selector = new FileSelectorComponent("ExportTheme",
+                    appDataManager.getThemeFile(theme).getAbsolutePath(),
+                    (dir, name) -> name.toLowerCase().endsWith(".theme"),
+                    FileSelectorComponent.Mode.SAVE, "theme");
             File file = selector.openFileChooser();
             if (file != null) {
                 appDataManager.saveTheme(theme, file);
@@ -85,7 +87,10 @@ public class ThemeEditorFrame extends StaticWindow {
         if (ImGui.beginMenu("Themes")) {
             if (ImGui.menuItem("Import...")) {
                 AppDataManager appDataManager = Main.getAppDataManager();
-                FileSelectorComponent selector = new FileSelectorComponent("ImportTheme", appDataManager.getThemesDirectory().getAbsolutePath(), (dir, name) -> name.toLowerCase().endsWith(".theme"), FileDialog.LOAD);
+                FileSelectorComponent selector = new FileSelectorComponent("ImportTheme",
+                        appDataManager.getThemesDirectory().getAbsolutePath(),
+                        (dir, name) -> name.toLowerCase().endsWith(".theme"),
+                        FileSelectorComponent.Mode.OPEN, "theme");
                 File file = selector.openFileChooser();
                 if (file != null) {
                     Theme importedTheme = appDataManager.loadTheme(appDataManager.getThemeName(file.getName()), file);

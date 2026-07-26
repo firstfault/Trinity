@@ -6,12 +6,11 @@ import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
 import me.f1nal.trinity.execution.packages.ProjectContainerKind;
+import me.f1nal.trinity.gui.components.general.NativeFilePicker;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 
-import java.awt.FileDialog;
-import java.awt.Frame;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,11 +22,9 @@ public final class ProjectInputImporter {
     }
 
     public static void chooseAndImport(Trinity trinity) {
-        FileDialog dialog = new FileDialog((Frame) null, "Add project inputs", FileDialog.LOAD);
-        dialog.setMultipleMode(true);
-        dialog.setFilenameFilter((dir, name) -> isSupported(new File(dir, name)));
-        dialog.setVisible(true);
-        if (dialog.getFiles().length != 0) importFiles(trinity, Arrays.asList(dialog.getFiles()));
+        File[] files = NativeFilePicker.openFiles(null,
+                new NativeFilePicker.Filter("Java archives and classes", "jar", "zip", "class"));
+        if (files.length != 0) importFiles(trinity, Arrays.asList(files));
     }
 
     public static void importFiles(Trinity trinity, List<File> files) {

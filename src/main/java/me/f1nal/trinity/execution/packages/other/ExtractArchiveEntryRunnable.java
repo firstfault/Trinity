@@ -11,7 +11,6 @@ import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.util.NameUtil;
 import com.google.common.io.Files;
 
-import java.awt.*;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -48,7 +47,8 @@ public class ExtractArchiveEntryRunnable implements Runnable, ICaption {
         File targetFile = new File(parentFile, simpleName);
         String extension = !simpleName.contains(".") ? null : NameUtil.getExtension(simpleName);
         FilenameFilter filter = extension == null ? null : (dir, name) -> name.endsWith("." + extension);
-        FileSelectorComponent selector = new FileSelectorComponent("Extract To", targetFile.getAbsolutePath(), filter, FileDialog.SAVE);
+        FileSelectorComponent selector = new FileSelectorComponent("Extract To", targetFile.getAbsolutePath(),
+                filter, FileSelectorComponent.Mode.SAVE, extension == null ? new String[0] : new String[]{extension});
         File file = selector.openFileChooser();
 
         if (file == null) {

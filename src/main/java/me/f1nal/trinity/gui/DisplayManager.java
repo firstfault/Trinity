@@ -55,7 +55,6 @@ import org.lwjgl.glfw.GLFWWindowCloseCallback;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.io.File;
-import java.awt.FileDialog;
 import java.util.*;
 import java.util.zip.ZipFile;
 
@@ -314,7 +313,8 @@ public final class DisplayManager extends ImGuiApplication {
             File path = this.trinity == null ? new File("") : this.trinity.getDatabase().getPath();
             if (!path.isDirectory() && path.getParentFile() != null) path = path.getParentFile();
             databaseOpenFileSelector = new FileSelectorComponent("Database File Selector",
-                    path.getAbsolutePath(), FileSelectorComponent.TDB_FILE_FILTER, FileDialog.LOAD);
+                    path.getAbsolutePath(), FileSelectorComponent.TDB_FILE_FILTER,
+                    FileSelectorComponent.Mode.OPEN, "tdb");
         }
         return databaseOpenFileSelector;
     }

@@ -5,11 +5,11 @@ import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.packages.ProjectContainer;
 import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
+import me.f1nal.trinity.gui.components.general.NativeFilePicker;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 
-import javax.swing.JFileChooser;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,13 +26,10 @@ public final class ExportLooseFilesRunnable implements Runnable {
     public void run() {
         File databaseFile = Main.getTrinity().getDatabase().getPath();
         File initial = databaseFile == null ? new File("").getAbsoluteFile() : databaseFile.getAbsoluteFile().getParentFile();
-        JFileChooser chooser = new JFileChooser(initial);
-        chooser.setDialogTitle("Export Loose Files");
-        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        chooser.setAcceptAllFileFilterUsed(false);
-        if (chooser.showSaveDialog(null) != JFileChooser.APPROVE_OPTION) return;
+        File selected = NativeFilePicker.pickFolder(initial == null ? null : initial.getAbsolutePath());
+        if (selected == null) return;
 
-        Path root = chooser.getSelectedFile().toPath().toAbsolutePath().normalize();
+        Path root = selected.toPath().toAbsolutePath().normalize();
         Thread worker = new Thread(() -> export(root), "Trinity loose file exporter");
         worker.setDaemon(true);
         worker.start();

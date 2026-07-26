@@ -9,8 +9,6 @@ import me.f1nal.trinity.gui.components.general.FileSelectorComponent;
 import me.f1nal.trinity.gui.components.general.TextFieldComponent;
 import me.f1nal.trinity.gui.windows.impl.project.settings.AbstractProjectSettingsTab;
 
-import java.awt.*;
-
 public class ProjectSettingsGeneral extends AbstractProjectSettingsTab {
     private TextFieldComponent projectName;
     private DescribableEnumComboBox<DatabaseCompressionType> compressionTypeCombo;
@@ -20,7 +18,9 @@ public class ProjectSettingsGeneral extends AbstractProjectSettingsTab {
         super(trinity);
         this.projectName = new TextFieldComponent("Project Name", new ImString(trinity.getDatabase().getName(), 0x50));
         this.compressionTypeCombo = new DescribableEnumComboBox<>("Database Compression", DatabaseCompressionTypeManager.getTypes().toArray(new DatabaseCompressionType[0]), getDatabase().getCompressionType());
-        this.databasePath = new FileSelectorComponent("Database Path", getDatabase().getPath().getAbsolutePath(), FileSelectorComponent.TDB_FILE_FILTER, FileDialog.SAVE);
+        this.databasePath = new FileSelectorComponent("Database Path",
+                getDatabase().getPath().getAbsolutePath(), FileSelectorComponent.TDB_FILE_FILTER,
+                FileSelectorComponent.Mode.SAVE, "tdb");
     }
 
     @Override

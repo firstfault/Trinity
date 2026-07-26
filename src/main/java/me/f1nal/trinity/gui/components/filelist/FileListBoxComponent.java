@@ -13,7 +13,6 @@ import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.util.GuiUtil;
 
-import java.awt.*;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
@@ -28,11 +27,18 @@ public class FileListBoxComponent<T extends ListedFile> implements ICaption {
     private final ListedFileFactory<T> listedFileFactory;
     private Consumer<T> elementAddEvent;
 
-    public FileListBoxComponent(AbstractWindow parentWindow, String label, FilenameFilter filter, ListedFileFactory<T> listedFileFactory) {
+    public FileListBoxComponent(
+            AbstractWindow parentWindow,
+            String label,
+            FilenameFilter filter,
+            ListedFileFactory<T> listedFileFactory,
+            String... extensions
+    ) {
         this.parentWindow = parentWindow;
         this.label = label;
         this.listedFileFactory = listedFileFactory;
-        this.fileSelectorComponent = new FileSelectorComponent("Add Class Path", new File("").getAbsolutePath(), filter, FileDialog.LOAD);
+        this.fileSelectorComponent = new FileSelectorComponent("Add Class Path", new File("").getAbsolutePath(),
+                filter, FileSelectorComponent.Mode.OPEN, extensions);
     }
 
     public void setElementAddEvent(Consumer<T> elementAddEvent) {

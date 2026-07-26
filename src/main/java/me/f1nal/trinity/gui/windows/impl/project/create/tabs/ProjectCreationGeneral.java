@@ -10,7 +10,6 @@ import me.f1nal.trinity.gui.windows.impl.project.create.AbstractProjectCreationT
 import me.f1nal.trinity.util.PatternUtil;
 import me.f1nal.trinity.util.TextFieldPatternMatchCallback;
 
-import java.awt.*;
 import java.io.File;
 
 public class ProjectCreationGeneral extends AbstractProjectCreationTab {
@@ -21,7 +20,8 @@ public class ProjectCreationGeneral extends AbstractProjectCreationTab {
     public ProjectCreationGeneral() {
         this.projectName = new TextFieldComponent("Project Name", new ImString("", 0x50));
         this.compressionTypeCombo = new DescribableEnumComboBox<>("Database Compression", DatabaseCompressionTypeManager.getTypes().toArray(new DatabaseCompressionType[0]));
-        this.databasePath = new FileSelectorComponent("Database Path", new File("").getAbsolutePath(), FileSelectorComponent.TDB_FILE_FILTER, FileDialog.SAVE);
+        this.databasePath = new FileSelectorComponent("Database Path", new File("").getAbsolutePath(),
+                FileSelectorComponent.TDB_FILE_FILTER, FileSelectorComponent.Mode.SAVE, "tdb");
 
         this.projectName.setCallback(new TextFieldPatternMatchCallback(PatternUtil.DATABASE_NAME));
     }

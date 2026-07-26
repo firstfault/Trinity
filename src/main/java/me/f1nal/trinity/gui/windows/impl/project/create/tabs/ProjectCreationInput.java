@@ -31,7 +31,8 @@ public class ProjectCreationInput extends AbstractProjectCreationTab {
     private final FileListBoxComponent<AbstractProjectInputFile> fileListComponent;
 
     public ProjectCreationInput(AbstractWindow parentWindow) {
-        this.fileListComponent = new FileListBoxComponent<>(parentWindow, "Input Class Path", INPUT_FILTER, new ProjectInputFileFactory());
+        this.fileListComponent = new FileListBoxComponent<>(parentWindow, "Input Class Path", INPUT_FILTER,
+                new ProjectInputFileFactory(), "zip", "jar", "class");
     }
 
     public FileListBoxComponent<AbstractProjectInputFile> getFileListComponent() {
