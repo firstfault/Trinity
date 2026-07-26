@@ -16,6 +16,7 @@ import com.google.common.collect.Queues;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
+import org.lwjgl.system.Configuration;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -50,6 +51,8 @@ public class Main {
             System.out.println(VERSION);
             return;
         }
+
+        Configuration.GLFW_CHECK_THREAD0.set(false);
 
         renderThread = Thread.currentThread();
         scheduler = new ScheduledThreadPoolExecutor(1);

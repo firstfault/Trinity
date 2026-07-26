@@ -53,6 +53,9 @@ tasks.shadowJar {
 tasks.register<JavaExec>("run") {
     mainClass.set("me.f1nal.trinity.Main")
     classpath = sourceSets["main"].runtimeClasspath
+    if (System.getProperty("os.name", "").startsWith("Mac")) {
+        jvmArgs("-XstartOnFirstThread")
+    }
 }
 
 tasks.build {

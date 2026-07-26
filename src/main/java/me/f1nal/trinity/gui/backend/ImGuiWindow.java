@@ -148,6 +148,9 @@ public abstract class ImGuiWindow {
     }
 
     protected final void setWindowIcon(String resourcePath) {
+        // macOS gets its application icon from the app bundle and does not support setting an icon on a regular GLFW window
+        if (isMacOs()) return;
+
         try (InputStream stream = ImGuiWindow.class.getClassLoader().getResourceAsStream(resourcePath)) {
             if (stream == null) throw new IllegalArgumentException("Missing window icon resource: " + resourcePath);
             BufferedImage image = ImageIO.read(stream);
@@ -178,8 +181,7 @@ public abstract class ImGuiWindow {
     }
 
     private void decideGlGlslVersions() {
-        final boolean isMac = System.getProperty("os.name").toLowerCase().contains("mac");
-        if (isMac) {
+        if (isMacOs()) {
             glslVersion = "#version 150";
             GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 3);
             GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 2);
@@ -190,6 +192,10 @@ public abstract class ImGuiWindow {
             GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 3);
             GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 0);
         }
+    }
+
+    private static boolean isMacOs() {
+        return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac");
     }
 
     /**
