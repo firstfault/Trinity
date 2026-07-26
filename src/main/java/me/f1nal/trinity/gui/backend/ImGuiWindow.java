@@ -194,8 +194,34 @@ public abstract class ImGuiWindow {
         }
     }
 
-    private static boolean isMacOs() {
+    protected static boolean isMacOs() {
         return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac");
+    }
+
+    /**
+     * Returns the number of physical framebuffer pixels per logical window point.
+     */
+    protected final float getFramebufferScale() {
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            IntBuffer windowWidth = stack.mallocInt(1);
+            IntBuffer windowHeight = stack.mallocInt(1);
+            IntBuffer framebufferWidth = stack.mallocInt(1);
+            IntBuffer framebufferHeight = stack.mallocInt(1);
+            GLFW.glfwGetWindowSize(handle, windowWidth, windowHeight);
+            GLFW.glfwGetFramebufferSize(handle, framebufferWidth, framebufferHeight);
+
+            float scaleX = windowWidth.get(0) > 0
+                    ? (float) framebufferWidth.get(0) / windowWidth.get(0)
+                    : 1.F;
+            float scaleY = windowHeight.get(0) > 0
+                    ? (float) framebufferHeight.get(0) / windowHeight.get(0)
+                    : 1.F;
+            float scale = Math.max(scaleX, scaleY);
+
+            // Window and framebuffer sizes are integers, so an odd window size
+            // can make a 2x Retina ratio appear slightly above or below 2.
+            return Math.max(1.F, Math.round(scale * 4.F) / 4.F);
+        }
     }
 
     /**

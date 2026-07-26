@@ -126,7 +126,8 @@ public final class DisplayManager extends ImGuiApplication {
             this.initialized = true;
         }
 
-        if (this.fontManager.consumeRebuildRequest()) {
+        boolean densityChanged = this.fontManager.updateRasterizerDensity(this.getFontRasterizerDensity());
+        if (densityChanged || this.fontManager.consumeRebuildRequest()) {
             this.rebuildFontAtlas(this.fontManager::rebuildFonts);
         }
         
@@ -144,7 +145,7 @@ public final class DisplayManager extends ImGuiApplication {
         ImGuiIO io = ImGui.getIO();
         io.setIniFilename(new File(Main.getAppDataManager().getDirectory(), "gui.ini").getAbsolutePath());
         io.setConfigFlags(io.getConfigFlags() | ImGuiConfigFlags.DockingEnable);
-        fontManager.setupFonts();
+        fontManager.setupFonts(this.getFontRasterizerDensity());
         CodeColorScheme.enableColorListeners();
         TrinityStyle.initialize(Main.getPreferences().getAccentColor());
         io.setGetClipboardTextFn(new ImStrSupplier() {
@@ -221,6 +222,10 @@ public final class DisplayManager extends ImGuiApplication {
             GLFW.glfwSetWindowShouldClose(getHandle(), false);
             Main.runLater(() -> this.closeDatabase(Main::exit));
         }));
+    }
+
+    private float getFontRasterizerDensity() {
+        return isMacOs() ? getFramebufferScale() : 1.F;
     }
 
     private void homepage() {

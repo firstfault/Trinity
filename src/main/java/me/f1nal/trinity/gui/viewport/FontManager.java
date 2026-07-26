@@ -36,12 +36,21 @@ public class FontManager {
     private ImFont codiconFont;
     private volatile boolean rebuildRequested;
     private volatile long rebuildAfter;
+    private float rasterizerDensity = 1.F;
 
-    public void setupFonts() {
+    public void setupFonts(float rasterizerDensity) {
         // Finish every potentially large Java allocation before giving ImGui pointers into
         // these arrays. The atlas is built synchronously immediately after registration.
         FONT_RESOURCES.forEach(this::loadFromResources);
+        this.rasterizerDensity = normalizeRasterizerDensity(rasterizerDensity);
         this.buildFontAtlas();
+    }
+
+    public boolean updateRasterizerDensity(float rasterizerDensity) {
+        float normalizedDensity = normalizeRasterizerDensity(rasterizerDensity);
+        if (Math.abs(this.rasterizerDensity - normalizedDensity) < 0.01F) return false;
+        this.rasterizerDensity = normalizedDensity;
+        return true;
     }
 
     public void requestRebuild() {
@@ -134,8 +143,13 @@ public class FontManager {
     private ImFontConfig createJavaOwnedFontConfig(List<ImFontConfig> fontConfigs) {
         ImFontConfig fontConfig = new ImFontConfig();
         fontConfig.setFontDataOwnedByAtlas(false);
+        fontConfig.setRasterizerDensity(this.rasterizerDensity);
         fontConfigs.add(fontConfig);
         return fontConfig;
+    }
+
+    private static float normalizeRasterizerDensity(float rasterizerDensity) {
+        return Float.isFinite(rasterizerDensity) ? Math.max(1.F, rasterizerDensity) : 1.F;
     }
 
     private byte[] loadFromResources(String name) {
