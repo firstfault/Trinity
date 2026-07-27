@@ -38,7 +38,9 @@ public class XrefViewerFrame extends ClosableWindow {
         this.xrefTable.getColumns().add(
                 new TableColumn<AbstractXref>("Invocation", AbstractXref::getInvocation).setWidthWeight(1.F));
         this.xrefTable.getColumns().add(new TableColumn<AbstractXref>("Where", new TableColumnRendererXrefWhere<>(
-                builder instanceof XrefBuilderClassRef)).setWidthWeight(3.F));
+                builder instanceof XrefBuilderClassRef))
+                .setSortKey(xref -> xref.getWhere().getText())
+                .setWidthWeight(3.F));
 
         if (autofollowXref && this.xrefViewList.size() == 1) this.followFirstXref();
     }

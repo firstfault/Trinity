@@ -3,6 +3,8 @@ package me.f1nal.trinity.gui.components.general.table;
 import imgui.flag.ImGuiTableColumnFlags;
 import me.f1nal.trinity.util.ByteUtil;
 
+import java.util.Comparator;
+import java.util.Objects;
 import java.util.function.Function;
 
 public class TableColumn<T> {
@@ -10,9 +12,11 @@ public class TableColumn<T> {
     private int flags = ImGuiTableColumnFlags.None;
     private float widthWeight;
     private final ITableCellRenderer<T> renderer;
+    private Comparator<T> comparator;
 
     public TableColumn(String header, Function<T, String> text) {
         this(header, new TableColumnRendererText<>(text));
+        this.setSortKey(text);
     }
 
     public TableColumn(String header, ITableCellRenderer<T> renderer) {
@@ -39,12 +43,23 @@ public class TableColumn<T> {
         return widthWeight;
     }
 
+    public TableColumn<T> setSortKey(Function<T, String> sortKey) {
+        Objects.requireNonNull(sortKey);
+        this.comparator = Comparator.comparing(sortKey,
+                Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER));
+        return this;
+    }
+
+    Comparator<T> getComparator() {
+        return comparator;
+    }
+
     public String getHeader() {
         return header;
     }
 
     public int getFlags() {
-        return flags;
+        return this.comparator == null ? flags | ImGuiTableColumnFlags.NoSort : flags;
     }
 
     public void draw(T element) {

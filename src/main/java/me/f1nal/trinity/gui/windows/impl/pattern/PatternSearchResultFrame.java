@@ -33,7 +33,7 @@ public final class PatternSearchResultFrame extends ClosableWindow {
         this.filter = new ListFilterComponent<>(rows, this.searchFilter);
         this.totalMatches = totalMatches;
         this.retainedMatches = matches.size();
-        this.table.getColumns().add(new TableColumn<>("Match", (column, row) -> {
+        this.table.getColumns().add(new TableColumn<PatternResultRow>("Match", (column, row) -> {
             FontSettings font = Main.getPreferences().getDecompilerFont();
             font.pushFont();
             ImGui.textColored(CodeColorScheme.KEYWORD_DATA, row.getSummary());
@@ -45,8 +45,10 @@ public final class PatternSearchResultFrame extends ClosableWindow {
                 ImGui.endTooltip();
             }
             font.popFont();
-        }));
-        this.table.getColumns().add(new TableColumn<>("Where", new TableColumnRendererXrefWhere<>()));
+        }).setSortKey(PatternResultRow::getSummary));
+        this.table.getColumns().add(new TableColumn<PatternResultRow>(
+                "Where", new TableColumnRendererXrefWhere<>())
+                .setSortKey(row -> row.getWhere().getText()));
         this.setDialog(true);
     }
 

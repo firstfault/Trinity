@@ -30,7 +30,9 @@ public class ConstantViewFrame extends ClosableWindow {
         this.listFilterComponent = new ListFilterComponent<>(constantList,
                 this.searchFilter, new KindFilter<>(XrefKind.values()));
         this.table.getColumns().add(new TableColumn<>("Constant", ConstantViewCache::getConstant));
-        this.table.getColumns().add(new TableColumn<>("Where", new TableColumnRendererXrefWhere<>()));
+        this.table.getColumns().add(new TableColumn<ConstantViewCache>(
+                "Where", new TableColumnRendererXrefWhere<>())
+                .setSortKey(constant -> constant.getWhere().getText()));
         this.setDialog(true);
     }
 
