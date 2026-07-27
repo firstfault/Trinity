@@ -85,8 +85,21 @@ public final class Decompiler implements IEventListener {
                 return;
             }
 
+            if (content == null) {
+                failedList.add(classInput);
+                progressiveClass.failProgressive();
+                if (decompileCallback != null) {
+                    try {
+                        decompileCallback.call(null);
+                    } catch (Throwable throwable) {
+                        throwable.printStackTrace();
+                    }
+                }
+                decompileStack.remove(classInput);
+                return;
+            }
+
             try {
-                Objects.requireNonNull(content);
                 Objects.requireNonNull(trinity);
                 DecompiledClass decompiledClass = new DecompiledClass(trinity, classInput, content);
                 progressiveClass.finishProgressive(decompiledClass);

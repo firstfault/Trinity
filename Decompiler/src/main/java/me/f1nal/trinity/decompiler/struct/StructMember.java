@@ -67,6 +67,13 @@ public abstract class StructMember {
   }
 
   private List<TypeAnnotation> getPossibleTypeAnnotationCollisions(Type type) {
+    // Classes do not have a declaration type, so StructClass#getType() is null.
+    // A class declaration annotation therefore cannot collide with an annotation
+    // written before a field type or method return type.
+    if (type == null) {
+      return Collections.emptyList();
+    }
+
     return Arrays.stream(StructGeneralAttribute.TYPE_ANNOTATION_ATTRIBUTES)
       .flatMap(attrKey -> {
         StructTypeAnnotationAttribute attribute = (StructTypeAnnotationAttribute)getAttribute(attrKey);
