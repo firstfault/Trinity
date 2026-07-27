@@ -28,7 +28,7 @@ public class PreferencesFile extends AppDataFile {
     private boolean decompilerEnumClass = false;
     private boolean autoviewXref = false;
     private boolean checkForUpdates = true;
-    private boolean navigationNotifications = true;
+    private boolean navigationNotifications = false;
     private boolean navigationHistoryVisible = false;
     private boolean assemblerHideMetadata = false;
     private AccentColor accentColor = AccentColor.SAPPHIRE;

@@ -113,6 +113,10 @@ public class FontManager {
         final ImFontConfig baseFontConfig = createJavaOwnedFontConfig(fontConfigs);
         final ImFontConfig iconFontConfig = createJavaOwnedFontConfig(fontConfigs);
         iconFontConfig.setMergeMode(true);
+        float iconAdvance = size * 1.25F;
+        iconFontConfig.setGlyphMinAdvanceX(iconAdvance);
+        iconFontConfig.setGlyphMaxAdvanceX(iconAdvance);
+        iconFontConfig.setPixelSnapH(true);
         final ImFontGlyphRangesBuilder rangesBuilder = new ImFontGlyphRangesBuilder();
         rangesBuilder.addRanges(io.getFonts().getGlyphRangesDefault());
         rangesBuilder.addRanges(FontAwesomeIcons._IconRange);
