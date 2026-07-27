@@ -84,6 +84,7 @@ public abstract class AbstractClassStructureNodeInput<I extends Input> extends C
     @Override
     protected BrowserViewerNode createBrowserViewerNode() {
         BrowserViewerNode node = super.createBrowserViewerNode();
+        node.setKeyBindingInput(this.input);
         this.refreshTheme(node);
         return node;
     }

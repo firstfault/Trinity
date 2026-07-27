@@ -7,10 +7,12 @@ import imgui.flag.ImGuiKey;
 import imgui.type.ImString;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
+import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.gui.components.IconFamily;
 import me.f1nal.trinity.gui.components.events.MouseClickEventHandler;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
+import me.f1nal.trinity.keybindings.HoveredInputKeyBindings;
 import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.StringUtil;
 import me.f1nal.trinity.util.animation.Animation;
@@ -36,6 +38,7 @@ public class BrowserViewerNode {
     private List<ColoredString> suffix;
     private boolean defaultOpen;
     private boolean leftClickOnRelease;
+    private Input<?> keyBindingInput;
 
     public BrowserViewerNode(String icon, Supplier<Integer> color, Supplier<String> label, RenameHandler rename) {
         this(icon, IconFamily.DEFAULT, color, label, rename);
@@ -71,6 +74,10 @@ public class BrowserViewerNode {
 
     public void setLeftClickOnRelease(boolean leftClickOnRelease) {
         this.leftClickOnRelease = leftClickOnRelease;
+    }
+
+    public void setKeyBindingInput(Input<?> keyBindingInput) {
+        this.keyBindingInput = keyBindingInput;
     }
 
     public String getIcon() {
@@ -191,6 +198,11 @@ public class BrowserViewerNode {
         if (this.suffix != null && !this.suffix.isEmpty()) {
             ImGui.sameLine(0.F, 0.F);
             ColoredString.drawText(this.suffix);
+        }
+
+        if (hovered && this.keyBindingInput != null) {
+            HoveredInputKeyBindings.handle(this.keyBindingInput,
+                    this.isRenameAvailable() ? this::beginRenaming : null);
         }
     }
 

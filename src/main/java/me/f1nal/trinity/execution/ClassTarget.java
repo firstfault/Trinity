@@ -139,6 +139,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
 
     public void setInput(ClassInput input) {
         this.input = input;
+        this.getBrowserViewerNode().setKeyBindingInput(input);
         this.resetKind();
     }
 

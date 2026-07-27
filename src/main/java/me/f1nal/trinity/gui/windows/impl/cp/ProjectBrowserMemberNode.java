@@ -24,6 +24,7 @@ final class ProjectBrowserMemberNode implements IBrowserViewerNode {
                 () -> method ? CodeColorScheme.METHOD_REF : CodeColorScheme.FIELD_REF,
                 () -> input.getDisplayName().getName(),
                 input);
+        this.browserViewerNode.setKeyBindingInput(input);
         this.browserViewerNode.addMouseClickHandler(clickType -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
                 PopupItemBuilder popup = PopupItemBuilder.create();
