@@ -36,7 +36,7 @@ public class TableComponent<T> {
         }
 
         for (TableColumn<T> column : this.columns) {
-            ImGui.tableSetupColumn(column.getHeader(), column.getFlags());
+            ImGui.tableSetupColumn(column.getHeader(), column.getFlags(), column.getWidthWeight());
         }
 
         if (height > 0.F) {

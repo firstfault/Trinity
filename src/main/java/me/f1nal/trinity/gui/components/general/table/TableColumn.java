@@ -8,6 +8,7 @@ import java.util.function.Function;
 public class TableColumn<T> {
     private final String header;
     private int flags = ImGuiTableColumnFlags.None;
+    private float widthWeight;
     private final ITableCellRenderer<T> renderer;
 
     public TableColumn(String header, Function<T, String> text) {
@@ -26,6 +27,16 @@ public class TableColumn<T> {
 
     public boolean isResizable() {
         return ByteUtil.getBitflag(this.flags, ImGuiTableColumnFlags.NoResize);
+    }
+
+    public TableColumn<T> setWidthWeight(float widthWeight) {
+        this.widthWeight = widthWeight;
+        this.flags = ByteUtil.setBitflag(this.flags, ImGuiTableColumnFlags.WidthStretch, true);
+        return this;
+    }
+
+    public float getWidthWeight() {
+        return widthWeight;
     }
 
     public String getHeader() {

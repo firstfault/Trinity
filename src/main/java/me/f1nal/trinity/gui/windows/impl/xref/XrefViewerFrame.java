@@ -35,10 +35,10 @@ public class XrefViewerFrame extends ClosableWindow {
         this.builder = builder;
         this.setDialog(true);
 
-        this.xrefTable.getColumns().add(new TableColumn<>("Access", AbstractXref::getAccessText));
-        this.xrefTable.getColumns().add(new TableColumn<>("Invocation", AbstractXref::getInvocation));
-        this.xrefTable.getColumns().add(new TableColumn<>("Where", new TableColumnRendererXrefWhere<>(
-                builder instanceof XrefBuilderClassRef)));
+        this.xrefTable.getColumns().add(
+                new TableColumn<AbstractXref>("Invocation", AbstractXref::getInvocation).setWidthWeight(1.F));
+        this.xrefTable.getColumns().add(new TableColumn<AbstractXref>("Where", new TableColumnRendererXrefWhere<>(
+                builder instanceof XrefBuilderClassRef)).setWidthWeight(3.F));
 
         if (autofollowXref && this.xrefViewList.size() == 1) this.followFirstXref();
     }
