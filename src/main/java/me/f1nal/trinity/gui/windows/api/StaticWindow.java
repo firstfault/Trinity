@@ -43,6 +43,7 @@ public abstract class StaticWindow extends AbstractWindow {
 
         String title = this.getImGuiWindowName();
         int flags = this.applyDialogWindowFlags(this.windowFlags);
+        boolean covered = this.isDialog() && this.isDialogCovered();
         boolean begin;
         if (this.isDialog()) {
             if (!ImGui.isPopupOpen(title)) ImGui.openPopup(title);
@@ -54,12 +55,16 @@ public abstract class StaticWindow extends AbstractWindow {
         }
         if (begin) {
             this.rendered = true;
-            renderFrame();
-            if (this.isDialog()
-                    && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
-                    && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
-                this.close();
+            if (!covered) {
+                this.captureDialogPosition();
+                renderFrame();
+                if (this.isDialog()
+                        && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
+                        && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
+                    this.close();
+                }
             }
+
             this.renderChildWindows();
             if (this.isDialog()) {
                 if (!this.open.get() || !this.isVisible()) ImGui.closeCurrentPopup();

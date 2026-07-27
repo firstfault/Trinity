@@ -8,11 +8,17 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.util.NameUtil;
 
 public abstract class AbstractWindow {
+    private static final float COVERED_DIALOG_POSITION = -100_000.F;
     protected String title;
     protected final float width, height;
     protected Trinity trinity;
     private boolean dialog;
+    private boolean dialogCovered;
     private boolean centerOnNextOpen;
+    private boolean restoreDialogPosition;
+    private boolean dialogPositionKnown;
+    private float dialogPositionX;
+    private float dialogPositionY;
     private Runnable childWindowRenderer;
     /**
      * If this window is currently visible.
@@ -83,18 +89,49 @@ public abstract class AbstractWindow {
         }
     }
 
+    public final void setDialogCovered(boolean dialogCovered) {
+        this.dialogCovered = dialogCovered;
+    }
+
+    protected final boolean isDialogCovered() {
+        return dialogCovered;
+    }
+
     protected final int applyDialogWindowFlags(int flags) {
         return this.isDialog() ? flags | ImGuiWindowFlags.NoDocking : flags;
     }
 
     protected final void applyOpeningPosition() {
+        ImGuiViewport viewport = ImGui.getMainViewport();
+        if (this.isDialog() && this.isDialogCovered()) {
+            if (!this.dialogPositionKnown) {
+                this.dialogPositionX = viewport.getWorkCenterX() - this.width * 0.5F;
+                this.dialogPositionY = viewport.getWorkCenterY() - this.height * 0.5F;
+                this.dialogPositionKnown = true;
+            }
+            ImGui.setNextWindowPos(COVERED_DIALOG_POSITION, COVERED_DIALOG_POSITION, ImGuiCond.Always);
+            this.restoreDialogPosition = true;
+            this.centerOnNextOpen = false;
+            return;
+        }
+        if (this.restoreDialogPosition) {
+            ImGui.setNextWindowPos(this.dialogPositionX, this.dialogPositionY, ImGuiCond.Always);
+            this.restoreDialogPosition = false;
+            return;
+        }
         if (!this.centerOnNextOpen) return;
 
-        ImGuiViewport viewport = ImGui.getMainViewport();
         ImGui.setNextWindowDockID(0);
         ImGui.setNextWindowPos(viewport.getWorkCenterX(), viewport.getWorkCenterY(),
                 ImGuiCond.Always, 0.5F, 0.5F);
         this.centerOnNextOpen = false;
+    }
+
+    protected final void captureDialogPosition() {
+        if (!this.isDialog() || this.isDialogCovered()) return;
+        this.dialogPositionX = ImGui.getWindowPosX();
+        this.dialogPositionY = ImGui.getWindowPosY();
+        this.dialogPositionKnown = true;
     }
 
     public void setTitle(String title) {

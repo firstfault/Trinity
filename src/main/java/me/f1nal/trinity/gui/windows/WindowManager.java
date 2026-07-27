@@ -116,9 +116,14 @@ public class WindowManager {
         }
 
         AbstractWindow dialog = dialogs.get(index);
+        dialog.setDialogCovered(index < dialogs.size() - 1);
         dialog.setChildWindowRenderer(() -> this.drawDialogStack(dialogs, index + 1));
-        dialog.render();
-        dialog.setChildWindowRenderer(null);
+        try {
+            dialog.render();
+        } finally {
+            dialog.setChildWindowRenderer(null);
+            dialog.setDialogCovered(false);
+        }
     }
 
     private void drawDialogFadeOut() {

@@ -63,22 +63,28 @@ public abstract class ClosableWindow extends AbstractWindow {
             ImGui.setNextWindowSize(width, height, ImGuiCond.Always);
             this.sizeSet = true;
         }
+        boolean covered = this.isDialog() && this.isDialogCovered();
         boolean begin = this.beginWindow();
         this.rendered = true;
-        this.windowFocused = begin && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
+        this.windowFocused = !covered && begin
+                && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
 
         if (begin) {
-            if (!focusGained) {
-                this.onFocusGain();
-                focusGained = true;
+            if (!covered) {
+                this.captureDialogPosition();
+                if (!focusGained) {
+                    this.onFocusGain();
+                    focusGained = true;
+                }
+                if (this.menuBar != null) this.menuBar.draw();
+                renderFrame();
+                if ((closeableByEscape || this.isDialog())
+                        && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
+                        && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
+                    this.close();
+                }
             }
-            if (this.menuBar != null) this.menuBar.draw();
-            renderFrame();
-            if ((closeableByEscape || this.isDialog())
-                    && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
-                    && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
-                this.close();
-            }
+
             this.renderChildWindows();
         } else {
             focusGained = false;
