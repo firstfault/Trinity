@@ -8,6 +8,7 @@ import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.IconFamily;
 import me.f1nal.trinity.gui.components.events.MouseClickType;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
+import me.f1nal.trinity.gui.windows.impl.constant.ConstantSearchFrame;
 import me.f1nal.trinity.gui.windows.impl.cp.BrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.IBrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.IRenameHandler;
@@ -132,8 +133,16 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
                 predicate(() -> getPackage() != null && getPackage().isOpen() && getBrowserViewerNode().isRenameAvailable(),
                         items -> items.menuItem("Rename", () -> this.getBrowserViewerNode().beginRenaming())).
                 predicate(() -> this instanceof ResourceArchiveEntry,
-                        items -> items.menuItem(FontAwesomeIcons.TrashAlt + " Delete", () -> Main.getTrinity().getExecution().deleteResource((ResourceArchiveEntry) this))).
+                        items -> items
+                                .menuItem("Search References", this::openResourceReferenceSearch)
+                                .menuItem(FontAwesomeIcons.TrashAlt + " Delete", () -> Main.getTrinity().getExecution().deleteResource((ResourceArchiveEntry) this))).
                 menuItem(FontAwesomeIcons.FileDownload + " Extract", new ExtractArchiveEntryRunnable(this));
+    }
+
+    private void openResourceReferenceSearch() {
+        ConstantSearchFrame searchFrame = Main.getWindowManager().addStaticWindow(ConstantSearchFrame.class);
+        searchFrame.setStringSearchTerm(this.getDisplayOrRealName());
+        Main.getWindowManager().requestFocus(searchFrame);
     }
 
     private void openViewer(ArchiveEntryViewerType viewerType) {

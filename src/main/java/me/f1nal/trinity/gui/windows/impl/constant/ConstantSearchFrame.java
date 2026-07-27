@@ -17,6 +17,7 @@ import java.util.List;
 
 public class ConstantSearchFrame extends StaticWindow {
     private final EnumComboBox<ConstantSearchType> searchTypeCombo;
+    private final ConstantSearchTypeString stringSearchType;
     private static final MemorableCheckboxComponent closeFrame = new MemorableCheckboxComponent("closeFrameAfterConstantSearch", "Close After Search", false);
     private ConstantSearchType previousSearchType;
     private boolean focusSearchInput;
@@ -25,8 +26,9 @@ public class ConstantSearchFrame extends StaticWindow {
         super("Constant Search", 100, 100, trinity);
         this.setDialog(true);
         this.windowFlags = ImGuiWindowFlags.AlwaysAutoResize;
+        this.stringSearchType = new ConstantSearchTypeString(trinity);
         this.searchTypeCombo = new EnumComboBox<>("Constant Type", new ConstantSearchType[]{
-                new ConstantSearchTypeString(trinity),
+                this.stringSearchType,
                 new ConstantSearchTypeNumber.ConstantSearchTypeDecimal(trinity),
                 new ConstantSearchTypeNumber.ConstantSearchTypeInteger(trinity),
                 new ConstantSearchTypeNumber.ConstantSearchTypeLong(trinity),
@@ -34,6 +36,13 @@ public class ConstantSearchFrame extends StaticWindow {
                 new ConstantSearchTypeNumber.ConstantSearchTypeDouble(trinity),
                 new ConstantSearchTypeNull(trinity),
         });
+    }
+
+    public void setStringSearchTerm(String searchTerm) {
+        this.searchTypeCombo.getSelection().set(0);
+        this.stringSearchType.getSearchTerm().set(searchTerm);
+        this.stringSearchType.getExact().set(true);
+        this.focusSearchInput = true;
     }
 
     @Override
