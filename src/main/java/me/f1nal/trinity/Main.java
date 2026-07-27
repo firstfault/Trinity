@@ -19,6 +19,9 @@ import com.google.common.util.concurrent.ListenableFutureTask;
 import org.lwjgl.system.Configuration;
 
 import java.io.*;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -29,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Main {
     public static final String VERSION = "0.0.6-alpha1";
+    private static final String MACOS_FIRST_THREAD_PROPERTY = "trinity.macos.firstThread";
 
     /**
      * Manages the graphical user interface (GUI) elements and interactions.
@@ -49,6 +53,9 @@ public class Main {
     public static void main(String[] args) throws IOException {
         if (args.length == 1 && "--version".equals(args[0])) {
             System.out.println(VERSION);
+            return;
+        }
+        if (relaunchPackagedJarOnMacOsFirstThread(args)) {
             return;
         }
 
@@ -80,6 +87,47 @@ public class Main {
         ImGuiApplication.launch(displayManager);
         System.out.println("see you later!");
         Main.exit();
+    }
+
+    private static boolean relaunchPackagedJarOnMacOsFirstThread(String[] args) throws IOException {
+        if (!System.getProperty("os.name", "").startsWith("Mac")
+                || Boolean.getBoolean(MACOS_FIRST_THREAD_PROPERTY)) {
+            return false;
+        }
+
+        Path applicationPath;
+        try {
+            applicationPath = Path.of(Main.class.getProtectionDomain().getCodeSource()
+                    .getLocation().toURI());
+        } catch (URISyntaxException | RuntimeException exception) {
+            return false;
+        }
+        if (!Files.isRegularFile(applicationPath)
+                || !applicationPath.getFileName().toString().endsWith(".jar")) {
+            return false;
+        }
+
+        List<String> command = new ArrayList<>(args.length + 5);
+        command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+        command.add("-XstartOnFirstThread");
+        command.add("-D" + MACOS_FIRST_THREAD_PROPERTY + "=true");
+        command.add("-jar");
+        command.add(applicationPath.toString());
+        command.addAll(List.of(args));
+
+        Process process = new ProcessBuilder(command).inheritIO().start();
+        try {
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                System.exit(exitCode);
+            }
+        } catch (InterruptedException exception) {
+            process.destroy();
+            Thread.currentThread().interrupt();
+            throw new IOException("Interrupted while launching Trinity on the macOS first thread.",
+                    exception);
+        }
+        return true;
     }
 
     public static void checkForUpdatesOnStartup() {
