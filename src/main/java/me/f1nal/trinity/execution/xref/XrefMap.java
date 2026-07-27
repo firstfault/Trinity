@@ -27,7 +27,7 @@ public final class XrefMap extends ProgressiveLoadTask {
     /**
      * The internal data structure that stores references.
      */
-    private final ListMultimap<MemberDetails, MemberXref> memberReferences = Multimaps.newListMultimap(new HashMap<>(), ArrayList::new);
+    private final ListMultimap<MemberDetails, AbstractXref> memberReferences = Multimaps.newListMultimap(new HashMap<>(), ArrayList::new);
     private final Execution execution;
 
     /**
@@ -105,7 +105,7 @@ public final class XrefMap extends ProgressiveLoadTask {
 
     /** Replaces every reference originating from one edited method. */
     public synchronized void refreshMethod(MethodInput methodInput) {
-        memberReferences.entries().removeIf(entry -> entry.getValue().getMethodInput() == methodInput);
+        memberReferences.entries().removeIf(entry -> entry.getValue().getWhere().getInput() == methodInput);
         for (ClassTarget target : execution.getClassTargetMap().values()) {
             target.getReferences().removeIf(reference -> reference.getWhere().getInput() == methodInput);
         }
@@ -222,7 +222,31 @@ public final class XrefMap extends ProgressiveLoadTask {
             if (value instanceof Type) processClassLiteralLdc(where, (Type)value);
             if (value instanceof AnnotationNode) this.processAnnotations(where, List.of((AnnotationNode) value));
             if (value instanceof List<?>) this.processAnnotationArgs(where, (List<Object>) value);
+            if (value instanceof String[]) this.processAnnotationEnumValue(where, (String[]) value);
         }
+    }
+
+    private void processAnnotationEnumValue(XrefWhere where, String[] enumValue) {
+        if (enumValue.length != 2 || enumValue[0] == null || enumValue[1] == null) {
+            return;
+        }
+
+        Type enumType;
+        try {
+            enumType = Type.getType(enumValue[0]);
+        } catch (Throwable throwable) {
+            Logging.warn("Failed to process annotation enum descriptor: {} inside {}", enumValue[0], where);
+            return;
+        }
+        if (enumType.getSort() != Type.OBJECT) {
+            return;
+        }
+
+        String owner = enumType.getInternalName();
+        ClassXref reference = new ClassXref(
+                where, XrefAccessType.READ, enumValue[1], XrefKind.ANNOTATION);
+        putClassReference(owner, reference);
+        putMemberReference(new MemberDetails(owner, enumValue[1], enumValue[0]), reference);
     }
 
     private void processArgumentXrefs(MethodInput methodInput, String descriptor) {
@@ -250,7 +274,7 @@ public final class XrefMap extends ProgressiveLoadTask {
         putClassReference(NameUtil.internalToNormal(elementType.getClassName()), ClassXref.parameter(new XrefWhereMethod(methodInput)));
     }
 
-    private void putMemberReference(MemberDetails details, MemberXref referencer) {
+    private void putMemberReference(MemberDetails details, AbstractXref referencer) {
         this.memberReferences.put(new MemberDetails(clearDescriptorFromOwner(details.getOwner()),
                 details.getName(), details.getDesc()), referencer);
     }
@@ -292,7 +316,7 @@ public final class XrefMap extends ProgressiveLoadTask {
      * @param desc  The referenced descriptor.
      * @return A non-null list of references for this target.
      */
-    public Collection<MemberXref> queryMemberReferences(String owner, String name, String desc) {
+    public Collection<AbstractXref> queryMemberReferences(String owner, String name, String desc) {
         final MemberDetails memberDetails = new MemberDetails(owner, name, desc);
         if (!this.memberReferences.containsKey(memberDetails)) {
             return this.translateMemberReferences(memberDetails);
@@ -317,7 +341,7 @@ public final class XrefMap extends ProgressiveLoadTask {
         return null;
     }
 
-    private Collection<MemberXref> translateMemberReferences(MemberDetails memberDetails) {
+    private Collection<AbstractXref> translateMemberReferences(MemberDetails memberDetails) {
         final @Nullable MemberInput<?> translatedDetails = this.translateMemberDetails(memberDetails);
 
         if (translatedDetails == null) {
@@ -347,12 +371,12 @@ public final class XrefMap extends ProgressiveLoadTask {
         return classTarget == null ? Collections.emptyList() : classTarget.getReferences();
     }
 
-    public Collection<MemberXref> queryMemberReferences(MemberDetails details) {
+    public Collection<AbstractXref> queryMemberReferences(MemberDetails details) {
         return queryMemberReferences(details.getOwner(), details.getName(), details.getDesc());
     }
 
-    public List<MemberXref> getMemberReferencesByPattern(Pattern pattern) {
-        List<MemberXref> list = new ArrayList<>();
+    public List<AbstractXref> getMemberReferencesByPattern(Pattern pattern) {
+        List<AbstractXref> list = new ArrayList<>();
 
         this.memberReferences.asMap().forEach((memberDetails, xrefs) -> {
             if (pattern.matcher(this.translateMemberAsDisplayNames(memberDetails).getKey()).matches()) {
