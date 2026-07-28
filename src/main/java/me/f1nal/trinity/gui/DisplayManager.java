@@ -6,6 +6,7 @@ import imgui.app.Configuration;
 import imgui.callback.ImStrConsumer;
 import imgui.callback.ImStrSupplier;
 import imgui.flag.*;
+import imgui.type.ImInt;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.RecentDatabaseEntry;
@@ -59,6 +60,13 @@ import java.util.*;
 import java.util.zip.ZipFile;
 
 public final class DisplayManager extends ImGuiApplication {
+    private static final int MAIN_DOCKSPACE_ID = 123;
+    private static final float PROJECT_BROWSER_WIDTH_RATIO = 410.F / 1920.F;
+    private static final float CLASS_STRUCTURE_HEIGHT_RATIO = 287.F / 920.F;
+    private static final String PROJECT_BROWSER_WINDOW =
+            "Project Browser###BeginWndStaticWndProject Browser";
+    private static final String CLASS_STRUCTURE_WINDOW =
+            "Class Structure###BeginWndStaticWndClass Structure";
     /**
      * Initial window title to be set when first creating the display.
      */
@@ -77,6 +85,7 @@ public final class DisplayManager extends ImGuiApplication {
     private FileSelectorComponent databaseOpenFileSelector;
     private NavigationTarget currentDecompilerTarget;
     private boolean initialized;
+    private boolean defaultDockLayoutPending;
 
     public DisplayManager(String windowTitle) {
         this.windowTitle = windowTitle;
@@ -143,7 +152,9 @@ public final class DisplayManager extends ImGuiApplication {
     protected void initImGui(Configuration config) {
         super.initImGui(config);
         ImGuiIO io = ImGui.getIO();
-        io.setIniFilename(new File(Main.getAppDataManager().getDirectory(), "gui.ini").getAbsolutePath());
+        File guiIniFile = new File(Main.getAppDataManager().getDirectory(), "gui.ini");
+        this.defaultDockLayoutPending = !guiIniFile.isFile();
+        io.setIniFilename(guiIniFile.getAbsolutePath());
         io.setConfigFlags(io.getConfigFlags() | ImGuiConfigFlags.DockingEnable);
         fontManager.setupFonts(this.getFontRasterizerDensity());
         CodeColorScheme.enableColorListeners();
@@ -210,9 +221,47 @@ public final class DisplayManager extends ImGuiApplication {
         ImGui.setNextWindowViewport(viewport.getID());
         ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 0.F, 0.F);
         ImGui.begin("DockSpace", ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoNavFocus);
-        ImGui.dockSpace(123);
+        if (this.defaultDockLayoutPending) {
+            this.defaultDockLayoutPending = false;
+            this.createDefaultDockLayout(viewport);
+        }
+        ImGui.dockSpace(MAIN_DOCKSPACE_ID);
         ImGui.end();
         ImGui.popStyleVar(2);
+    }
+
+    private void createDefaultDockLayout(ImGuiViewport viewport) {
+        imgui.internal.ImGui.dockBuilderRemoveNode(MAIN_DOCKSPACE_ID);
+        imgui.internal.ImGui.dockBuilderAddNode(MAIN_DOCKSPACE_ID,
+                imgui.internal.flag.ImGuiDockNodeFlags.DockSpace);
+        imgui.internal.ImGui.dockBuilderSetNodePos(MAIN_DOCKSPACE_ID,
+                viewport.getWorkPosX(), viewport.getWorkPosY());
+        imgui.internal.ImGui.dockBuilderSetNodeSize(MAIN_DOCKSPACE_ID,
+                viewport.getWorkSizeX(), viewport.getWorkSizeY());
+
+        ImInt projectBrowserNode = new ImInt();
+        ImInt rightSideNode = new ImInt();
+        imgui.internal.ImGui.dockBuilderSplitNode(MAIN_DOCKSPACE_ID, ImGuiDir.Left,
+                PROJECT_BROWSER_WIDTH_RATIO, projectBrowserNode, rightSideNode);
+
+        ImInt classStructureNode = new ImInt();
+        ImInt centerNode = new ImInt();
+        imgui.internal.ImGui.dockBuilderSplitNode(rightSideNode.get(), ImGuiDir.Down,
+                CLASS_STRUCTURE_HEIGHT_RATIO, classStructureNode, centerNode);
+
+        imgui.internal.ImGui.dockBuilderDockWindow(PROJECT_BROWSER_WINDOW,
+                projectBrowserNode.get());
+        imgui.internal.ImGui.dockBuilderDockWindow(CLASS_STRUCTURE_WINDOW,
+                classStructureNode.get());
+        imgui.internal.ImGui.dockBuilderFinish(MAIN_DOCKSPACE_ID);
+    }
+
+    public void exitApplication() {
+        String iniFilename = ImGui.getIO().getIniFilename();
+        if (iniFilename != null) {
+            ImGui.saveIniSettingsToDisk(iniFilename);
+        }
+        Main.exit();
     }
 
     private void initializeWindow() {
@@ -220,7 +269,7 @@ public final class DisplayManager extends ImGuiApplication {
         GLFW.glfwSetDropCallback(getHandle(), GLFWDropCallback.create(this.dragAndDropHandler));
         GLFW.glfwSetWindowCloseCallback(getHandle(), GLFWWindowCloseCallback.create((hnd) -> {
             GLFW.glfwSetWindowShouldClose(getHandle(), false);
-            Main.runLater(() -> this.closeDatabase(Main::exit));
+            Main.runLater(() -> this.closeDatabase(this::exitApplication));
         }));
     }
 

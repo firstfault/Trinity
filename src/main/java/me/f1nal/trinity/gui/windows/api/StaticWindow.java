@@ -36,7 +36,7 @@ public abstract class StaticWindow extends AbstractWindow {
             return;
         }
         if (!setSize) {
-            ImGui.setNextWindowSize(width, height, ImGuiCond.Always);
+            ImGui.setNextWindowSize(width, height, ImGuiCond.FirstUseEver);
             setSize = true;
         }
         this.applyOpeningPosition();
