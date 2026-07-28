@@ -49,15 +49,15 @@ public final class GlobalSearchOverlay {
     private static final float DESIRED_WIDTH = 680.F;
     private static final float DESIRED_HEIGHT = 420.F;
     private static final float VIEWPORT_MARGIN = 28.F;
-    private static final float PANEL_ROUNDING = 8.F;
-    private static final float ROW_HEIGHT = 44.F;
+    private static final float PANEL_ROUNDING = 0.F;
+    private static final float ROW_HEIGHT = 17f;
     private static final float DIM_ALPHA = 44.F;
 
     private final DisplayManager displayManager;
     private final ApplicationActionRegistry actionRegistry;
     private final GlobalSearchFileIndex fileIndex = new GlobalSearchFileIndex();
     private final DoubleTapDetector shiftDetector = new DoubleTapDetector(DOUBLE_SHIFT_DELAY_MILLIS);
-    private final Animation panelAnimation = new Animation(Easing.EASE_OUT_QUAD, 150L);
+    private final Animation panelAnimation = new Animation(Easing.EASE_OUT_QUAD, 110L);
     private final Animation dimAnimation = new Animation(Easing.EASE_IN_OUT_QUAD, 210L);
     private final ImString query = new ImString(512);
     private final List<SearchResult> results = new ArrayList<>();
@@ -249,7 +249,7 @@ public final class GlobalSearchOverlay {
             focusSearch = false;
         }
         boolean changed = ImGui.inputTextWithHint("###TrinityGlobalSearchInput",
-                "Search actions, members, and project files...", query);
+                "Search...", query);
 
         if (!query.isEmpty()) {
             ImGui.sameLine(0.F, 5.F);

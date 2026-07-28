@@ -27,7 +27,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
     private final String size;
     private final int sizeInBytes;
     private final BrowserViewerNode browserViewerNode;
-    private final ArchiveEntryViewerType[] viewerTypes;
+    private ArchiveEntryViewerType[] viewerTypes;
     private ZipEntryMetadata zipMetadata;
 
     protected ArchiveEntry(int sizeInBytes) {
@@ -38,7 +38,6 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         this.sizeInBytes = sizeInBytes;
         this.zipMetadata = zipMetadata == null ? ZipEntryMetadata.createDefault() : zipMetadata;
         this.size = ByteUtil.getHumanReadableByteCountSI(sizeInBytes);
-        this.viewerTypes = Arrays.stream(ArchiveEntryViewerType.values()).filter(type -> type.getValid().test(this)).toArray(ArchiveEntryViewerType[]::new);
         this.browserViewerNode = new BrowserViewerNode(getIcon(), IconFamily.CODICON,
                 () -> this.getKind() == null ? this.getIconColor() : this.getKind().getColor(),
                 this::getDisplaySimpleName, this.getRenameHandler());
@@ -47,19 +46,25 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
             if (clickType == MouseClickType.RIGHT_CLICK) {
                 Main.getDisplayManager().getPopupMenu().show(this.createPopup(PopupItemBuilder.create()));
             } else if (clickType == MouseClickType.LEFT_CLICK) {
-                if (this.viewerTypes.length != 0) {
-                    this.openViewer(this.viewerTypes[0]);
+                ArchiveEntryViewerType[] availableViewerTypes = this.getViewerTypes();
+                if (availableViewerTypes.length != 0) {
+                    this.openViewer(availableViewerTypes[0]);
                 }
             }
         });
     }
 
     public ArchiveEntryViewerWindow<?> getDefaultViewer() {
-        return viewerTypes[0].getWindow(this);
+        return this.getViewerTypes()[0].getWindow(this);
     }
 
     public final ArchiveEntryViewerType[] getViewerTypes() {
-        return viewerTypes;
+        if (this.viewerTypes == null) {
+            this.viewerTypes = Arrays.stream(ArchiveEntryViewerType.values())
+                    .filter(type -> type.getValid().test(this))
+                    .toArray(ArchiveEntryViewerType[]::new);
+        }
+        return this.viewerTypes;
     }
 
     public abstract void setName(String newName);
