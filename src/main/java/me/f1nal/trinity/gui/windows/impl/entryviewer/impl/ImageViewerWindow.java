@@ -23,6 +23,7 @@ public final class ImageViewerWindow extends ArchiveEntryViewerWindow<ResourceAr
     private static final float MIN_ZOOM = 0.01F;
     private static final float MAX_ZOOM = 4096.F;
     private static final float ZOOM_STEP = 1.15F;
+    private static final float CHECKER_SIZE = 16.F;
     private static final double ZOOM_INDICATOR_DURATION = 1.D;
     private static final double ZOOM_INDICATOR_FADE_DURATION = 0.3D;
 
@@ -73,6 +74,7 @@ public final class ImageViewerWindow extends ArchiveEntryViewerWindow<ResourceAr
         ImGui.setCursorScreenPos(canvasPosition);
         ImGui.invisibleButton("##imageCanvas", availableWidth, availableHeight);
         boolean canvasHovered = ImGui.isItemHovered();
+        this.drawCheckerboard(canvasX, canvasY, availableWidth, availableHeight);
         this.drawContextMenu(fitScale);
         float imageX = canvasPosition.x + (availableWidth - displayWidth) * 0.5F
                 + this.panX;
@@ -98,6 +100,27 @@ public final class ImageViewerWindow extends ArchiveEntryViewerWindow<ResourceAr
             ImGui.setTooltip(this.imageWidth + " \u00d7 " + this.imageHeight);
         }
         this.drawZoomIndicator(scale);
+    }
+
+    private void drawCheckerboard(float x, float y, float width, float height) {
+        ImDrawList drawList = ImGui.getWindowDrawList();
+        drawList.addRectFilled(x, y, x + width, y + height,
+                CodeColorScheme.setAlpha(CodeColorScheme.BACKGROUND, 255));
+
+        int alternateColor = CodeColorScheme.setAlpha(
+                CodeColorScheme.WIDGET_BACKGROUND, 65);
+        int columns = (int) Math.ceil(width / CHECKER_SIZE);
+        int rows = (int) Math.ceil(height / CHECKER_SIZE);
+        for (int row = 0; row < rows; row++) {
+            for (int column = row & 1; column < columns; column += 2) {
+                float tileX = x + column * CHECKER_SIZE;
+                float tileY = y + row * CHECKER_SIZE;
+                drawList.addRectFilled(tileX, tileY,
+                        Math.min(tileX + CHECKER_SIZE, x + width),
+                        Math.min(tileY + CHECKER_SIZE, y + height),
+                        alternateColor);
+            }
+        }
     }
 
     private void updateZoom() {
