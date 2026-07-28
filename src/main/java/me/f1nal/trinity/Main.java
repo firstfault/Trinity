@@ -31,7 +31,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class Main {
-    public static final String VERSION = "0.0.6-alpha1";
+    public static final String VERSION = "0.0.7-alpha1";
     private static final String MACOS_FIRST_THREAD_PROPERTY = "trinity.macos.firstThread";
 
     /**
