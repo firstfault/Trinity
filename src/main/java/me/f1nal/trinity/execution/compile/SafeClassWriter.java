@@ -37,6 +37,7 @@ import org.objectweb.asm.tree.ClassNode;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Consumer;
 
 
 /**
@@ -48,11 +49,20 @@ import java.util.function.Function;
 public class SafeClassWriter extends ClassWriter {
     private final Function<String, ClassNode> classNodeRetriever;
     private final Console console;
+    private final Consumer<String> unresolvedTypeConsumer;
+    private final boolean warnOnUnresolved;
 
     public SafeClassWriter(final int flags, Function<String, ClassNode> classNodeRetriever, Console console) {
+        this(flags, classNodeRetriever, console, ignored -> { }, true);
+    }
+
+    public SafeClassWriter(final int flags, Function<String, ClassNode> classNodeRetriever, Console console,
+                           Consumer<String> unresolvedTypeConsumer, boolean warnOnUnresolved) {
         super(flags);
         this.classNodeRetriever = classNodeRetriever;
         this.console = console;
+        this.unresolvedTypeConsumer = unresolvedTypeConsumer;
+        this.warnOnUnresolved = warnOnUnresolved;
     }
 
     @Override
@@ -99,10 +109,17 @@ public class SafeClassWriter extends ClassWriter {
                 }
             }
         } catch (TypeNotPresentException e) {
-            console.warn("Unable to find common super class between {} and {} because {} isn't in the class path. Fallback to java/lang/Object", type1, type2, e.typeName());
+            unresolvedTypeConsumer.accept(e.typeName());
+            if (warnOnUnresolved) {
+                console.warn("Unable to find common super class between {} and {} because {} isn't in the dependency classpath. Fallback to java/lang/Object",
+                        type1, type2, e.typeName());
+            }
             return "java/lang/Object";
         } catch (IOException e) {
-            console.warn("Unable to find common super class between {} and {}. Fallback to java/lang/Object", type1, type2);
+            if (warnOnUnresolved) {
+                console.warn("Unable to find common super class between {} and {}. Fallback to java/lang/Object",
+                        type1, type2);
+            }
             return "java/lang/Object";
         }
     }
@@ -187,4 +204,3 @@ public class SafeClassWriter extends ClassWriter {
         return typeInfo;
     }
 }
-

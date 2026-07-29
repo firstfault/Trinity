@@ -525,7 +525,9 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             SafeClassWriter writer = new SafeClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS,
                     typeName -> {
                         ClassInput input = trinity.getExecution().getClassInput(typeName);
-                        return input == null ? trinity.getJrtInput().getClass(typeName) : input.getNode();
+                        return input == null
+                                ? trinity.getExecution().getDependencies().getClass(typeName)
+                                : input.getNode();
                     }, new Console());
             owner.accept(writer);
             ClassNode computedOwner = new ClassNode(org.objectweb.asm.Opcodes.ASM9);

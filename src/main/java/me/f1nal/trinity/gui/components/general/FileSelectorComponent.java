@@ -1,6 +1,7 @@
 package me.f1nal.trinity.gui.components.general;
 
 import imgui.ImGui;
+import imgui.ImGuiStyle;
 import imgui.type.ImString;
 import me.f1nal.trinity.gui.components.ComponentId;
 import me.f1nal.trinity.util.GuiUtil;
@@ -10,6 +11,7 @@ import java.io.FilenameFilter;
 import java.util.Arrays;
 
 public class FileSelectorComponent {
+    private static final int PATH_CAPACITY = 2048;
     public static final FilenameFilter TDB_FILE_FILTER = (f, n) -> n.toLowerCase().endsWith(".tdb");
 
     public enum Mode {
@@ -18,7 +20,7 @@ public class FileSelectorComponent {
     }
 
     private final String label;
-    private final ImString path = new ImString(256);
+    private final ImString path = new ImString(PATH_CAPACITY);
     private String lastDirectory;
     private final FilenameFilter filenameFilter;
     private final Mode mode;
@@ -50,6 +52,37 @@ public class FileSelectorComponent {
         }
         GuiUtil.tooltip("Open File Chooser");
         ImGui.inputText("###" + this.componentId, this.path);
+    }
+
+    /**
+     * Draws the path editor and file-picker action on one row.
+     *
+     * @return whether the selected path changed
+     */
+    public boolean drawInline(String browseLabel) {
+        ImGui.text(this.label);
+
+        ImGuiStyle style = ImGui.getStyle();
+        float buttonWidth = ImGui.calcTextSize(browseLabel).x
+                + style.getFramePadding().x * 2.F;
+        float inputWidth = Math.max(80.F, ImGui.getContentRegionAvailX()
+                - buttonWidth - style.getItemSpacing().x);
+        ImGui.setNextItemWidth(inputWidth);
+        boolean changed = ImGui.inputText("###" + this.componentId, this.path);
+        ImGui.sameLine();
+        if (ImGui.button(browseLabel + "###Browse" + this.componentId)) {
+            File result = this.openFileChooser();
+            if (result != null) {
+                this.path.set(result);
+                changed = true;
+            }
+        }
+        GuiUtil.tooltip("Choose a file");
+        return changed;
+    }
+
+    public String getPath() {
+        return this.path.get();
     }
 
     public File getFile() {

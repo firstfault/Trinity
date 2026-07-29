@@ -66,7 +66,10 @@ class ClassWriterTaskTest {
         container.addDirectory(new ArchiveDirectoryEntry("empty/", directoryMetadata));
 
         Path output = temporaryDirectory.resolve("output.jar");
-        new ClassWriterTask(container, null, new Console(), output.toFile(), false).buildJar(progress -> { });
+        List<Float> progress = new ArrayList<>();
+        ClassWriterTask.ExportResult result =
+                new ClassWriterTask(container, null, new Console(), output.toFile(), false)
+                        .buildJar(progress::add);
 
         try (ZipFile zip = new ZipFile(output.toFile())) {
             assertEquals("archive comment", zip.getComment());
@@ -81,6 +84,17 @@ class ClassWriterTaskTest {
             assertTrue(zip.getEntry("empty/").isDirectory());
         }
         assertFalse(input.isRebuildRequired());
+        assertTrue(result.isSuccessful());
+        assertEquals(output.toFile().getAbsoluteFile(), result.outputFile());
+        assertEquals(3, result.entryCount());
+        assertEquals(output.toFile().length(), result.outputSize());
+        assertEquals(0, result.unresolvedDependencyCount());
+        assertEquals(0, result.removedSignatureCount());
+        assertFalse(progress.isEmpty());
+        assertEquals(1.F, progress.get(progress.size() - 1));
+        for (int index = 1; index < progress.size(); index++) {
+            assertTrue(progress.get(index) >= progress.get(index - 1));
+        }
     }
 
     private static byte[] createClassBytes() {

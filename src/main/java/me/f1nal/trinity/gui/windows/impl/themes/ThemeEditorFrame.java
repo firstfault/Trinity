@@ -29,16 +29,16 @@ public class ThemeEditorFrame extends StaticWindow {
         this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize;
         this.windowFlags |= ImGuiWindowFlags.MenuBar;
         this.themeManager = Main.getThemeManager();
-        this.theme = themeManager.getCurrentTheme().isVisibleInEditor()
-                ? themeManager.getCurrentTheme()
-                : themeManager.getThemes().stream()
-                        .filter(Theme::isVisibleInEditor)
-                        .findFirst()
-                        .orElseThrow();
+        this.selectAvailableTheme();
     }
 
     @Override
     protected void renderFrame() {
+        if (this.theme == null
+                || !this.themeManager.getThemes().contains(this.theme)
+                || !this.theme.isVisibleInEditor()) {
+            this.selectAvailableTheme();
+        }
         PopupMenu.style(true);
         this.drawMenuBar();
         PopupMenu.style(false);
@@ -77,7 +77,10 @@ public class ThemeEditorFrame extends StaticWindow {
         });
         if (theme.isEditable()) {
             popup.separator();
-            popup.menuItem("Delete", () -> this.themeManager.deleteThemePermanently(theme));
+            popup.menuItem("Delete", () -> {
+                this.themeManager.deleteThemePermanently(theme);
+                if (this.theme == theme) this.selectAvailableTheme();
+            });
         }
         this.popupMenu.show(popup);
     }
@@ -104,6 +107,7 @@ public class ThemeEditorFrame extends StaticWindow {
 
             if (ImGui.menuItem("Refresh")) {
                 Main.getAppDataManager().reloadThemes();
+                this.selectAvailableTheme();
             }
 
             boolean disabled = this.modifiedTheme != null;
@@ -134,6 +138,12 @@ public class ThemeEditorFrame extends StaticWindow {
     }
 
     private void drawThemeEditor() {
+        if (this.theme == null) {
+            ImGui.textWrapped("No editable themes are installed.");
+            ImGui.textDisabled("Use Themes > Create New Theme or Import...");
+            return;
+        }
+
         boolean setOpen = this.setOpen;
         if (!setOpen) this.setOpen = true;
 
@@ -178,6 +188,16 @@ public class ThemeEditorFrame extends StaticWindow {
                 ImGui.treePop();
             }
         }
+    }
+
+    private void selectAvailableTheme() {
+        Theme currentTheme = this.themeManager.getCurrentTheme();
+        this.theme = currentTheme != null && currentTheme.isVisibleInEditor()
+                ? currentTheme
+                : this.themeManager.getThemes().stream()
+                        .filter(Theme::isVisibleInEditor)
+                        .findFirst()
+                        .orElse(null);
     }
 
     private void saveModifiedTheme() {

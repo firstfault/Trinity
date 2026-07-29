@@ -5,24 +5,32 @@ import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiStyleVar;
+import imgui.flag.ImGuiTreeNodeFlags;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.database.inputs.DependencyImporter;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventClassesLoaded;
+import me.f1nal.trinity.events.EventDependenciesChanged;
 import me.f1nal.trinity.events.EventMemberModified;
 import me.f1nal.trinity.events.EventPackageStructureReload;
 import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.execution.ClassTarget;
+import me.f1nal.trinity.execution.dependency.DependencyArchive;
+import me.f1nal.trinity.execution.dependency.DependencyKind;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.gui.components.filter.ListFilterComponent;
 import me.f1nal.trinity.gui.components.filter.SearchBarFilter;
 import me.f1nal.trinity.gui.components.filter.kind.KindFilter;
+import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
+import me.f1nal.trinity.gui.windows.impl.project.RemoveDependencyArchivePopup;
+import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.*;
 
@@ -57,6 +65,11 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
 
     @Subscribe
     public void onMemberModified(EventMemberModified event) {
+        this.refreshFilterComponent();
+    }
+
+    @Subscribe
+    public void onDependenciesChanged(EventDependenciesChanged event) {
         this.refreshFilterComponent();
     }
 
@@ -103,10 +116,63 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
 
         if (ImGui.beginChild(getId("ViewTree"), 0.F, 0.F)) {
             for (ProjectBrowserTreeNodePackage root : this.rootNodes) root.draw(this);
+            this.drawDependencies();
         }
         ImGui.endChild();
         ImGui.popStyleColor(2);
         ImGui.getStyle().setTouchExtraPadding(extraPadding.x, extraPadding.y);
+    }
+
+    private void drawDependencies() {
+        boolean open = ImGui.treeNodeEx("Dependencies###ProjectDependencies",
+                ImGuiTreeNodeFlags.DefaultOpen);
+        boolean rootContextMenu = ImGui.isItemClicked(1);
+        ImGui.sameLine();
+        if (ImGui.smallButton("+ Add###AddProjectDependency")) {
+            DependencyImporter.chooseAndImport(trinity);
+        }
+        if (ImGui.isItemHovered()) {
+            ImGui.setTooltip("Store a JAR, ZIP, or JMOD on this project's dependency classpath.");
+        }
+        if (rootContextMenu) {
+            PopupItemBuilder popup = PopupItemBuilder.create()
+                    .menuItem("Add Dependency Archives...", () -> DependencyImporter.chooseAndImport(trinity));
+            boolean hasJavaBase = trinity.getExecution().getDependencies().getArchives().stream()
+                    .anyMatch(archive -> archive.getKind() == DependencyKind.RUNTIME_MODULE
+                            && "java.base".equals(archive.getRuntimeModule()));
+            if (!hasJavaBase) {
+                popup.menuItem("Restore java.base...", () -> DependencyImporter.restoreJavaBase(trinity));
+            }
+            Main.getDisplayManager().getPopupMenu().show(popup);
+        }
+
+        if (!open) return;
+        for (DependencyArchive archive : trinity.getExecution().getDependencies().getArchives()) {
+            int flags = ImGuiTreeNodeFlags.SpanFullWidth
+                    | ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen;
+            ImGui.treeNodeEx(archive.getName() + "###Dependency" + archive.getId(), flags);
+            boolean archiveContextMenu = ImGui.isItemClicked(1);
+            ImGui.sameLine();
+            if (archive.isResolved()) {
+                ImGui.textDisabled(archive.getClassCount() + " classes \u00b7 linked");
+                if (ImGui.isItemHovered()) ImGui.setTooltip(archive.getResolvedLocation());
+            } else {
+                ImGui.textColored(CodeColorScheme.NOTIFY_ERROR,
+                        "Unresolved \u00b7 " + String.valueOf(archive.getStoredReference()));
+                if (ImGui.isItemHovered()) ImGui.setTooltip(archive.getResolutionError());
+            }
+            if (archiveContextMenu) {
+                PopupItemBuilder popup = PopupItemBuilder.create();
+                if (archive.getKind() == DependencyKind.ARCHIVE) {
+                    popup.menuItem(archive.isResolved() ? "Change Location..." : "Locate Dependency...",
+                            () -> DependencyImporter.rebind(trinity, archive));
+                }
+                popup.menuItem("Remove Dependency...", () -> Main.getWindowManager()
+                        .addPopup(new RemoveDependencyArchivePopup(trinity, archive)));
+                Main.getDisplayManager().getPopupMenu().show(popup);
+            }
+        }
+        ImGui.treePop();
     }
 
     void drawEntryDragSource(ArchiveEntry entry) {

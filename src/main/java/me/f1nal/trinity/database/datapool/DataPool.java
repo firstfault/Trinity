@@ -7,7 +7,11 @@ import me.f1nal.trinity.database.inputs.ProjectInputSet;
 import me.f1nal.trinity.database.inputs.UnreadClassBytes;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.Execution;
+import me.f1nal.trinity.execution.dependency.DependencyArchive;
+import me.f1nal.trinity.execution.dependency.DependencyKind;
+import me.f1nal.trinity.execution.loading.tasks.DependencyArchiveLoadTask;
 import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
+import me.f1nal.trinity.execution.loading.tasks.RuntimeDependencyLoadTask;
 import me.f1nal.trinity.execution.packages.ProjectContainer;
 import me.f1nal.trinity.execution.packages.ProjectContainerKind;
 import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
@@ -20,17 +24,23 @@ import org.objectweb.asm.tree.ClassNode;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.UUID;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
-/** Binary project data, grouped by its persisted JAR/loose container. */
+/** Binary project data, including project containers and dependency references. */
 public class DataPool {
-    private static final int VERSION = 2;
+    private static final int VERSION = 4;
+    private static final int OLDEST_SUPPORTED_VERSION = 2;
+    private static final int MAX_DEPENDENCY_ARCHIVES = 10_000;
+    private static final int MAX_DEPENDENCY_CLASSES = 100_000;
 
     public void deserialize(Database database, DataInputStream input) throws IOException {
         int version = input.readUnsignedShort();
-        if (version != VERSION) {
-            throw new IOException("Unsupported data pool version " + version + "; expected " + VERSION);
+        if (version < OLDEST_SUPPORTED_VERSION || version > VERSION) {
+            throw new IOException("Unsupported data pool version " + version
+                    + "; expected " + OLDEST_SUPPORTED_VERSION + "-" + VERSION);
         }
 
         long started = System.currentTimeMillis();
@@ -70,6 +80,16 @@ public class DataPool {
             projectInput.add(new ProjectContainerInput(id, name, kind, classPath));
         }
 
+        if (version >= 4) {
+            database.loadTasks.add(new DependencyArchiveLoadTask(readDependencyArchives(input)));
+        } else if (version == 3) {
+            database.loadTasks.add(new DependencyArchiveLoadTask(
+                    readEmbeddedDependencyArchives(input)));
+        } else {
+            // Version 2 predates persisted classpaths. Migrate it with the
+            // same java.base dependency provided to newly created projects.
+            database.loadTasks.add(new RuntimeDependencyLoadTask());
+        }
         database.loadTasks.add(new ClassInputReaderLoadTask(projectInput));
         database.setDataPoolLoadTime(System.currentTimeMillis() - started);
     }
@@ -113,6 +133,72 @@ public class DataPool {
                 output.writeUTF(directory.getName());
                 writeMetadata(output, directory.getMetadata());
             }
+        }
+
+        writeDependencyArchives(output, execution.getDependencies().getArchives());
+    }
+
+    static List<DependencyArchive> readDependencyArchives(DataInputStream input) throws IOException {
+        int dependencyCount = readCount(input, "dependency");
+        if (dependencyCount > MAX_DEPENDENCY_ARCHIVES) {
+            throw new IOException("Too many dependency archives: " + dependencyCount);
+        }
+        List<DependencyArchive> dependencies = new ArrayList<>(dependencyCount);
+        for (int i = 0; i < dependencyCount; i++) {
+            UUID id = new UUID(input.readLong(), input.readLong());
+            String name = input.readUTF();
+            int kindIndex = input.readUnsignedByte();
+            if (kindIndex >= DependencyKind.values().length) {
+                throw new IOException("Unknown dependency kind " + kindIndex);
+            }
+            try {
+                dependencies.add(new DependencyArchive(id, name, DependencyKind.values()[kindIndex],
+                        readString(input), readString(input), readString(input)));
+            } catch (IllegalArgumentException exception) {
+                throw new IOException("Invalid persisted dependency archive " + name, exception);
+            }
+        }
+        return dependencies;
+    }
+
+    static List<DependencyArchive> readEmbeddedDependencyArchives(DataInputStream input)
+            throws IOException {
+        int dependencyCount = readCount(input, "dependency");
+        if (dependencyCount > MAX_DEPENDENCY_ARCHIVES) {
+            throw new IOException("Too many dependency archives: " + dependencyCount);
+        }
+        List<DependencyArchive> dependencies = new ArrayList<>(dependencyCount);
+        for (int i = 0; i < dependencyCount; i++) {
+            UUID id = new UUID(input.readLong(), input.readLong());
+            String name = input.readUTF();
+            int classCount = readCount(input, "dependency class");
+            if (classCount > MAX_DEPENDENCY_CLASSES) {
+                throw new IOException("Too many classes in dependency archive " + name + ": " + classCount);
+            }
+            for (int j = 0; j < classCount; j++) {
+                input.readUTF();
+                readBytes(input);
+            }
+            dependencies.add(name.equals("java.base")
+                    ? new DependencyArchive(id, name, DependencyKind.RUNTIME_MODULE,
+                            null, null, "java.base")
+                    : new DependencyArchive(id, name, DependencyKind.ARCHIVE,
+                            name, null, null));
+        }
+        return dependencies;
+    }
+
+    static void writeDependencyArchives(DataOutputStream output, List<DependencyArchive> dependencies)
+            throws IOException {
+        output.writeInt(dependencies.size());
+        for (DependencyArchive dependency : dependencies) {
+            output.writeLong(dependency.getId().getMostSignificantBits());
+            output.writeLong(dependency.getId().getLeastSignificantBits());
+            output.writeUTF(dependency.getName());
+            output.writeByte(dependency.getKind().ordinal());
+            writeString(output, dependency.getRelativePath());
+            writeString(output, dependency.getAbsolutePath());
+            writeString(output, dependency.getRuntimeModule());
         }
     }
 

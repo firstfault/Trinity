@@ -5,6 +5,7 @@ import me.f1nal.trinity.logging.Logging;
 import org.lwjgl.glfw.GLFW;
 
 import java.awt.*;
+import java.io.File;
 import java.net.URI;
 
 public class SystemUtil {
@@ -28,6 +29,22 @@ public class SystemUtil {
             Desktop.getDesktop().browse(URI.create(url));
         } catch (Throwable throwable) {
             Logging.warn("Failed to browse URL '{}': {}", url, throwable);
+        }
+    }
+
+    public static boolean openDirectory(File directory) {
+        try {
+            File target = directory == null ? null : directory.getAbsoluteFile();
+            if (target == null || !target.isDirectory()
+                    || !Desktop.isDesktopSupported()
+                    || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+                return false;
+            }
+            Desktop.getDesktop().open(target);
+            return true;
+        } catch (Throwable throwable) {
+            Logging.warn("Failed to open directory '{}': {}", directory, throwable);
+            return false;
         }
     }
 }

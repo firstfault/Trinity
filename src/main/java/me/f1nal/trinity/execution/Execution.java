@@ -7,11 +7,15 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.inputs.ProjectInputSet;
 import me.f1nal.trinity.database.datapool.DataPool;
 import me.f1nal.trinity.events.EventClassesLoaded;
+import me.f1nal.trinity.events.EventDependenciesChanged;
+import me.f1nal.trinity.execution.dependency.DependencyArchive;
+import me.f1nal.trinity.execution.dependency.DependencyManager;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
 import me.f1nal.trinity.execution.hierarchy.ObjectHierarchyLoadTask;
 import me.f1nal.trinity.execution.hierarchy.ClassHierarchy;
 import me.f1nal.trinity.execution.loading.AsynchronousLoad;
 import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
+import me.f1nal.trinity.execution.loading.tasks.RuntimeDependencyLoadTask;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
 import me.f1nal.trinity.execution.packages.ProjectContainer;
@@ -32,6 +36,7 @@ public final class Execution {
     private final Map<String, ClassTarget> classTargetMap = new HashMap<>();
     private final List<ClassInput> classInputList = new ArrayList<>();
     private final List<ProjectContainer> containers = new ArrayList<>();
+    private final DependencyManager dependencies = new DependencyManager();
     /**
      * Reference map containing all references.
      */
@@ -48,6 +53,7 @@ public final class Execution {
 
         // If this method returned false, we are creating a new database.
         if (!this.trinity.getDatabase().addLoadTasks(this.asynchronousLoad)) {
+            this.asynchronousLoad.add(new RuntimeDependencyLoadTask());
             this.asynchronousLoad.add(new ClassInputReaderLoadTask(projectInput));
         }
 
@@ -259,6 +265,16 @@ public final class Execution {
 
     public List<ProjectContainer> getContainers() {
         return Collections.unmodifiableList(containers);
+    }
+
+    public DependencyManager getDependencies() {
+        return dependencies;
+    }
+
+    public void removeDependency(DependencyArchive archive) {
+        if (dependencies.removeArchive(archive)) {
+            trinity.getEventManager().postEvent(new EventDependenciesChanged());
+        }
     }
 
     public void addContainer(ProjectContainer container) {
