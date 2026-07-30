@@ -6,42 +6,57 @@ import me.f1nal.trinity.gui.components.ComponentId;
 
 public abstract class PopupWindow extends AbstractWindow {
     private final String popupId = this.getTitle() + "###" + ComponentId.getId(this.getClass());
-    private boolean setVisible;
-    private Runnable closeEvent;
-    protected boolean closeOnEscape = true;
+    private boolean closeRequested;
+    private boolean keyboardInputReady;
+    private boolean dismissible = true;
 
     protected PopupWindow(String title, Trinity trinity) {
         super(title, 0.F, 0.F, trinity);
     }
 
     @Override
-    public void render() {
-        if (!setVisible) {
+    public final void render() {
+        if (!this.closeRequested && !ImGui.isPopupOpen(this.popupId)) {
             ImGui.openPopup(this.popupId);
-            setVisible = true;
         }
     }
 
-    public void renderPopup() {
-        renderFrame();
-    }
-
-    public boolean canCloseOnEscapeNow() {
-        return closeOnEscape;
-    }
-
-    public void close() {
-        if (this.closeEvent != null) {
-            this.closeEvent.run();
+    public final boolean renderPopup() {
+        boolean acceptedKeyboardInput = this.keyboardInputReady;
+        if (!this.closeRequested) {
+            renderFrame();
+            this.keyboardInputReady = true;
         }
+        return acceptedKeyboardInput;
     }
 
-    public Runnable getCloseEvent() {
-        return closeEvent;
+    public final void handleEscape() {
+        if (this.dismissible) this.onEscape();
     }
 
-    public void setCloseEvent(Runnable closeEvent) {
-        this.closeEvent = closeEvent;
+    protected void onEscape() {
+        this.close();
+    }
+
+    public final void setDismissible(boolean dismissible) {
+        this.dismissible = dismissible;
+    }
+
+    public final boolean isDismissible() {
+        return this.dismissible;
+    }
+
+    protected final boolean isKeyboardInputReady() {
+        return this.keyboardInputReady;
+    }
+
+    @Override
+    public final void close() {
+        this.closeRequested = true;
+    }
+
+    public final boolean isCloseRequested() {
+        return this.closeRequested;
     }
 
     public String getPopupId() {

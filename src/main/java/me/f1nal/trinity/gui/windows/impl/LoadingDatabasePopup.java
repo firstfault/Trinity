@@ -15,7 +15,7 @@ public class LoadingDatabasePopup extends PopupWindow {
     public LoadingDatabasePopup(Trinity trinity, File path) {
         super("Loading Database...", trinity);
         this.path = path;
-        closeOnEscape = false;
+        this.setDismissible(false);
     }
 
     @Override

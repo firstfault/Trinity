@@ -29,7 +29,6 @@ import me.f1nal.trinity.gui.windows.impl.assembler.line.Instruction2SourceMappin
 import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionDrag;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionReferenceArrow;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.AssemblerBytecodeGoToIndexPopup;
-import me.f1nal.trinity.gui.windows.impl.assembler.popup.AssemblerUnsavedChangesPopup;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.AssemblerEditInstructionPopup;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.EditField;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.EditingInstruction;
@@ -848,17 +847,20 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         }
         if (closePromptOpen) return;
         closePromptOpen = true;
-        Main.getWindowManager().addPopup(new AssemblerUnsavedChangesPopup(trinity,
-                () -> {
+        Main.getWindowManager()
+                .dialog("Unsaved assembler changes")
+                .message("This method has unsaved bytecode changes.")
+                .defaultAction("Save", () -> {
                     closePromptOpen = false;
                     closeAfterSave = true;
                     saveMethod = true;
-                },
-                () -> {
+                })
+                .action("Discard", () -> {
                     closePromptOpen = false;
                     forceClose = true;
                     AssemblerFrame.super.close();
-                },
-                () -> closePromptOpen = false));
+                })
+                .cancel(() -> closePromptOpen = false)
+                .show();
     }
 }

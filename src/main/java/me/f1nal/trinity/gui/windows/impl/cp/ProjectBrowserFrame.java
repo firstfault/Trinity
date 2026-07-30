@@ -29,7 +29,6 @@ import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
-import me.f1nal.trinity.gui.windows.impl.project.RemoveDependencyArchivePopup;
 import me.f1nal.trinity.theme.CodeColorScheme;
 
 import java.util.*;
@@ -167,12 +166,22 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
                     popup.menuItem(archive.isResolved() ? "Change Location..." : "Locate Dependency...",
                             () -> DependencyImporter.rebind(trinity, archive));
                 }
-                popup.menuItem("Remove Dependency...", () -> Main.getWindowManager()
-                        .addPopup(new RemoveDependencyArchivePopup(trinity, archive)));
+                popup.menuItem("Remove Dependency...",
+                        () -> this.confirmDependencyRemoval(archive));
                 Main.getDisplayManager().getPopupMenu().show(popup);
             }
         }
         ImGui.treePop();
+    }
+
+    private void confirmDependencyRemoval(DependencyArchive archive) {
+        Main.getWindowManager()
+                .dialog("Remove Dependency")
+                .message("Remove " + archive.getName()
+                        + " from this project's dependency classpath?")
+                .confirm("Remove Dependency",
+                        () -> trinity.getExecution().removeDependency(archive))
+                .show();
     }
 
     void drawEntryDragSource(ArchiveEntry entry) {

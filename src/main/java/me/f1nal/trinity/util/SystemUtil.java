@@ -7,6 +7,7 @@ import org.lwjgl.glfw.GLFW;
 import java.awt.*;
 import java.io.File;
 import java.net.URI;
+import java.util.Locale;
 
 public class SystemUtil {
     public static void copyToClipboard(String text) {
@@ -35,8 +36,17 @@ public class SystemUtil {
     public static boolean openDirectory(File directory) {
         try {
             File target = directory == null ? null : directory.getAbsoluteFile();
-            if (target == null || !target.isDirectory()
-                    || !Desktop.isDesktopSupported()
+            if (target == null || !target.isDirectory()) {
+                return false;
+            }
+            if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) {
+                new ProcessBuilder("/usr/bin/open", target.getPath())
+                        .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                        .redirectError(ProcessBuilder.Redirect.DISCARD)
+                        .start();
+                return true;
+            }
+            if (!Desktop.isDesktopSupported()
                     || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
                 return false;
             }

@@ -9,6 +9,7 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.compile.ClassWriterTask;
 import me.f1nal.trinity.execution.compile.Console;
 import me.f1nal.trinity.execution.dependency.DependencyArchive;
+import me.f1nal.trinity.execution.packages.ExportJarSettings;
 import me.f1nal.trinity.execution.packages.ProjectContainer;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.general.FileSelectorComponent;
@@ -27,8 +28,9 @@ import java.util.Locale;
 public class ExportJarWindow extends ClosableWindow {
     private final ProjectContainer container;
     private final FileSelectorComponent outputFile;
-    private final ImBoolean removeSignatures = new ImBoolean(true);
-    private final ImBoolean ignoreUnresolvedDependencies = new ImBoolean(false);
+    private final ImBoolean removeSignatures;
+    private final ImBoolean ignoreUnresolvedDependencies;
+    private final ImBoolean overwriteExisting;
     private final Console console = new Console();
     private ClassWriterTask classWriterTask;
     private ClassWriterTask.ExportResult lastResult;
@@ -39,6 +41,11 @@ public class ExportJarWindow extends ClosableWindow {
         super("Export " + container.getName(), 680, 590, trinity);
         if (!container.isJar()) throw new IllegalArgumentException("Cannot export a loose container as a JAR");
         this.container = container;
+        ExportJarSettings settings = container.getExportJarSettings();
+        this.removeSignatures = new ImBoolean(settings.isRemoveSignatures());
+        this.ignoreUnresolvedDependencies =
+                new ImBoolean(settings.isIgnoreUnresolvedDependencies());
+        this.overwriteExisting = new ImBoolean(settings.isOverwriteExisting());
         this.setDialog(true);
         this.windowFlags |= ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize;
 
@@ -118,20 +125,36 @@ public class ExportJarWindow extends ClosableWindow {
             color = CodeColorScheme.NOTIFY_SUCCESS;
             icon = FontAwesomeIcons.CheckCircle;
         }
-        ImGui.textColored(color, icon + " " + validation.message());
+        String message = validation.overwriteRequired() && overwriteExisting.get()
+                ? "This file already exists."
+                : validation.message();
+        ImGui.textColored(color, icon + " " + message);
     }
 
     private void drawExportOptions() {
-        ImGui.checkbox("Remove invalid signatures", removeSignatures);
+        boolean changed = ImGui.checkbox("Remove invalid signatures", removeSignatures);
         GuiUtil.tooltip("Recommended whenever classes or resources have changed.");
         drawOptionDescription("Removes META-INF signature files that no longer verify after the JAR changes.");
 
-        ImGui.checkbox("Ignore Unresolved Dependencies", ignoreUnresolvedDependencies);
+        changed |= ImGui.checkbox("Ignore unresolved dependencies", ignoreUnresolvedDependencies);
         GuiUtil.tooltip("Controls reporting only; export is always allowed to continue.");
         String description = ignoreUnresolvedDependencies.get()
                 ? "Suppress missing-class warnings and use safe java/lang/Object frame fallbacks."
                 : "List every missing class in Export activity. The JAR still exports with warnings.";
         drawOptionDescription(description);
+
+        changed |= ImGui.checkbox("Overwrite existing", overwriteExisting);
+        GuiUtil.tooltip("Skips confirmation before replacing an existing destination file.");
+        drawOptionDescription(overwriteExisting.get()
+                ? "Existing destination files will be replaced without confirmation."
+                : "Ask for confirmation before replacing an existing destination file.");
+
+        if (changed) {
+            ExportJarSettings settings = container.getExportJarSettings();
+            settings.set(removeSignatures.get(), ignoreUnresolvedDependencies.get(),
+                    overwriteExisting.get());
+            settings.save();
+        }
     }
 
     private static void drawOptionDescription(String description) {
@@ -258,9 +281,15 @@ public class ExportJarWindow extends ClosableWindow {
 
     private void requestExport(OutputValidation validation) {
         if (!validation.valid() || state == ExportState.EXPORTING) return;
-        if (validation.overwriteRequired()) {
-            Main.getWindowManager().addPopup(new ExportJarOverwritePopup(
-                    trinity, validation.file(), this::startExport));
+        if (validation.overwriteRequired() && !overwriteExisting.get()) {
+            File outputFile = validation.file().getAbsoluteFile();
+            Main.getWindowManager()
+                    .dialog("Replace existing JAR?")
+                    .warning("The destination already exists.")
+                    .message(outputFile.getAbsolutePath())
+                    .message("Trinity writes a complete temporary archive before replacing this file.")
+                    .confirm("Replace File", () -> this.startExport(outputFile))
+                    .show();
             return;
         }
         startExport(validation.file());

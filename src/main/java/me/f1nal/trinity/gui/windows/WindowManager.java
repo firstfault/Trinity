@@ -155,6 +155,9 @@ public class WindowManager {
             closableWindows.clear();
             staticWindowMap.clear();
             dialogOrder.clear();
+            synchronized (this.popups) {
+                this.popups.forEach(PopupWindow::close);
+            }
         } finally {
             this.resettingWindows = false;
         }
@@ -166,34 +169,63 @@ public class WindowManager {
 
 
     private void drawPopups() {
-        if (this.popups.isEmpty()) {
+        PopupWindow[] popupSnapshot;
+        synchronized (this.popups) {
+            popupSnapshot = this.popups.toArray(new PopupWindow[0]);
+        }
+        if (popupSnapshot.length == 0) return;
+
+        try {
+            this.drawPopupStack(popupSnapshot, 0);
+        } finally {
+            synchronized (this.popups) {
+                this.popups.removeIf(PopupWindow::isCloseRequested);
+            }
+        }
+    }
+
+    private void drawPopupStack(PopupWindow[] popups, int index) {
+        if (index >= popups.length) return;
+
+        PopupWindow popup = popups[index];
+        popup.render();
+        if (!ImGui.isPopupOpen(popup.getPopupId())) return;
+        if (!ImGui.beginPopupModal(popup.getPopupId(),
+                ImGuiWindowFlags.AlwaysAutoResize
+                        | ImGuiWindowFlags.NoSavedSettings)) {
             return;
         }
 
-        int pops = 0;
-        PopupWindow[] popups = this.popups.toArray(new PopupWindow[0]);
-        for (PopupWindow popup : popups) {
-            popup.render();
-        }
-        PopupWindow last = popups[popups.length - 1];
-
-        for (PopupWindow popup : popups) {
-            if (popup == last && !ImGui.isPopupOpen(popup.getPopupId())) {
-                ImGui.openPopup(popup.getPopupId());
+        try {
+            if (popup.isCloseRequested()) {
+                this.closePopupDescendants(popups, index);
+                ImGui.closeCurrentPopup();
+                return;
             }
-            if (ImGui.beginPopupModal(popup.getPopupId(), ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings)) {
-                popup.renderPopup();
-                if (popup == last && ImGui.isKeyPressed(ImGuiKey.Escape, false) && popup.canCloseOnEscapeNow()) {
-                    popup.close();
-                }
-                if (!this.popups.contains(popup)) {
-                    ImGui.closeCurrentPopup();
-                }
-                ++pops;
-            }
-        }
 
-        while (pops-- != 0) ImGui.endPopup();
+            boolean keyboardInputReady = popup.renderPopup();
+            int childIndex = index + 1;
+            boolean hasChild = childIndex < popups.length;
+            if (!popup.isCloseRequested() && !hasChild && keyboardInputReady
+                    && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
+                popup.handleEscape();
+            }
+
+            if (popup.isCloseRequested()) {
+                this.closePopupDescendants(popups, index);
+                ImGui.closeCurrentPopup();
+            } else if (hasChild) {
+                this.drawPopupStack(popups, childIndex);
+            }
+        } finally {
+            ImGui.endPopup();
+        }
+    }
+
+    private void closePopupDescendants(PopupWindow[] popups, int parentIndex) {
+        for (int index = parentIndex + 1; index < popups.length; index++) {
+            popups[index].close();
+        }
     }
 
     public void addClosableWindow(ClosableWindow window) {
@@ -220,8 +252,13 @@ public class WindowManager {
     }
 
     public void addPopup(PopupWindow popup) {
-        this.popups.add(popup);
-        popup.setCloseEvent(() -> this.popups.remove(popup));
+        PopupWindow checkedPopup = Objects.requireNonNull(popup, "popup");
+        if (!checkedPopup.isCloseRequested()) this.popups.add(checkedPopup);
+    }
+
+    /** Creates a fluent builder for a simple modal decision dialog. */
+    public DialogBuilder dialog(String title) {
+        return new DialogBuilder(this, this.displayManager.getTrinity(), title);
     }
 
     public <T extends StaticWindow> T addStaticWindow(Class<T> type) {

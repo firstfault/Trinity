@@ -13,7 +13,7 @@ public class SavingDatabasePopup extends PopupWindow {
     public SavingDatabasePopup(Trinity trinity, Consumer<Boolean> callback) {
         super("Saving Database...", trinity);
         this.callback = callback;
-        closeOnEscape = false;
+        this.setDismissible(false);
     }
 
     @Override

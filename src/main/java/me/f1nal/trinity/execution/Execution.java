@@ -286,6 +286,7 @@ public final class Execution {
 
     public void removeContainer(ProjectContainer container) {
         if (!containers.remove(container)) return;
+        trinity.getDatabase().remove(container.getExportJarSettings());
         for (ClassTarget target : new ArrayList<>(container.getClasses())) {
             classTargetMap.remove(target.getRealName(), target);
             if (target.getInput() != null) classInputList.remove(target.getInput());

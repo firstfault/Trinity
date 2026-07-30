@@ -25,6 +25,7 @@ public final class ProjectContainer {
     private final Set<ClassTarget> classes = new LinkedHashSet<>();
     private final Map<String, ResourceArchiveEntry> resources = new LinkedHashMap<>();
     private final List<ArchiveDirectoryEntry> directories = new ArrayList<>();
+    private final ExportJarSettings exportJarSettings;
     private String archiveComment;
     private int nextEntryOrder;
 
@@ -33,6 +34,7 @@ public final class ProjectContainer {
         this.name = name;
         this.kind = kind;
         this.rootPackage = new Package(this, database);
+        this.exportJarSettings = new ExportJarSettings(id);
     }
 
     public UUID getId() {
@@ -54,6 +56,10 @@ public final class ProjectContainer {
 
     public boolean isJar() {
         return kind == ProjectContainerKind.JAR;
+    }
+
+    public ExportJarSettings getExportJarSettings() {
+        return exportJarSettings;
     }
 
     public Package getRootPackage() {

@@ -15,7 +15,7 @@ import me.f1nal.trinity.gui.windows.impl.cp.IBrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.gui.windows.impl.ExportJarWindow;
-import me.f1nal.trinity.gui.windows.impl.project.RemoveProjectContainerPopup;
+import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.gui.windows.impl.project.EditJarWindow;
 import me.f1nal.trinity.execution.packages.other.ExportLooseFilesRunnable;
 import me.f1nal.trinity.remap.Remapper;
@@ -99,14 +99,29 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
 
                 if (browserViewerNode.isRenameAvailable()) popup.menuItem("Rename", () -> this.getBrowserViewerNode().beginRenaming());
                 if (this.isArchive() && container != null && container.isJar()) {
-                    popup.separator().menuItem("Remove Archive...", () -> Main.getWindowManager()
-                            .addPopup(new RemoveProjectContainerPopup(Main.getTrinity(), container)));
+                    popup.separator().menuItem("Remove Archive...",
+                            () -> this.confirmArchiveRemoval(container));
                 }
 
                 Main.getDisplayManager().getPopupMenu().show(popup);
             }
         });
         this.updateBrowserViewerNode();
+    }
+
+    private void confirmArchiveRemoval(ProjectContainer container) {
+        Main.getWindowManager()
+                .dialog("Remove Archive")
+                .message("Remove " + container.getName()
+                        + " and all of its classes and resources from this project?")
+                .confirm("Remove Archive", () -> {
+                    Main.getWindowManager().closeAll(window ->
+                            window instanceof ArchiveEntryViewerWindow<?> viewer
+                                    && viewer.getArchiveEntry().getContainer() == container);
+                    Main.getTrinity().getExecution().removeContainer(container);
+                    Main.getTrinity().getExecution().refreshStructuralIndexes();
+                })
+                .show();
     }
 
     public void rename(Remapper remapper, String newName) {

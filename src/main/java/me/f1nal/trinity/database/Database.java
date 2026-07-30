@@ -114,6 +114,11 @@ public class Database {
         this.objects.add(obj);
     }
 
+    public void remove(IDatabaseSavable<?> savable) {
+        AbstractDatabaseObject obj = savable.createDatabaseObject();
+        if (obj != null) this.objects.remove(obj);
+    }
+
     public boolean isOpened() {
         return opened;
     }
