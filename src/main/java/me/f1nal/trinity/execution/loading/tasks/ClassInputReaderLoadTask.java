@@ -5,6 +5,7 @@ import me.f1nal.trinity.database.inputs.ProjectContainerInput;
 import me.f1nal.trinity.database.inputs.ProjectInputSet;
 import me.f1nal.trinity.database.inputs.UnreadClassBytes;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
+import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.Execution;
@@ -24,16 +25,32 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.function.BooleanSupplier;
 
 /** Parses and installs all project inputs while retaining their container ownership. */
 public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICaption {
     private final ProjectInputSet projectInput;
+    private final boolean activeImport;
+    private final BooleanSupplier installationAllowed;
     private volatile int installedContainerCount;
+    private volatile boolean installationCancelled;
 
     public ClassInputReaderLoadTask(ProjectInputSet projectInput) {
+        this(projectInput, false, () -> true);
+    }
+
+    private ClassInputReaderLoadTask(ProjectInputSet projectInput, boolean activeImport,
+                                     BooleanSupplier installationAllowed) {
         super("Reading Input");
         this.projectInput = projectInput == null ? new ProjectInputSet() : projectInput;
+        this.activeImport = activeImport;
+        this.installationAllowed = installationAllowed;
+    }
+
+    public static ClassInputReaderLoadTask forActiveImport(ProjectInputSet projectInput,
+                                                            BooleanSupplier installationAllowed) {
+        return new ClassInputReaderLoadTask(projectInput, true, installationAllowed);
     }
 
     @Override
@@ -43,33 +60,33 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
         this.startWork(Math.max(1, classCount));
 
         Execution execution = getTrinity().getExecution();
-        Set<String> reservedNames = execution.getClassList().stream()
-                .map(input -> input.getClassTarget().getRealName())
-                .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+        Set<String> reservedNames = new HashSet<>();
         List<ParsedContainer> parsedContainers = new ArrayList<>();
+        List<RejectedContainer> rejectedContainers = new ArrayList<>();
 
         for (ProjectContainerInput input : projectInput.getContainers()) {
-            ParsedContainer parsed = parseContainer(input, execution, reservedNames);
+            ParsedContainer parsed = parseContainer(input, execution, reservedNames, rejectedContainers);
             if (parsed != null) parsedContainers.add(parsed);
         }
         if (classCount == 0) this.finishedWork();
 
-        CountDownLatch installed = new CountDownLatch(1);
-        Main.runLater(() -> {
-            for (ParsedContainer parsed : parsedContainers) installContainer(execution, parsed);
-            installedContainerCount = parsedContainers.size();
-            installed.countDown();
-        });
-
+        var installation = Main.runLater(() ->
+                installTransaction(execution, parsedContainers, rejectedContainers));
         try {
-            installed.await();
+            installation.get();
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(exception);
+        } catch (ExecutionException exception) {
+            Throwable cause = exception.getCause();
+            if (cause instanceof RuntimeException runtimeException) throw runtimeException;
+            if (cause instanceof Error error) throw error;
+            throw new RuntimeException(cause);
         }
     }
 
-    private ParsedContainer parseContainer(ProjectContainerInput input, Execution execution, Set<String> reservedNames) {
+    private ParsedContainer parseContainer(ProjectContainerInput input, Execution execution, Set<String> reservedNames,
+                                           List<RejectedContainer> rejectedContainers) {
         List<ClassTarget> targets = new ArrayList<>();
         Set<String> localNames = new HashSet<>();
         String failure = null;
@@ -93,11 +110,57 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
         }
 
         if (failure != null) {
-            notifyRejected(input.getName(), failure);
+            rejectedContainers.add(new RejectedContainer(input.getName(), failure));
             return null;
         }
         reservedNames.addAll(localNames);
         return new ParsedContainer(input, targets);
+    }
+
+    private void installTransaction(Execution execution, List<ParsedContainer> parsedContainers,
+                                    List<RejectedContainer> rejectedContainers) {
+        if (!installationAllowed.getAsBoolean()) {
+            installationCancelled = true;
+            return;
+        }
+
+        rejectedContainers.forEach(rejected -> notifyRejected(rejected.container(), rejected.reason()));
+        Set<String> reservedNames = getInstalledClassNames(execution);
+        List<ParsedContainer> acceptedContainers = new ArrayList<>();
+        for (ParsedContainer parsed : parsedContainers) {
+            String duplicate = reserveClassNames(reservedNames, parsed.targets());
+            if (duplicate == null) {
+                acceptedContainers.add(parsed);
+            } else {
+                notifyRejected(parsed.input().getName(), "duplicate class " + duplicate);
+            }
+        }
+
+        for (ParsedContainer parsed : acceptedContainers) installContainer(execution, parsed);
+        installedContainerCount = acceptedContainers.size();
+        if (activeImport && installedContainerCount != 0) {
+            execution.refreshStructuralIndexes();
+            getTrinity().getEventManager().postEvent(new EventClassesLoaded());
+        }
+    }
+
+    private Set<String> getInstalledClassNames(Execution execution) {
+        Set<String> names = new HashSet<>();
+        execution.getClassList().forEach(input -> names.add(input.getClassTarget().getRealName()));
+        execution.getClassTargetMap().values().stream()
+                .filter(target -> target.getInput() != null)
+                .forEach(target -> names.add(target.getRealName()));
+        return names;
+    }
+
+    static String reserveClassNames(Set<String> reservedNames, List<ClassTarget> targets) {
+        Set<String> candidateNames = new HashSet<>();
+        for (ClassTarget target : targets) {
+            String name = target.getRealName();
+            if (reservedNames.contains(name) || !candidateNames.add(name)) return name;
+        }
+        reservedNames.addAll(candidateNames);
+        return null;
     }
 
     private ClassTarget createClassTarget(Execution execution, ClassNode classNode, UnreadClassBytes unread) {
@@ -168,6 +231,13 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
         return installedContainerCount;
     }
 
+    public boolean isInstallationCancelled() {
+        return installationCancelled;
+    }
+
     private record ParsedContainer(ProjectContainerInput input, List<ClassTarget> targets) {
+    }
+
+    private record RejectedContainer(String container, String reason) {
     }
 }

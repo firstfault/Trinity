@@ -136,7 +136,9 @@ public final class ApplicationActionRegistry {
     }
 
     private boolean canAddInput() {
-        return hasProject() && displayManager.getTrinity().getExecution().getAsynchronousLoad().isFinished();
+        return hasProject()
+                && displayManager.getTrinity().getExecution().getAsynchronousLoad().isFinished()
+                && !ProjectInputImporter.isBusy();
     }
 
     private <T extends StaticWindow> void openStatic(Class<T> type) {

@@ -177,6 +177,10 @@ public final class Execution {
     }
 
     public ClassTarget addClassTarget(ClassTarget classTarget) {
+        ClassTarget existing = this.classTargetMap.get(classTarget.getRealName());
+        if (existing != null && existing != classTarget && existing.getInput() != null) {
+            throw new IllegalArgumentException("Class already exists: " + classTarget.getRealName());
+        }
         this.classTargetMap.put(classTarget.getRealName(), classTarget);
         return classTarget;
     }

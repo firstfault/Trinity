@@ -105,20 +105,30 @@ public abstract class ClosableWindow extends AbstractWindow {
 
     @Override
     public void setVisible(boolean visible) {
+        if (visible && this.isDisposed()) return;
         if (visible) {
             this.closeRequested = false;
         }
         super.setVisible(visible);
 
         if (!visible) {
-            Main.getWindowManager().getClosableWindows().remove(this);
+            this.removeFromWindowManager();
+            this.dispose();
         }
+    }
+
+    protected void removeFromWindowManager() {
+        Main.getWindowManager().getClosableWindows().remove(this);
     }
 
     @Override
     public void close() {
         this.closeRequested = true;
-        super.close();
+        try {
+            super.close();
+        } finally {
+            this.dispose();
+        }
     }
 
     public boolean isCloseRequested() {

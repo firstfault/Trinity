@@ -119,6 +119,19 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 menu("Find", find -> find.menuItem("Search Text", "Ctrl+F", this::openSearch))));
     }
 
+    @Override
+    protected void onDispose() {
+        trinity.getEventManager().unregisterListener(this);
+        this.selectedClass = null;
+        this.navigationTarget = null;
+        this.navigationInstruction = null;
+        this.searchedClass = null;
+        this.selectionMatchesClass = null;
+        this.searchResults.clear();
+        this.selectionMatches.clear();
+        super.onDispose();
+    }
+
     private void openSearch() {
         this.searchVisible = true;
         this.focusSearch = true;

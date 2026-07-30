@@ -150,8 +150,10 @@ public class WindowManager {
      */
     public void resetAllWindows() {
         this.resettingWindows = true;
+        List<AbstractWindow> windows = getAllWindows();
         try {
-            getAllWindows().stream().filter(abstractWindow -> !(abstractWindow instanceof PopupWindow)).forEach(AbstractWindow::close);
+            windows.stream().filter(abstractWindow -> !(abstractWindow instanceof PopupWindow))
+                    .forEach(AbstractWindow::close);
             closableWindows.clear();
             staticWindowMap.clear();
             dialogOrder.clear();
@@ -159,6 +161,7 @@ public class WindowManager {
                 this.popups.forEach(PopupWindow::close);
             }
         } finally {
+            windows.forEach(AbstractWindow::dispose);
             this.resettingWindows = false;
         }
     }
@@ -179,7 +182,11 @@ public class WindowManager {
             this.drawPopupStack(popupSnapshot, 0);
         } finally {
             synchronized (this.popups) {
-                this.popups.removeIf(PopupWindow::isCloseRequested);
+                this.popups.removeIf(popup -> {
+                    if (!popup.isCloseRequested()) return false;
+                    popup.dispose();
+                    return true;
+                });
             }
         }
     }
@@ -229,13 +236,15 @@ public class WindowManager {
     }
 
     public void addClosableWindow(ClosableWindow window) {
-        if (window.isCloseRequested()) {
+        if (window.isCloseRequested() || window.isDisposed()) {
+            window.dispose();
             return;
         }
 
         final ClosableWindow windowAlreadyOpened = getClosableWindows().stream().filter(openWindow -> openWindow.isAlreadyOpen(window)).findFirst().orElse(null);
 
         if (windowAlreadyOpened != null) {
+            window.dispose();
             windowAlreadyOpened.setVisible(true);
             this.moveDialogToFront(windowAlreadyOpened);
             return;

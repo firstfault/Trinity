@@ -20,6 +20,7 @@ public abstract class AbstractWindow {
     private float dialogPositionX;
     private float dialogPositionY;
     private Runnable childWindowRenderer;
+    private boolean disposed;
     /**
      * If this window is currently visible.
      */
@@ -57,6 +58,27 @@ public abstract class AbstractWindow {
 
     public void close() {
         this.setVisible(false);
+    }
+
+    /**
+     * Permanently releases resources owned by this window.
+     *
+     * <p>Disposal is terminal and idempotent. Closing a static window may only
+     * hide it, so the window manager invokes this separately when it actually
+     * removes a window from its ownership.</p>
+     */
+    public final synchronized void dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        this.onDispose();
+    }
+
+    /** Called exactly once when this window is permanently discarded. */
+    protected void onDispose() {
+    }
+
+    public final synchronized boolean isDisposed() {
+        return this.disposed;
     }
 
     public void setVisible(boolean visible) {
