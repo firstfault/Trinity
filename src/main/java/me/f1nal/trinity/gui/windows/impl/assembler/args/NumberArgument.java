@@ -11,13 +11,13 @@ public class NumberArgument extends InstructionOperand {
         this.getDetailsText().add(new ColoredString(formatNumber(number), CodeColorScheme.NUMBER));
     }
 
-    private static String formatNumber(Number number) {
+    public static String formatNumber(Number number) {
         final String suffix = getSuffix(number);
         String text = String.valueOf(number);
 
         if (!suffix.isEmpty()) {
             if (text.endsWith(".0")) {
-                text = text.substring(text.length() - 1);
+                text = text.substring(0, text.length() - 2);
             } else if (!(number instanceof Long) && !text.contains(".")) {
                 text += ".";
             }

@@ -10,6 +10,7 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.gui.windows.impl.assembler.args.NumberArgument;
 import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewCache;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
@@ -181,6 +182,11 @@ public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
             super(trinity, "Decimal (Any Type)");
         }
 
+        ConstantSearchTypeDecimal(Trinity trinity, long value) {
+            this(trinity);
+            this.value.set(value);
+        }
+
         @Override
         public boolean draw() {
             ImGui.inputScalar("Decimal", ImGuiDataType.S64, value, 1, 5);
@@ -194,10 +200,22 @@ public abstract class ConstantSearchTypeNumber extends ConstantSearchType {
 
         @Override
         protected String convertConstantToText(Number value) {
-            if (value.intValue() != this.value.get()) {
-                return null;
+            if (!matches(value, this.value.get())) return null;
+            return NumberArgument.formatNumber(value);
+        }
+
+        private static boolean matches(Number candidate, long expected) {
+            if (candidate instanceof Byte || candidate instanceof Short
+                    || candidate instanceof Integer || candidate instanceof Long) {
+                return candidate.longValue() == expected;
             }
-            return value.intValue() + NumberArgument.getSuffix(value);
+            if (candidate instanceof Float || candidate instanceof Double) {
+                double floating = candidate.doubleValue();
+                return Double.isFinite(floating)
+                        && BigDecimal.valueOf(floating)
+                        .compareTo(BigDecimal.valueOf(expected)) == 0;
+            }
+            return false;
         }
     }
 }
