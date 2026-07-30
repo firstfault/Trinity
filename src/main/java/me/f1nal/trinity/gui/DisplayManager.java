@@ -385,12 +385,41 @@ public final class DisplayManager extends ImGuiApplication {
             after.run();
             return;
         }
-        this.windowManager.addPopup(new SavingDatabasePopup(trinity, (status) -> {
+        Trinity databaseToClose = trinity;
+        this.windowManager.addPopup(new SavingDatabasePopup(databaseToClose, status -> {
             DatabaseLoader.save.clear();
-            DatabaseLoader.load.clear();
-            setDatabase(null);
-            after.run();
+            if (this.trinity != databaseToClose) return;
+            if (!shouldCloseAfterSave(status)) {
+                showDatabaseSaveFailure(databaseToClose, after);
+                return;
+            }
+            completeDatabaseClose(databaseToClose, after);
         }));
+    }
+
+    static boolean shouldCloseAfterSave(Boolean status) {
+        return Boolean.TRUE.equals(status);
+    }
+
+    private void showDatabaseSaveFailure(Trinity databaseToClose, Runnable after) {
+        this.windowManager.dialog("Database Save Failed")
+                .error("Trinity could not save the project.")
+                .message("The project remains open and its in-memory data has not been discarded.")
+                .defaultAction("Retry Save", () -> {
+                    if (this.trinity == databaseToClose) closeDatabase(after);
+                })
+                .action("Discard Changes and Close",
+                        () -> completeDatabaseClose(databaseToClose, after))
+                .cancel("Keep Project Open", () -> {
+                })
+                .show();
+    }
+
+    private void completeDatabaseClose(Trinity databaseToClose, Runnable after) {
+        if (this.trinity != databaseToClose) return;
+        DatabaseLoader.load.clear();
+        setDatabase(null);
+        after.run();
     }
 
     public void openDecompilerView(Input<?> input) {

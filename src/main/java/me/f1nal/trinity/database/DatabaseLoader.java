@@ -19,7 +19,6 @@ import java.util.Objects;
 
 public class DatabaseLoader {
     private static final int DATABASE_VERSION = 3;
-
     public static final DatabaseSemaphore save = new DatabaseSemaphore((path) -> {
         Trinity trinity = Main.getTrinity();
         Database database = trinity.getDatabase();
