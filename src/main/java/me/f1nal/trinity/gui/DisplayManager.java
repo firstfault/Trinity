@@ -89,7 +89,6 @@ public final class DisplayManager extends ImGuiApplication {
 
     public DisplayManager(String windowTitle) {
         this.windowTitle = windowTitle;
-        this.setDatabase(null);
         String mostRecentDatabasePath = Main.getAppDataManager().getRecentDatabases().getMostRecentDatabasePath();
         if (Main.getAppDataManager().getState().isDatabaseLoaded() && mostRecentDatabasePath != null) {
             this.windowManager.addPopup(new LoadingDatabasePopup(null, new File(mostRecentDatabasePath)));
@@ -120,6 +119,7 @@ public final class DisplayManager extends ImGuiApplication {
             this.trinity.getEventManager().setRegistered(true);
         } else return;
 
+        Main.getAppDataManager().getState().setDatabaseLoaded(true);
         Main.getAppDataManager().getRecentDatabases().addDatabase(new RecentDatabaseEntry(trinity.getDatabase().getName(), trinity.getDatabase().getPath().getAbsolutePath(), System.currentTimeMillis()));
 
         Main.runLater(() -> this.windowManager.addStaticWindow(ProjectBrowserFrame.class));

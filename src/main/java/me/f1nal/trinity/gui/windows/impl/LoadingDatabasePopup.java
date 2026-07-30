@@ -25,10 +25,10 @@ public class LoadingDatabasePopup extends PopupWindow {
             boolean status = DatabaseLoader.load.getStatus();
             close();
             if (!status) {
+                Main.getAppDataManager().getState().setDatabaseLoaded(false);
                 Main.getWindowManager().addStaticWindow(NewProjectFrame.class);
             }
             DatabaseLoader.load.clear();
-            Main.getAppDataManager().getState().setDatabaseLoaded(true);
         }
     }
 }
