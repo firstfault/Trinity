@@ -7,6 +7,7 @@ import me.f1nal.trinity.events.api.EventManager;
 import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.execution.constant.ConstantStatisticsCache;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
+import me.f1nal.trinity.execution.xref.XrefViewerSettings;
 import me.f1nal.trinity.input.JrtInput;
 import me.f1nal.trinity.refactor.RefactorManager;
 import me.f1nal.trinity.remap.Remapper;
@@ -45,6 +46,10 @@ public final class Trinity {
      */
     private final ConstantStatisticsCache constantStatisticsCache;
     /**
+     * Project-level xref viewer filter preferences.
+     */
+    private final XrefViewerSettings xrefViewerSettings;
+    /**
      * Automatic refactoring.
      */
     private final RefactorManager refactorManager;
@@ -55,6 +60,7 @@ public final class Trinity {
         this.remapper = new Remapper(this.execution);
         this.eventManager = new EventManager();
         this.constantStatisticsCache = this.eventManager.registerListener(new ConstantStatisticsCache(this.execution));
+        this.xrefViewerSettings = new XrefViewerSettings();
         this.refactorManager = new RefactorManager(this);
         this.decompiler = this.eventManager.registerListener(new Decompiler(this));
         this.execution.getAsynchronousLoad().execute();
@@ -86,6 +92,10 @@ public final class Trinity {
 
     public ConstantStatisticsCache getConstantStatisticsCache() {
         return constantStatisticsCache;
+    }
+
+    public XrefViewerSettings getXrefViewerSettings() {
+        return xrefViewerSettings;
     }
 
     public RefactorManager getRefactorManager() {

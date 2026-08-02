@@ -2,10 +2,11 @@ package me.f1nal.trinity.execution.xref;
 
 import me.f1nal.trinity.execution.xref.where.XrefWhere;
 import me.f1nal.trinity.gui.components.filter.kind.IKind;
+import me.f1nal.trinity.gui.components.filter.kind.IKindTypeName;
 import me.f1nal.trinity.gui.components.general.table.IWhere;
 import me.f1nal.trinity.util.SearchTermMatchable;
 
-public abstract class AbstractXref implements SearchTermMatchable, IKind, IWhere {
+public abstract class AbstractXref implements SearchTermMatchable, IKind, IKindTypeName, IWhere {
     private final XrefWhere where;
     private final XrefKind kind;
 
@@ -16,6 +17,10 @@ public abstract class AbstractXref implements SearchTermMatchable, IKind, IWhere
 
     public abstract XrefAccessType getAccess();
     public abstract String getInvocation();
+    @Override
+    public final String getKindTypeName() {
+        return getInvocation();
+    }
     @Override
     public final XrefWhere getWhere() {
         return where;
@@ -34,4 +39,3 @@ public abstract class AbstractXref implements SearchTermMatchable, IKind, IWhere
         return getWhere().getText().toLowerCase().contains(lowerCase) || getInvocation().toLowerCase().contains(lowerCase);
     }
 }
-

@@ -49,6 +49,10 @@ public final class AccentTheme extends Theme {
         CodeColorScheme.XREF_TYPE = CodeColorScheme.CLASS_REF;
         CodeColorScheme.XREF_INVOKE = CodeColorScheme.METHOD_REF;
         CodeColorScheme.XREF_FIELD = CodeColorScheme.FIELD_REF;
+        CodeColorScheme.XREF_DESCRIPTOR = CodeColorScheme.CLASS_REF;
+        CodeColorScheme.XREF_METADATA = CodeColorScheme.ARCHIVE_REF;
+        CodeColorScheme.XREF_VARIABLE = CodeColorScheme.VAR_REF;
+        CodeColorScheme.XREF_STACK_FRAME = CodeColorScheme.LABEL;
     }
 
     private int createColor(String name, Color accent) {

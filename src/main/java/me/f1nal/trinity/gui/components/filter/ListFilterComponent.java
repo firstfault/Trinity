@@ -5,8 +5,6 @@ import imgui.ImGui;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ListFilterComponent<T> {
     private final Collection<T> elementList;
@@ -43,13 +41,14 @@ public class ListFilterComponent<T> {
     }
 
     private void refreshFilteredList() {
-        Stream<T> stream = this.elementList.stream();
+        List<T> current = new ArrayList<>(this.elementList);
 
         for (Filter<T> filter : filters) {
-            stream = stream.filter(filter.filter());
+            filter.update(current);
+            current = current.stream().filter(filter.filter()).toList();
         }
 
-        this.filteredList = stream.toList();
+        this.filteredList = current;
         this.filterChangeListeners.forEach(Runnable::run);
     }
 

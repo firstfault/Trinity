@@ -5,6 +5,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.xref.AbstractXref;
 import me.f1nal.trinity.execution.xref.XrefKind;
+import me.f1nal.trinity.execution.xref.XrefViewerSettings;
 import me.f1nal.trinity.gui.components.filter.ListFilterComponent;
 import me.f1nal.trinity.gui.components.filter.SearchBarFilter;
 import me.f1nal.trinity.gui.components.filter.kind.KindFilter;
@@ -23,6 +24,7 @@ public class XrefViewerFrame extends ClosableWindow {
     private final XrefBuilder builder;
     private final ListFilterComponent<AbstractXref> listFilterComponent;
     private final SearchBarFilter<AbstractXref> searchFilter;
+    private final KindFilter<AbstractXref> kindFilter;
     private final TableComponent<AbstractXref> xrefTable = new TableComponent<>(null);
 
     public XrefViewerFrame(XrefBuilder builder, Trinity trinity, boolean autofollowXref) {
@@ -30,8 +32,17 @@ public class XrefViewerFrame extends ClosableWindow {
 
         this.xrefViewList = builder.createXrefs();
         this.searchFilter = new SearchBarFilter<>();
+        XrefViewerSettings settings = trinity.getXrefViewerSettings();
+        this.kindFilter = new KindFilter<>(XrefKind.values(),
+                kind -> settings.isKindEnabled((XrefKind) kind));
         this.listFilterComponent = new ListFilterComponent<>(this.xrefViewList,
-                this.searchFilter, new KindFilter<>(XrefKind.values()));
+                this.searchFilter, this.kindFilter);
+        this.kindFilter.addStateChangeListener(() -> {
+            for (XrefKind kind : XrefKind.values()) {
+                settings.setKindEnabled(kind, this.kindFilter.isEnabled(kind));
+            }
+            trinity.getDatabase().save(settings);
+        });
         this.builder = builder;
         this.setDialog(true);
 

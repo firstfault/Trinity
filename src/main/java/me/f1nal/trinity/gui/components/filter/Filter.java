@@ -9,6 +9,10 @@ public abstract class Filter<T> {
      */
     public abstract void initialize(Collection<T> collection);
 
+    /** Receives the elements left by filters that run before this one. */
+    public void update(Collection<T> collection) {
+    }
+
     public abstract Predicate<T> filter();
 
     /**

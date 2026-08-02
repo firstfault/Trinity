@@ -1,7 +1,6 @@
 package me.f1nal.trinity.execution.xref;
 
 import me.f1nal.trinity.execution.xref.where.XrefWhere;
-import org.objectweb.asm.util.Printer;
 
 public class ClassXref extends AbstractXref {
     private final XrefAccessType accessType;
@@ -30,7 +29,8 @@ public class ClassXref extends AbstractXref {
     }
 
     public static ClassXref typeInstruction(XrefWhere where, int opcode) {
-        return new ClassXref(where, XrefAccessType.READ, Printer.OPCODES[opcode], XrefKind.TYPE);
+        return new ClassXref(
+                where, XrefAccessType.READ, XrefInvocationFormatter.instruction(opcode), XrefKind.TYPE);
     }
 
     @Override

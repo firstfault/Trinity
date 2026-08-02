@@ -47,8 +47,6 @@ Search constants across the entire project <b>instantly</b>, not just the string
 
 Load one or several files into a workspace, edit their classes and members, and save the complete project as a compressed Trinity database (`.tdb`), letting you resume your work right where you left it off.
 
-Dependency JARs, ZIPs, and JMODs can be added from the Project Browser's **Dependencies** section. Trinity stores a relative path with an absolute fallback instead of embedding dependency bytes in the database. New projects include a symbolic `runtime:java.base` dependency resolved from the JDK running Trinity. Missing paths remain visible and can be rebound; JAR export reports unresolved dependencies but remains non-blocking. Select **Ignore Unresolved Dependencies** to suppress those warnings.
-
 ### ...and more!
 
 Built-in refactoring / deobfuscation, custom themes, a built-in theme editor, configurable key mappings, among many others

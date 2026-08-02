@@ -213,6 +213,7 @@ public class DatabaseLoader {
         aliases.put(DatabasePackage.class, "packageObj");
         aliases.put(DatabaseDecompiler.class, "decompiler");
         aliases.put(DatabaseExportJarSettings.class, "exportJarSettings");
+        aliases.put(DatabaseXrefViewerSettings.class, "xrefViewerSettings");
         aliases.put(DatabaseNavigationHistory.class, "navigationHistory");
         aliases.put(DatabaseNavigationEntry.class, "navigationEntry");
 //        aliases.put(ClassNode.class, "asmClassNode");

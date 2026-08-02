@@ -6,7 +6,6 @@ import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
-import org.objectweb.asm.util.Printer;
 
 /**
  * The {@link MemberXref} class represents a reference between a class member and code within a method.
@@ -77,7 +76,6 @@ public class MemberXref extends AbstractXref {
 
     @Override
     public String getInvocation() {
-        return Printer.OPCODES[this.instruction.getOpcode()];
+        return XrefInvocationFormatter.instruction(this.instruction.getOpcode());
     }
 }
-

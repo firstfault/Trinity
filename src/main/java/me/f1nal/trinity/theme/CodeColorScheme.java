@@ -141,6 +141,10 @@ public final class CodeColorScheme {
     public static int XREF_TYPE = CLASS_REF;
     public static int XREF_INVOKE = METHOD_REF;
     public static int XREF_FIELD = FIELD_REF;
+    public static int XREF_DESCRIPTOR = CLASS_REF;
+    public static int XREF_METADATA = ARCHIVE_REF;
+    public static int XREF_VARIABLE = VAR_REF;
+    public static int XREF_STACK_FRAME = LABEL;
     @LabeledColor(category = XREF_KIND, label = "Exception")
     public static int XREF_EXCEPTION = getRgb(new Color(192, 125, 70));
     @LabeledColor(category = XREF_KIND, label = "Annotation")

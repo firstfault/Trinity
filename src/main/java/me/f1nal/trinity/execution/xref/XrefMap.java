@@ -8,11 +8,9 @@ import me.f1nal.trinity.execution.xref.where.XrefWhere;
 import me.f1nal.trinity.execution.xref.where.XrefWhereClass;
 import me.f1nal.trinity.execution.xref.where.XrefWhereField;
 import me.f1nal.trinity.execution.xref.where.XrefWhereMethod;
-import me.f1nal.trinity.logging.Logging;
-import me.f1nal.trinity.util.NameUtil;
+import me.f1nal.trinity.execution.xref.where.XrefWhereMethodInsn;
 import com.google.common.collect.Multimaps;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
 import org.jetbrains.annotations.Nullable;
@@ -69,38 +67,7 @@ public final class XrefMap extends ProgressiveLoadTask {
     }
 
     private void buildClassXrefs(ClassInput classInput) {
-        ClassNode node = classInput.getNode();
-        XrefWhereClass whereClass = new XrefWhereClass(classInput);
-
-        this.processClassSupers(whereClass, classInput);
-
-        this.processAnnotations(whereClass, node.visibleAnnotations);
-        this.processAnnotations(whereClass, node.invisibleAnnotations);
-
-        for (MethodInput methodInput : classInput.getMethodMap().values()) {
-            XrefWhereMethod whereMethod = new XrefWhereMethod(methodInput);
-
-            this.processMethodInstructions(whereMethod, methodInput);
-
-            try {
-                this.processArgumentXrefs(methodInput, methodInput.getDescriptor());
-            } catch (Throwable throwable) {
-                Logging.warn("Failed to process argument references: {} in {}", throwable, methodInput);
-            }
-
-            this.processAnnotations(whereMethod, methodInput.getNode().visibleAnnotations);
-            this.processAnnotations(whereMethod, methodInput.getNode().invisibleAnnotations);
-
-            this.processThrows(whereMethod, methodInput.getNode().exceptions);
-            this.processTryCatchHandlers(whereMethod, methodInput.getNode().tryCatchBlocks);
-        }
-
-        for (FieldInput fieldInput : classInput.getFieldMap().values()) {
-            XrefWhereField whereField = new XrefWhereField(fieldInput);
-
-            this.processAnnotations(whereField, fieldInput.getNode().visibleAnnotations);
-            this.processAnnotations(whereField, fieldInput.getNode().invisibleAnnotations);
-        }
+        indexScan(classInput, AsmReferenceScanner.scanClass(classInput.getNode()));
     }
 
     /** Replaces every reference originating from one edited method. */
@@ -109,179 +76,85 @@ public final class XrefMap extends ProgressiveLoadTask {
         for (ClassTarget target : execution.getClassTargetMap().values()) {
             target.getReferences().removeIf(reference -> reference.getWhere().getInput() == methodInput);
         }
-
-        XrefWhereMethod whereMethod = new XrefWhereMethod(methodInput);
-        processMethodInstructions(whereMethod, methodInput);
-        try {
-            processArgumentXrefs(methodInput, methodInput.getDescriptor());
-        } catch (Throwable throwable) {
-            Logging.warn("Failed to refresh argument references: {} in {}", throwable, methodInput);
-        }
-        processAnnotations(whereMethod, methodInput.getNode().visibleAnnotations);
-        processAnnotations(whereMethod, methodInput.getNode().invisibleAnnotations);
-        processThrows(whereMethod, methodInput.getNode().exceptions);
-        processTryCatchHandlers(whereMethod, methodInput.getNode().tryCatchBlocks);
+        indexScan(methodInput.getOwningClass(),
+                AsmReferenceScanner.scanMethod(methodInput.getNode()));
     }
 
-    private void processMethodInstructions(XrefWhereMethod whereMethod, MethodInput methodInput) {
-        for (AbstractInsnNode instruction : methodInput.getInstructions()) {
-            if (instruction.getOpcode() <= Opcodes.NOP) {
-                continue;
-            }
+    private void indexScan(ClassInput classInput, AsmReferenceScanner.ScanResult scan) {
+        Map<FieldNode, FieldInput> fields = new IdentityHashMap<>();
+        classInput.getFieldMap().values().forEach(field -> fields.put(field.getNode(), field));
+        Map<MethodNode, MethodInput> methods = new IdentityHashMap<>();
+        classInput.getMethodMap().values().forEach(method -> methods.put(method.getNode(), method));
 
-            if (instruction instanceof MethodInsnNode min) {
-                this.addMethodReference(min, new MemberXref(methodInput, instruction));
-            } else if (instruction instanceof FieldInsnNode fin) {
-                this.addFieldReference(fin, new MemberXref(methodInput, instruction));
-            } else if (instruction instanceof TypeInsnNode) {
-                this.processTypeInstruction(whereMethod, (TypeInsnNode) instruction);
-            } else if (instruction instanceof LdcInsnNode) {
-                Object cst = ((LdcInsnNode) instruction).cst;
-
-                if (cst instanceof Type) {
-                    this.processClassLiteralLdc(whereMethod, (Type)cst);
-                }
-            }
+        for (AsmReferenceScanner.ClassReference reference : scan.classReferences()) {
+            XrefWhere where = createWhere(classInput, reference.source(), fields, methods);
+            putClassReference(reference.owner(), new ClassXref(
+                    where, reference.access(), reference.invocation(), reference.kind()));
+        }
+        for (AsmReferenceScanner.MemberReference reference : scan.memberReferences()) {
+            XrefWhere where = createWhere(classInput, reference.source(), fields, methods);
+            MethodInput sourceMethod = reference.source().method() == null
+                    ? null : methods.get(reference.source().method());
+            AbstractXref xref = createMemberXref(reference, where, sourceMethod);
+            indexMemberReference(classInput, reference, xref);
         }
     }
 
-    private void addMethodReference(MethodInsnNode instruction, MemberXref memberXref) {
-        Collection<MethodInput> targets = MemberResolver.resolveInvocationTargets(
-                execution, memberXref.getMethodInput().getOwningClass(), instruction);
-        if (targets.isEmpty()) {
-            putMemberReference(new MemberDetails(instruction.owner, instruction.name, instruction.desc), memberXref);
-        } else {
-            for (MethodInput target : targets) {
-                putMemberReference(target.getDetails(), memberXref);
+    private XrefWhere createWhere(ClassInput classInput, AsmReferenceScanner.Source source,
+                                  Map<FieldNode, FieldInput> fields,
+                                  Map<MethodNode, MethodInput> methods) {
+        if (source.method() != null) {
+            MethodInput method = methods.get(source.method());
+            if (method != null) {
+                return source.instruction() == null
+                        ? new XrefWhereMethod(method)
+                        : new XrefWhereMethodInsn(method, source.instruction());
             }
         }
-        putReferencedOwner(instruction.owner, memberXref);
-    }
-
-    private void addFieldReference(FieldInsnNode instruction, MemberXref memberXref) {
-        FieldInput target = MemberResolver.resolveField(
-                execution, instruction.owner, instruction.name, instruction.desc);
-        putMemberReference(target == null
-                ? new MemberDetails(instruction.owner, instruction.name, instruction.desc)
-                : target.getDetails(), memberXref);
-        putReferencedOwner(instruction.owner, memberXref);
-    }
-
-    private void processClassLiteralLdc(XrefWhere where, Type elementType) {
-        if (elementType.getSort() != Type.OBJECT) {
-            if (elementType.getSort() == Type.ARRAY) this.processClassLiteralLdc(where, elementType.getElementType());
-            return;
+        if (source.field() != null) {
+            FieldInput field = fields.get(source.field());
+            if (field != null) return new XrefWhereField(field);
         }
-        putClassReference(NameUtil.internalToNormal(elementType.getClassName()), ClassXref.classLiteral(where));
+        return new XrefWhereClass(classInput);
     }
 
-    private void processTypeInstruction(XrefWhereMethod where, TypeInsnNode instruction) {
-        putClassReference(NameUtil.internalToNormal(instruction.desc), ClassXref.typeInstruction(where, instruction.getOpcode()));
-    }
-
-    private void processTryCatchHandlers(XrefWhereMethod where, List<TryCatchBlockNode> tryCatchBlocks) {
-        if (tryCatchBlocks != null) for (TryCatchBlockNode block : tryCatchBlocks) {
-            if (block.type == null) continue;
-            this.putClassReference(NameUtil.internalToNormal(block.type), new ClassXref(where, XrefAccessType.READ, "Catch", XrefKind.EXCEPTION));
+    private AbstractXref createMemberXref(AsmReferenceScanner.MemberReference reference,
+                                          XrefWhere where, MethodInput sourceMethod) {
+        if (sourceMethod != null && reference.directInstruction()) {
+            return new MemberXref(sourceMethod, reference.source().instruction());
         }
+        return new SymbolicMemberXref(
+                where, reference.kind(), reference.access(), reference.invocation());
     }
 
-    private void processThrows(XrefWhereMethod whereMethod, List<String> exceptions) {
-        if (exceptions != null) for (String exception : exceptions) {
-            putClassReference(exception, new ClassXref(whereMethod, XrefAccessType.READ, "Throws", XrefKind.EXCEPTION));
-        }
-    }
-
-    private void processClassSupers(XrefWhereClass where, ClassInput classInput) {
-        if (classInput.getSuperName() != null) putClassReference(classInput.getSuperName(), ClassXref.extendsClass(where, false));
-        List<String> interfaces = classInput.getNode().interfaces;
-        if (interfaces != null) for (String itf : interfaces) {
-            if (itf != null) putClassReference(itf, ClassXref.extendsClass(where, true));
-        }
-    }
-
-    private void processAnnotations(XrefWhere where, List<AnnotationNode> list) {
-        if (list == null || list.isEmpty()) {
-            return;
-        }
-        for (AnnotationNode node : list) {
-            Type type;
-            try {
-                type = Type.getType(node.desc);
-            } catch (Throwable throwable) {
-                Logging.warn("Failed to process annotation descriptor: {} inside {}", node.desc, where);
-                continue;
+    private void indexMemberReference(ClassInput caller,
+                                      AsmReferenceScanner.MemberReference reference,
+                                      AbstractXref xref) {
+        MemberDetails details = reference.details();
+        if (isMethodOpcode(reference.opcode())) {
+            MethodInsnNode instruction = new MethodInsnNode(reference.opcode(),
+                    details.getOwner(), details.getName(), details.getDesc(),
+                    reference.interfaceOwner());
+            Collection<MethodInput> targets =
+                    MemberResolver.resolveInvocationTargets(execution, caller, instruction);
+            if (!targets.isEmpty()) {
+                targets.forEach(target -> putMemberReference(target.getDetails(), xref));
+                return;
             }
-            putClassReference(NameUtil.internalToNormal(type.getClassName()), new ClassXref(where, XrefAccessType.READ, "@" + where.getName(), XrefKind.ANNOTATION));
-            this.processAnnotationArgs(where, node.values);
-        }
-    }
-
-    private void processAnnotationArgs(XrefWhere where, List<Object> values) {
-        if (values != null) for (Object value : values) {
-            if (value instanceof Type) processClassLiteralLdc(where, (Type)value);
-            if (value instanceof AnnotationNode) this.processAnnotations(where, List.of((AnnotationNode) value));
-            if (value instanceof List<?>) this.processAnnotationArgs(where, (List<Object>) value);
-            if (value instanceof String[]) this.processAnnotationEnumValue(where, (String[]) value);
-        }
-    }
-
-    private void processAnnotationEnumValue(XrefWhere where, String[] enumValue) {
-        if (enumValue.length != 2 || enumValue[0] == null || enumValue[1] == null) {
-            return;
-        }
-
-        Type enumType;
-        try {
-            enumType = Type.getType(enumValue[0]);
-        } catch (Throwable throwable) {
-            Logging.warn("Failed to process annotation enum descriptor: {} inside {}", enumValue[0], where);
-            return;
-        }
-        if (enumType.getSort() != Type.OBJECT) {
-            return;
-        }
-
-        String owner = enumType.getInternalName();
-        ClassXref reference = new ClassXref(
-                where, XrefAccessType.READ, enumValue[1], XrefKind.ANNOTATION);
-        putClassReference(owner, reference);
-        putMemberReference(new MemberDetails(owner, enumValue[1], enumValue[0]), reference);
-    }
-
-    private void processArgumentXrefs(MethodInput methodInput, String descriptor) {
-        Type returnType = Type.getReturnType(descriptor);
-        if (returnType.getSort() == Type.OBJECT) {
-            putClassReference(NameUtil.internalToNormal(returnType.getClassName()), ClassXref.returnsClass(new XrefWhereMethod(methodInput)));
-        }
-        Type[] argumentTypes = Type.getArgumentTypes(descriptor);
-        int index = 0;
-        for (Type arg : argumentTypes) {
-            if (arg.getSort() == Type.OBJECT) {
-                this.addMethodArgumentXref(methodInput, index, arg);
-            } else if (arg.getSort() == Type.ARRAY) {
-                Type elementType = arg.getElementType();
-                if (elementType.getSort() == Type.OBJECT) {
-                    this.addMethodArgumentXref(methodInput, index, elementType);
-                }
+        } else if (isFieldOpcode(reference.opcode())) {
+            FieldInput target = MemberResolver.resolveField(
+                    execution, details.getOwner(), details.getName(), details.getDesc());
+            if (target != null) {
+                putMemberReference(target.getDetails(), xref);
+                return;
             }
-
-            index += arg.getSize();
         }
-    }
-
-    private void addMethodArgumentXref(MethodInput methodInput, int index, Type elementType) {
-        putClassReference(NameUtil.internalToNormal(elementType.getClassName()), ClassXref.parameter(new XrefWhereMethod(methodInput)));
+        putMemberReference(details, xref);
     }
 
     private void putMemberReference(MemberDetails details, AbstractXref referencer) {
         this.memberReferences.put(new MemberDetails(clearDescriptorFromOwner(details.getOwner()),
                 details.getName(), details.getDesc()), referencer);
-    }
-
-    private void putReferencedOwner(String owner, MemberXref referencer) {
-        putClassReference(owner, new ClassXref(referencer.getWhere(), referencer.getAccess(),
-                referencer.getInvocation(), referencer.getKind()));
     }
 
     private void putClassReference(String owner, ClassXref ref) {
@@ -306,6 +179,20 @@ public final class XrefMap extends ProgressiveLoadTask {
         }
 
         return owner;
+    }
+
+    private static boolean isMethodOpcode(int opcode) {
+        return opcode == Opcodes.INVOKEVIRTUAL
+                || opcode == Opcodes.INVOKESPECIAL
+                || opcode == Opcodes.INVOKESTATIC
+                || opcode == Opcodes.INVOKEINTERFACE;
+    }
+
+    private static boolean isFieldOpcode(int opcode) {
+        return opcode == Opcodes.GETFIELD
+                || opcode == Opcodes.GETSTATIC
+                || opcode == Opcodes.PUTFIELD
+                || opcode == Opcodes.PUTSTATIC;
     }
 
     /**

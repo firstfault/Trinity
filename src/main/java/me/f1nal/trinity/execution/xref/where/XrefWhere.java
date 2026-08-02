@@ -8,11 +8,14 @@ import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.gui.components.FontSettings;
 import me.f1nal.trinity.gui.components.filter.kind.IKindType;
+import me.f1nal.trinity.gui.components.filter.kind.KindTooltip;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenu;
 import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerPreviewRenderer;
-import me.f1nal.trinity.util.GuiUtil;
+
+import java.util.Collection;
+import java.util.Collections;
 
 public abstract class XrefWhere {
     private final String name;
@@ -82,13 +85,18 @@ public abstract class XrefWhere {
     }
 
     public void draw(IKindType kind, PopupMenu popupMenu, Trinity trinity, boolean highlightOwnerClass) {
+        draw(kind, popupMenu, trinity, highlightOwnerClass, Collections.emptySet());
+    }
+
+    public void draw(IKindType kind, PopupMenu popupMenu, Trinity trinity,
+                     boolean highlightOwnerClass, Collection<String> presentTypeNames) {
         float rectSize = 12.F * Main.getPreferences().getDefaultFont().getSize() / 15F;
         ImGui.invisibleButton("XrefWhereButton", rectSize, rectSize);
         ImVec2 min = ImGui.getItemRectMin();
         ImVec2 max = ImGui.getItemRectMax();
         float yOffset = 1.5F;
         ImGui.getWindowDrawList().addRectFilled(min.x, min.y + yOffset, max.x, max.y + yOffset, kind.getColor(), 1.F);
-        GuiUtil.tooltip(kind.getName());
+        KindTooltip.draw(kind, presentTypeNames);
         ImGui.sameLine(0.F, 4.F);
         ImGui.text(getText());
         controls(popupMenu, trinity, highlightOwnerClass);
