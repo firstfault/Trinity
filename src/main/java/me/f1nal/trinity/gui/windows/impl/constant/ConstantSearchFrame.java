@@ -10,7 +10,6 @@ import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeConstantDynamic;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeHandle;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchType;
-import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeNull;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeNumber;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeString;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeType;
@@ -40,7 +39,6 @@ public class ConstantSearchFrame extends StaticWindow {
                 new ConstantSearchTypeType(trinity),
                 new ConstantSearchTypeHandle(trinity),
                 new ConstantSearchTypeConstantDynamic(trinity),
-                new ConstantSearchTypeNull(trinity),
         });
     }
 
