@@ -271,7 +271,7 @@ public class DecompilerCursor {
 
     public void handleLineDrawing(DecompilerLine line, float cursorScreenPosX, float lineNumberSpacing, float mousePosX, float cursorPosY, ImVec2 textSize) {
         if (this.coordinates != null && this.coordinates.getLine() == line) {
-            if (this.selectionEnd == null) {
+            if (this.selectionEnd == null && !this.window.hasActiveRename()) {
                 this.handleLineCursorDrawing(this.coordinates, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
             }
 

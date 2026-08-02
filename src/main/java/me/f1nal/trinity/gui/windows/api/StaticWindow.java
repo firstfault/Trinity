@@ -58,7 +58,8 @@ public abstract class StaticWindow extends AbstractWindow {
             if (!covered) {
                 this.captureDialogPosition();
                 renderFrame();
-                if (this.isDialog()
+                boolean contextMenuOpen = this.drawSharedContextMenu();
+                if (!contextMenuOpen && this.isDialog()
                         && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
                         && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
                     this.close();

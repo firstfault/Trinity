@@ -82,12 +82,11 @@ public final class DecompilerPreviewRenderer {
     }
 
     public void drawClassPreview(ClassInput classInput, boolean hasDetails) {
-        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(classInput);
+        DecompiledClass previewClass = getPreviewClass(classInput);
         if (previewClass == null) {
             return;
         }
 
-        previewClass.applyPendingOutput();
         DecompiledClass.ClassPreview preview = previewClass.getClassPreview(CLASS_PREVIEW_LINES);
         if (preview.lines().isEmpty()) {
             return;
@@ -109,12 +108,11 @@ public final class DecompilerPreviewRenderer {
     }
 
     public void drawMethodPreview(MethodInput methodInput, boolean hasDetails) {
-        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(methodInput.getOwningClass());
+        DecompiledClass previewClass = getPreviewClass(methodInput.getOwningClass());
         if (previewClass == null) {
             return;
         }
 
-        previewClass.applyPendingOutput();
         DecompiledClass.MethodPreview preview = previewClass.getMethodPreview(methodInput, METHOD_PREVIEW_LINES);
         if (preview.lines().isEmpty()) {
             return;
@@ -152,10 +150,9 @@ public final class DecompilerPreviewRenderer {
     public void drawMethodPatternUsagePreview(MethodInput methodInput,
                                               List<AbstractInsnNode> instructions) {
         drawDetails(methodSignature(methodInput));
-        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(methodInput.getOwningClass());
+        DecompiledClass previewClass = getPreviewClass(methodInput.getOwningClass());
         if (previewClass == null) return;
 
-        previewClass.applyPendingOutput();
         DecompiledClass.PatternUsagePreview preview = previewClass.getMethodPatternUsagePreview(
                 methodInput, instructions, METHOD_USAGE_SURROUNDING_LINES);
         if (preview.signature().isEmpty()) {
@@ -187,12 +184,11 @@ public final class DecompilerPreviewRenderer {
                                         boolean highlightOwnerClass, boolean highlightConstant,
                                         Object constantValue, int constantOccurrence) {
         drawDetails(methodSignature(methodInput));
-        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(methodInput.getOwningClass());
+        DecompiledClass previewClass = getPreviewClass(methodInput.getOwningClass());
         if (previewClass == null) {
             return;
         }
 
-        previewClass.applyPendingOutput();
         DecompiledClass.MethodUsagePreview preview = previewClass.getMethodUsagePreview(
                 methodInput, instruction, METHOD_USAGE_SURROUNDING_LINES,
                 highlightOwnerClass, highlightConstant, constantValue, constantOccurrence);
@@ -219,12 +215,11 @@ public final class DecompilerPreviewRenderer {
     }
 
     public void drawFieldPreview(FieldInput fieldInput, boolean hasDetails) {
-        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(fieldInput.getOwningClass());
+        DecompiledClass previewClass = getPreviewClass(fieldInput.getOwningClass());
         if (previewClass == null) {
             return;
         }
 
-        previewClass.applyPendingOutput();
         List<DecompilerLineText> declaration = previewClass.getFieldDeclarationPreview(fieldInput);
         if (declaration.isEmpty()) {
             return;
@@ -237,6 +232,7 @@ public final class DecompilerPreviewRenderer {
 
     public void drawVariablePreview(DecompiledClass decompiledClass,
                                     DecompilerComponent.VariablePreview variable, boolean hasDetails) {
+        trinity.getDecompiler().refreshRenderedText(decompiledClass);
         List<DecompilerLineText> declaration = decompiledClass.getVariableDeclarationPreview(
                 variable.methodInput(), variable.index());
         boolean stackVariable = variable.index() >= VarExprent.STACK_BASE;
@@ -269,6 +265,16 @@ public final class DecompilerPreviewRenderer {
         }
 //        ImGui.separator();
 //        ImGui.textColored(CodeColorScheme.DISABLED, "Preview truncated, hold SHIFT to show all");
+    }
+
+    private DecompiledClass getPreviewClass(ClassInput classInput) {
+        DecompiledClass previewClass = trinity.getDecompiler().getOrDecompile(classInput);
+        if (previewClass == null) {
+            return null;
+        }
+        previewClass.applyPendingOutput();
+        trinity.getDecompiler().refreshRenderedText(previewClass);
+        return previewClass;
     }
 
     private void drawDecompilerLine(List<DecompilerLineText> line, int leadingWhitespaceToTrim) {

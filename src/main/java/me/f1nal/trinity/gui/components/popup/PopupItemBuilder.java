@@ -59,6 +59,11 @@ public class PopupItemBuilder {
         return this.add(new PopupItemMenu(label, builder.get()));
     }
 
+    public PopupItemBuilder append(PopupItemBuilder builder) {
+        this.items.addAll(builder.get());
+        return this;
+    }
+
     private PopupItemBuilder add(PopupItem item) {
         this.items.add(item);
         return this;

@@ -2,6 +2,7 @@ package me.f1nal.trinity.execution.xref.where;
 
 import imgui.ImGui;
 import imgui.ImVec2;
+import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiMouseButton;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
@@ -16,6 +17,7 @@ import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerP
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.function.Supplier;
 
 public abstract class XrefWhere {
     private final String name;
@@ -70,12 +72,17 @@ public abstract class XrefWhere {
     }
 
     public void controls(PopupMenu popupMenu, Trinity trinity, boolean highlightOwnerClass) {
+        controls(popupMenu, trinity, highlightOwnerClass, this::menuItem);
+    }
+
+    public void controls(PopupMenu popupMenu, Trinity trinity, boolean highlightOwnerClass,
+                         Supplier<PopupItemBuilder> contextMenu) {
         if (ImGui.isItemHovered()) {
             hover(highlightOwnerClass);
             if (ImGui.isMouseDoubleClicked(ImGuiMouseButton.Left)) {
                 followInDecompiler();
             } else if (ImGui.isItemClicked(ImGuiMouseButton.Right)) {
-                popupMenu.show(menuItem());
+                popupMenu.show(contextMenu.get());
             }
         }
     }
@@ -90,6 +97,12 @@ public abstract class XrefWhere {
 
     public void draw(IKindType kind, PopupMenu popupMenu, Trinity trinity,
                      boolean highlightOwnerClass, Collection<String> presentTypeNames) {
+        draw(kind, popupMenu, trinity, highlightOwnerClass, presentTypeNames, this::menuItem);
+    }
+
+    public void draw(IKindType kind, PopupMenu popupMenu, Trinity trinity,
+                     boolean highlightOwnerClass, Collection<String> presentTypeNames,
+                     Supplier<PopupItemBuilder> contextMenu) {
         float rectSize = 12.F * Main.getPreferences().getDefaultFont().getSize() / 15F;
         ImGui.invisibleButton("XrefWhereButton", rectSize, rectSize);
         ImVec2 min = ImGui.getItemRectMin();
@@ -98,8 +111,13 @@ public abstract class XrefWhere {
         ImGui.getWindowDrawList().addRectFilled(min.x, min.y + yOffset, max.x, max.y + yOffset, kind.getColor(), 1.F);
         KindTooltip.draw(kind, presentTypeNames);
         ImGui.sameLine(0.F, 4.F);
-        ImGui.text(getText());
-        controls(popupMenu, trinity, highlightOwnerClass);
+        String text = getText();
+        ImVec2 textSize = ImGui.calcTextSize(text);
+        ImGui.invisibleButton("XrefWhereText", Math.max(1.F, textSize.x), ImGui.getTextLineHeight());
+        ImVec2 textPosition = ImGui.getItemRectMin();
+        ImGui.getWindowDrawList().addText(textPosition.x, textPosition.y,
+                ImGui.getColorU32(ImGuiCol.Text), text);
+        controls(popupMenu, trinity, highlightOwnerClass, contextMenu);
     }
 
     @Override

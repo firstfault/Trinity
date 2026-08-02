@@ -9,16 +9,17 @@ import me.f1nal.trinity.util.GuiUtil;
 import java.util.Objects;
 
 public class DecompilerComponentRenameState {
+    private static final float EMPTY_INPUT_WIDTH = 4.F;
+    private static final float MAX_INPUT_WIDTH = 255.F;
+
     private final DecompilerComponent component;
     private ImString text;
     private String id = ComponentId.getId(this.getClass());
     private boolean focusGrabbed;
-    private float minWidth = 25.F;
 
     public DecompilerComponentRenameState(DecompilerComponent component) {
         this.component = component;
         this.text = new ImString(Objects.requireNonNullElse(component.getRenameHandler().getFullName(), component.getText()), 0x200);
-        this.minWidth = Math.max(ImGui.calcTextSize(component.getText()).x, this.minWidth);
     }
 
     public void drawInputBox() {
@@ -26,7 +27,8 @@ public class DecompilerComponentRenameState {
             ImGui.setKeyboardFocusHere();
         }
 
-        final float width = Math.min(Math.max(ImGui.calcTextSize(text.get()).x + 8.F, this.minWidth), 255);
+        final float width = Math.min(Math.max(ImGui.calcTextSize(text.get()).x, EMPTY_INPUT_WIDTH),
+                MAX_INPUT_WIDTH);
         ImGui.pushItemWidth(width);
         GuiUtil.smallWidget(() -> ImGui.inputText("###" + this.id, this.text));
         ImGui.popItemWidth();

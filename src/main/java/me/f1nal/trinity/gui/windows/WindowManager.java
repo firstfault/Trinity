@@ -211,9 +211,10 @@ public class WindowManager {
             }
 
             boolean keyboardInputReady = popup.renderPopup();
+            boolean contextMenuOpen = this.displayManager.getPopupMenu().draw();
             int childIndex = index + 1;
             boolean hasChild = childIndex < popups.length;
-            if (!popup.isCloseRequested() && !hasChild && keyboardInputReady
+            if (!popup.isCloseRequested() && !hasChild && keyboardInputReady && !contextMenuOpen
                     && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
                 popup.handleEscape();
             }

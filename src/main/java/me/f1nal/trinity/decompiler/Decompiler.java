@@ -8,6 +8,7 @@ import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
 import me.f1nal.trinity.decompiler.main.extern.IDecompilationProgressListener;
 import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.events.EventMemberModified;
+import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.MemberInput;
@@ -36,6 +37,7 @@ public final class Decompiler implements IEventListener {
     private final Set<ClassInput> failedList = ConcurrentHashMap.newKeySet();
     private final Map<ClassInput, Long> decompileGenerations = new ConcurrentHashMap<>();
     private final Map<Object, Long> memberRefreshGenerations = new ConcurrentHashMap<>();
+    private final Set<DecompiledClass> staleRenderedText = ConcurrentHashMap.newKeySet();
     private final AtomicLong generationCounter = new AtomicLong();
 
     public Decompiler(Trinity trinity) throws FileNotFoundException {
@@ -71,7 +73,10 @@ public final class Decompiler implements IEventListener {
         decompileGenerations.put(classInput, generation);
 
         DecompiledClass progressiveClass = DecompiledClass.progressive(trinity, classInput);
-        decompileCache.put(classInput, progressiveClass);
+        DecompiledClass previousClass = decompileCache.put(classInput, progressiveClass);
+        if (previousClass != null) {
+            staleRenderedText.remove(previousClass);
+        }
 
         Map<String, Object> options = createOptions();
 
@@ -188,6 +193,27 @@ public final class Decompiler implements IEventListener {
         new Thread(task, "Decompiler Member Refresh").start();
     }
 
+    @Subscribe
+    public void onRefreshDecompilerText(EventRefreshDecompilerText event) {
+        for (DecompiledClass decompiledClass : decompileCache.values()) {
+            if (event.getPredicate().test(decompiledClass)) {
+                staleRenderedText.add(decompiledClass);
+            }
+        }
+    }
+
+    /**
+     * Rebuilds the colored text model after names or display settings change without discarding or
+     * rerunning the cached decompiler output.
+     */
+    public boolean refreshRenderedText(DecompiledClass decompiledClass) {
+        if (decompiledClass == null || !staleRenderedText.remove(decompiledClass)) {
+            return false;
+        }
+        decompiledClass.resetLines();
+        return true;
+    }
+
     private Map<String, Object> createOptions() {
         Map<String, Object> options = new HashMap<>();
         options.put(IFernflowerPreferences.BYTECODE_SOURCE_MAPPING, "1");
@@ -234,7 +260,10 @@ public final class Decompiler implements IEventListener {
     }
 
     public void invalidateCache(ClassInput owningClass) {
-        decompileCache.remove(owningClass);
+        DecompiledClass removedClass = decompileCache.remove(owningClass);
+        if (removedClass != null) {
+            staleRenderedText.remove(removedClass);
+        }
         decompileGenerations.remove(owningClass);
         decompileStack.remove(owningClass);
     }

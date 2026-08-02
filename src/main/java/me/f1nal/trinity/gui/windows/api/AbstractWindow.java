@@ -4,6 +4,7 @@ import imgui.ImGui;
 import imgui.ImGuiViewport;
 import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiWindowFlags;
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.util.NameUtil;
 
@@ -38,6 +39,12 @@ public abstract class AbstractWindow {
     }
 
     protected abstract void renderFrame();
+
+    /** Draws the shared context menu inside this window's ImGui popup/ID scope. */
+    protected final boolean drawSharedContextMenu() {
+        return Main.getDisplayManager() != null
+                && Main.getDisplayManager().getPopupMenu().draw();
+    }
 
     public final void setChildWindowRenderer(Runnable childWindowRenderer) {
         this.childWindowRenderer = childWindowRenderer;

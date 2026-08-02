@@ -22,7 +22,6 @@ import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventMemberModified;
-import me.f1nal.trinity.events.EventRefreshDecompilerText;
 import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
@@ -42,6 +41,7 @@ import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.keybindings.KeyBindManager;
+import me.f1nal.trinity.keybindings.HoveredInputKeyBindings;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.GuiUtil;
 import me.f1nal.trinity.util.Stopwatch;
@@ -73,7 +73,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
      * Text component that is currently hovered.
      */
     private DecompilerComponent hoveredComponent;
-    private boolean resetLines;
     private final ImString searchText = new ImString(256);
     private final ImBoolean searchCaseSensitive = new ImBoolean();
     private final ImBoolean searchWords = new ImBoolean();
@@ -235,14 +234,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.forceRefresh = true;
     }
 
-    @Subscribe
-    public void onRefreshDecompilerText(EventRefreshDecompilerText event) {
-        DecompiledClass decompiledClass = getDecompiledClass();
-        if (getDecompiledClass() != null && event.getPredicate().test(decompiledClass)) {
-            this.resetLines = true;
-        }
-    }
-
     private ClassInput decompilingInput;
 
     private void drawDecompileTab() {
@@ -258,9 +249,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             this.selectionMatchesDirty = true;
             if (this.autoscrollTo != null) this.autoscrollTo.invalidate();
         }
-        if (decompiledClass != null && this.resetLines) {
-            decompiledClass.resetLines();
-            this.resetLines = false;
+        if (decompiledClass != null && trinity.getDecompiler().refreshRenderedText(decompiledClass)) {
             this.searchDirty = true;
             this.selectionMatchesDirty = true;
         }
@@ -445,6 +434,18 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
     public DecompiledClass getDecompiledClass() {
         return trinity.getDecompiler().getFromCache(selectedClass);
+    }
+
+    boolean hasActiveRename() {
+        DecompiledClass decompiledClass = this.getDecompiledClass();
+        if (decompiledClass == null) return false;
+
+        for (DecompilerLine line : decompiledClass.getLines()) {
+            for (DecompilerLineText text : line.getComponents()) {
+                if (text.getComponent().getRenameState() != null) return true;
+            }
+        }
+        return false;
     }
 
     private void drawDecompiledOutput(DecompiledClass decompiledClass) {
@@ -639,6 +640,10 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 ? this.hoveredComponent : this.cursor.getComponent();
         if (target == null) return;
 
+        HoveredInputKeyBindings.offerFocused(() -> this.dispatchMemberKeyMapping(target));
+    }
+
+    private void dispatchMemberKeyMapping(DecompilerComponent target) {
         KeyBindManager bindings = Main.getKeyBindManager();
         Input<?> input = target.getActionInput();
         if (bindings.DECOMPILER_ASSEMBLE.isPressed()) {

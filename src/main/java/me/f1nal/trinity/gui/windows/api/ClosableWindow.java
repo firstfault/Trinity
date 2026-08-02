@@ -78,7 +78,8 @@ public abstract class ClosableWindow extends AbstractWindow {
                 }
                 if (this.menuBar != null) this.menuBar.draw();
                 renderFrame();
-                if ((closeableByEscape || this.isDialog())
+                boolean contextMenuOpen = this.drawSharedContextMenu();
+                if (!contextMenuOpen && (closeableByEscape || this.isDialog())
                         && ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
                         && ImGui.isKeyPressed(ImGuiKey.Escape, false)) {
                     this.close();

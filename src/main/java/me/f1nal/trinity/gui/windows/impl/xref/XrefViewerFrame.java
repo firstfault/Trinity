@@ -10,6 +10,7 @@ import me.f1nal.trinity.gui.components.filter.ListFilterComponent;
 import me.f1nal.trinity.gui.components.filter.SearchBarFilter;
 import me.f1nal.trinity.gui.components.filter.kind.KindFilter;
 import me.f1nal.trinity.gui.components.general.table.TableColumn;
+import me.f1nal.trinity.gui.components.general.table.TableColumnRendererXrefInvocation;
 import me.f1nal.trinity.gui.components.general.table.TableColumnRendererXrefWhere;
 import me.f1nal.trinity.gui.components.general.table.TableComponent;
 import me.f1nal.trinity.gui.navigation.NavigationAction;
@@ -18,6 +19,7 @@ import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 
 import java.util.Collection;
+import java.util.List;
 
 public class XrefViewerFrame extends ClosableWindow {
     private final Collection<AbstractXref> xrefViewList;
@@ -25,6 +27,8 @@ public class XrefViewerFrame extends ClosableWindow {
     private final ListFilterComponent<AbstractXref> listFilterComponent;
     private final SearchBarFilter<AbstractXref> searchFilter;
     private final KindFilter<AbstractXref> kindFilter;
+    private final TableColumnRendererXrefInvocation invocationRenderer =
+            new TableColumnRendererXrefInvocation();
     private final TableComponent<AbstractXref> xrefTable = new TableComponent<>(null);
 
     public XrefViewerFrame(XrefBuilder builder, Trinity trinity, boolean autofollowXref) {
@@ -46,10 +50,12 @@ public class XrefViewerFrame extends ClosableWindow {
         this.builder = builder;
         this.setDialog(true);
 
-        this.xrefTable.getColumns().add(
-                new TableColumn<AbstractXref>("Invocation", AbstractXref::getInvocation).setWidthWeight(1.F));
+        this.xrefTable.getColumns().add(new TableColumn<AbstractXref>("Invocation", this.invocationRenderer)
+                .setSortKey(AbstractXref::getInvocation)
+                .setWidthWeight(1.F));
         this.xrefTable.getColumns().add(new TableColumn<AbstractXref>("Where", new TableColumnRendererXrefWhere<>(
-                builder instanceof XrefBuilderClassRef))
+                builder instanceof XrefBuilderClassRef,
+                xref -> this.invocationRenderer.createContextMenu(xref, true)))
                 .setSortKey(xref -> xref.getWhere().getText())
                 .setWidthWeight(3.F));
 
@@ -78,8 +84,11 @@ public class XrefViewerFrame extends ClosableWindow {
     @Override
     protected void renderFrame() {
         this.listFilterComponent.draw();
-        this.xrefTable.setElementList(this.listFilterComponent.getFilteredList());
+        List<AbstractXref> filteredXrefs = this.listFilterComponent.getFilteredList();
+        this.invocationRenderer.beginFrame(filteredXrefs);
+        this.xrefTable.setElementList(this.invocationRenderer.filterSelectedType(filteredXrefs));
         this.xrefTable.draw(Math.max(1.F, ImGui.getContentRegionAvailY()));
+        this.invocationRenderer.endFrame();
     }
 
     @Override

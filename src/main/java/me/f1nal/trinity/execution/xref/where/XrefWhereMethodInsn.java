@@ -3,6 +3,7 @@ package me.f1nal.trinity.execution.xref.where;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.execution.Input;
 import me.f1nal.trinity.execution.MethodInput;
+import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerPreviewRenderer;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -37,6 +38,11 @@ public class XrefWhereMethodInsn extends XrefWhereMethod {
 
     public AbstractInsnNode getInsnNode() {
         return insnNode;
+    }
+
+    @Override
+    public PopupItemBuilder menuItem() {
+        return PopupItemBuilder.create().menuItem("Go to reference", this::followInDecompiler);
     }
 
     @Override

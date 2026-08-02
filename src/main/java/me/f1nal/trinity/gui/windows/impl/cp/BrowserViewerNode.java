@@ -201,7 +201,7 @@ public class BrowserViewerNode {
         }
 
         if (hovered && this.keyBindingInput != null) {
-            HoveredInputKeyBindings.handle(this.keyBindingInput,
+            HoveredInputKeyBindings.offerHovered(this.keyBindingInput,
                     this.isRenameAvailable() ? this::beginRenaming : null);
         }
     }

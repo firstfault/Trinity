@@ -45,6 +45,7 @@ import me.f1nal.trinity.gui.viewport.dnd.DragAndDropHandler;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
+import me.f1nal.trinity.keybindings.HoveredInputKeyBindings;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.theme.TrinityStyle;
 import me.f1nal.trinity.update.UpdateRelease;
@@ -204,8 +205,9 @@ public final class DisplayManager extends ImGuiApplication {
         this.mainMenuBar.draw(this.projectNavigationBand);
         this.setupDockspace();
         if (this.trinity == null && this.windowManager.getPopups().isEmpty()) this.homepage();
-        this.popupMenu.draw();
+        HoveredInputKeyBindings.beginFrame();
         this.windowManager.draw();
+        HoveredInputKeyBindings.dispatch();
         this.notificationRenderer.draw();
         this.dragAndDropHandler.draw();
         this.globalSearchOverlay.draw();
