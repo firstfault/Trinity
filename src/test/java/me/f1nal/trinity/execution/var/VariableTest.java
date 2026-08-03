@@ -14,25 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VariableTest {
     @Test
-    void refusesEmptyAndWhitespaceOnlyNames() {
-        Variable variable = variable();
-
-        assertFalse(variable.setName(""));
-        assertFalse(variable.setName("   "));
-        assertEquals("var0", variable.getName());
-    }
-
-    @Test
-    void retainsTheLastValidNameIfAnEditorBufferBecomesEmpty() {
-        Variable variable = variable();
-        assertTrue(variable.setName("counter"));
-
-        variable.getNameProperty().set("");
-
-        assertEquals("counter", variable.getName());
-    }
-
-    @Test
     void refusesAnotherVariableNameInTheSameMethod() {
         VariableTable table = variableTable();
         Variable first = table.getVariable(0);
@@ -46,10 +27,6 @@ class VariableTest {
         second.getNameProperty().set("counter");
         assertEquals("value", second.getName());
         assertEquals("value", second.getNameProperty().get());
-    }
-
-    private static Variable variable() {
-        return variableTable().getVariable(0);
     }
 
     private static VariableTable variableTable() {

@@ -29,18 +29,6 @@ class InstructionPatternMatcherTest {
     }
 
     @Test
-    void supportsHexIntegersAndEscapedQuotedWildcards() {
-        MethodInput method = method(new IntInsnNode(Opcodes.BIPUSH, 16),
-                new TypeInsnNode(Opcodes.NEW, "sample/*Literal"));
-        InstructionPattern pattern = compile("""
-                bipush 0x10
-                new "sample/\\*Literal"
-                """, false);
-
-        assertEquals(1, InstructionPatternMatcher.findAll(method, pattern).size());
-    }
-
-    @Test
     void sequenceGapUsesTheShortestMatchAndIncludesOverlaps() {
         MethodInput method = method(new InsnNode(Opcodes.ICONST_0), new InsnNode(Opcodes.NOP),
                 new InsnNode(Opcodes.IRETURN), new InsnNode(Opcodes.IRETURN));

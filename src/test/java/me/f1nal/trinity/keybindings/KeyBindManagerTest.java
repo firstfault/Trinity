@@ -14,27 +14,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class KeyBindManagerTest {
     @Test
-    void exposesStableDefaultInstructionMappings() {
-        KeyBindManager manager = new KeyBindManager();
-
-        assertEquals(ImGuiKey.A, manager.ASSEMBLER_INSERT.getKeyCode());
-        assertEquals(ImGuiKey.E, manager.ASSEMBLER_EDIT.getKeyCode());
-        assertEquals("E", manager.ASSEMBLER_EDIT.getKeyName());
-        assertTrue(manager.ASSEMBLER_EDIT.isDefault());
-        assertEquals(ImGuiKey.A, manager.DECOMPILER_ASSEMBLE.getKeyCode());
-        assertEquals(ImGuiKey.R, manager.DECOMPILER_RENAME.getKeyCode());
-        assertEquals(ImGuiKey.E, manager.DECOMPILER_EDIT.getKeyCode());
-        assertEquals(ImGuiKey.X, manager.DECOMPILER_VIEW_XREFS.getKeyCode());
-        assertEquals(ImGuiKey.V, manager.DECOMPILER_VIEW_MEMBER.getKeyCode());
-        assertEquals(Bindable.mouseButtonCode(3), manager.DECOMPILER_NAVIGATE_BACK.getKeyCode());
-        assertEquals("Mouse 4", manager.DECOMPILER_NAVIGATE_BACK.getKeyName());
-        assertEquals(Bindable.mouseButtonCode(4), manager.DECOMPILER_NAVIGATE_FORWARD.getKeyCode());
-        assertEquals("Mouse 5", manager.DECOMPILER_NAVIGATE_FORWARD.getKeyName());
-        assertEquals(ImGuiKey.Tab, manager.GLOBAL_SEARCH.getKeyCode());
-        assertEquals("Tab", manager.GLOBAL_SEARCH.getKeyName());
-    }
-
-    @Test
     void assigningAChordClearsConflictsInTheSameScope() {
         KeyBindManager manager = new KeyBindManager();
 

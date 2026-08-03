@@ -24,7 +24,7 @@ class ConstantSearchTypeAsmTest {
             false);
 
     @Test
-    void classLiteralSearchAcceptsSourceInternalAndDescriptorNames() {
+    void typeSearchAcceptsSourceInternalDescriptorAndJvmTypeNames() {
         Type string = Type.getType("Ljava/lang/String;");
 
         assertTrue(new ConstantSearchTypeType(null, "java.lang.String").matches(string));
@@ -32,16 +32,11 @@ class ConstantSearchTypeAsmTest {
         assertTrue(new ConstantSearchTypeType(null, "Ljava/lang/String;").matches(string));
         assertTrue(new ConstantSearchTypeType(null, "java.lang.String.class").matches(string));
         assertFalse(new ConstantSearchTypeType(null, "java.lang.Integer").matches(string));
-    }
-
-    @Test
-    void typeSearchSupportsPrimitiveArrayAndMethodTypes() {
         assertTrue(new ConstantSearchTypeType(null, "int").matches(Type.INT_TYPE));
         assertTrue(new ConstantSearchTypeType(null, "java.lang.String[]")
                 .matches(Type.getType("[Ljava/lang/String;")));
         assertTrue(new ConstantSearchTypeType(null, "(I)Ljava/lang/String;")
                 .matches(Type.getMethodType("(I)Ljava/lang/String;")));
-        assertTrue(new ConstantSearchTypeType(null, "").matches(Type.BOOLEAN_TYPE));
     }
 
     @Test

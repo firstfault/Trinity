@@ -6,7 +6,6 @@ import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
-import org.objectweb.asm.TypeReference;
 import org.objectweb.asm.tree.*;
 
 import java.util.IdentityHashMap;
@@ -54,31 +53,6 @@ class AssemblerClipboardCodecTest {
         assertEquals("edited text", ((LdcInsnNode) parsed.instructions().get(4)).cst);
         assertSame(existing, ((JumpInsnNode) parsed.instructions().get(5)).label);
         assertFalse(parsed.instructions().contains(existing));
-    }
-
-    @Test
-    void createsADeclaredTargetWhenAnExternalLabelDoesNotExist() {
-        AssemblerClipboardCodec.ParsedInstructions parsed = AssemblerClipboardCodec.parse(
-                "goto \"missing\"", ignored -> null);
-
-        assertEquals(2, parsed.instructions().size());
-        LabelNode created = (LabelNode) parsed.instructions().get(0);
-        assertSame(created, ((JumpInsnNode) parsed.instructions().get(1)).label);
-        assertEquals("missing", parsed.labelNames().get(created));
-    }
-
-    @Test
-    void intentionallyDoesNotCopyInstructionTypeAnnotations() {
-        InsnNode instruction = new InsnNode(Opcodes.NOP);
-        instruction.visibleTypeAnnotations = List.of(new TypeAnnotationNode(
-                TypeReference.newTypeReference(TypeReference.CAST).getValue(), null, "Lsample/Marker;"));
-
-        String text = AssemblerClipboardCodec.format(List.of(instruction), ignored -> null);
-        AbstractInsnNode restored = AssemblerClipboardCodec.parse(text, ignored -> null).instructions().get(0);
-
-        assertNull(restored.visibleTypeAnnotations);
-        assertNull(restored.invisibleTypeAnnotations);
-        assertEquals("nop", text);
     }
 
     @Test

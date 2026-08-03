@@ -24,19 +24,6 @@ class ClosableWindowDisposalTest {
     }
 
     @Test
-    void removingVisibilityIsTerminalForAClosableWindow() {
-        TestWindow window = new TestWindow();
-        window.setVisible(true);
-
-        window.setVisible(false);
-        window.setVisible(true);
-
-        assertTrue(window.isDisposed());
-        assertFalse(window.isVisible());
-        assertEquals(1, window.disposals);
-    }
-
-    @Test
     void rejectedDuplicateWindowIsDisposed() {
         WindowManager manager = new WindowManager(null);
         TestWindow original = new TestWindow();

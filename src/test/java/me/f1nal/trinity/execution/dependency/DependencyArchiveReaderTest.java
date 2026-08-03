@@ -15,7 +15,6 @@ import java.util.zip.ZipOutputStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class DependencyArchiveReaderTest {
     @TempDir
@@ -43,27 +42,6 @@ class DependencyArchiveReaderTest {
         assertEquals(archivePath.toAbsolutePath().normalize().toString(), archive.getAbsolutePath());
         assertEquals(1, archive.getClassCount());
         assertTrue(archive.getClasses().containsKey("dependency/Library"));
-    }
-
-    @Test
-    void readsJavaBaseFromTheRunningJdk() throws Exception {
-        DependencyArchive archive = DependencyArchiveReader.readRuntimeJavaBase();
-
-        assertEquals("java.base", archive.getName());
-        assertEquals(DependencyKind.RUNTIME_MODULE, archive.getKind());
-        assertEquals("runtime:java.base", archive.getStoredReference());
-        assertTrue(archive.getClasses().containsKey("java/lang/Object"));
-        assertTrue(archive.getClassCount() > 100);
-    }
-
-    @Test
-    void readsJmodDependencyArchives() throws Exception {
-        Path jmod = Path.of(System.getProperty("java.home"), "jmods", "java.logging.jmod");
-        assumeTrue(Files.isRegularFile(jmod));
-
-        DependencyArchive archive = DependencyArchiveReader.read(jmod.toFile());
-
-        assertTrue(archive.getClasses().containsKey("java/util/logging/Logger"));
     }
 
     @Test

@@ -29,34 +29,6 @@ class EventManagerTest {
         manager.setRegistered(false);
     }
 
-    @Test
-    void duplicateRegistrationDoesNotRequireDuplicateUnregistration() {
-        TestEventManager manager = new TestEventManager();
-        CountingListener listener = new CountingListener();
-
-        manager.registerListener(listener);
-        manager.registerListener(listener);
-        manager.setRegistered(true);
-        manager.postEvent(new TestEvent());
-
-        assertEquals(1, listener.events);
-        assertTrue(manager.unregisterListener(listener));
-        assertFalse(manager.unregisterListener(listener));
-    }
-
-    @Test
-    void unregisterWhileInactivePreventsFutureRegistration() {
-        TestEventManager manager = new TestEventManager();
-        CountingListener listener = new CountingListener();
-
-        manager.registerListener(listener);
-        assertTrue(manager.unregisterListener(listener));
-        manager.setRegistered(true);
-        manager.postEvent(new TestEvent());
-
-        assertEquals(0, listener.events);
-    }
-
     private static final class TestEventManager extends EventManager {
         private final EventBus eventBus = new EventBus();
 

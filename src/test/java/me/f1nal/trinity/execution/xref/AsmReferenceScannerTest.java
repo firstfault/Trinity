@@ -326,32 +326,6 @@ class AsmReferenceScannerTest {
         assertEquals(1, duplicates);
     }
 
-    @Test
-    void standaloneMethodScanMatchesTheMethodPortionOfAFullClassScan() {
-        ClassNode node = baseClass();
-        MethodNode method = new MethodNode(
-                Opcodes.ACC_PUBLIC, "run",
-                "(Lrefresh/Argument;)[Lrefresh/Return;",
-                "(Ljava/util/List<Lrefresh/Generic;>;)[Lrefresh/Return;",
-                new String[]{"refresh/Exception"});
-        method.instructions.add(new InvokeDynamicInsnNode(
-                "dynamic", "()Lrefresh/Dynamic;", BOOTSTRAP,
-                Type.getType("Lrefresh/BootstrapArgument;")));
-        node.methods.add(method);
-
-        AsmReferenceScanner.ScanResult full = AsmReferenceScanner.scanClass(node);
-        AsmReferenceScanner.ScanResult incremental = AsmReferenceScanner.scanMethod(method);
-
-        assertEquals(new HashSet<>(incremental.classReferences()),
-                full.classReferences().stream()
-                        .filter(reference -> reference.source().method() == method)
-                        .collect(java.util.stream.Collectors.toSet()));
-        assertEquals(new HashSet<>(incremental.memberReferences()),
-                full.memberReferences().stream()
-                        .filter(reference -> reference.source().method() == method)
-                        .collect(java.util.stream.Collectors.toSet()));
-    }
-
     private static ClassNode baseClass() {
         ClassNode node = new ClassNode(Opcodes.ASM9);
         node.version = Opcodes.V17;

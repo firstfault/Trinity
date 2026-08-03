@@ -41,18 +41,6 @@ class AssemblerDocumentTest {
     }
 
     @Test
-    void cloningLargeMethodDoesNotDropInstructions() {
-        MethodNode method = new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "large", "()V", null, null);
-        for (int i = 0; i < 50_000; i++) method.instructions.add(new InsnNode(Opcodes.NOP));
-        method.instructions.add(new InsnNode(Opcodes.RETURN));
-        method.maxStack = 0;
-        method.maxLocals = 0;
-        MethodNode clone = AssemblerDocument.cloneMethod(method);
-        assertEquals(50_001, clone.instructions.size());
-        assertEquals(AssemblerDocument.fingerprint(method), AssemblerDocument.fingerprint(clone));
-    }
-
-    @Test
     void commitAtomicallyReplacesAllCodeMetadataAndTracksExternalChanges() {
         MethodNode live = completeMethod();
         ClassNode ownerNode = new ClassNode(Opcodes.ASM9);

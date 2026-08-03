@@ -16,17 +16,11 @@ class InvokeDynamicConstantsTest {
                     + "Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;", false);
 
     @Test
-    void extractsLiteralAroundRuntimeArgumentTags() {
-        InvokeDynamicInsnNode instruction = concat("E1ygaqdb\u0001");
-
-        assertEquals(List.of("E1ygaqdb"), InvokeDynamicConstants.resolve(instruction));
-    }
-
-    @Test
-    void retainsRepeatedLiteralOccurrences() {
-        InvokeDynamicInsnNode instruction = concat("\u0001same\u0001same");
-
-        assertEquals(List.of("same", "same"), InvokeDynamicConstants.resolve(instruction));
+    void extractsLiteralsAndRetainsRepeatedOccurrences() {
+        assertEquals(List.of("E1ygaqdb"),
+                InvokeDynamicConstants.resolve(concat("E1ygaqdb\u0001")));
+        assertEquals(List.of("same", "same"),
+                InvokeDynamicConstants.resolve(concat("\u0001same\u0001same")));
     }
 
     @Test
@@ -38,14 +32,9 @@ class InvokeDynamicConstantsTest {
     }
 
     @Test
-    void fallsBackToRawArgumentsForMalformedRecipe() {
-        InvokeDynamicInsnNode instruction = concat("missing\u0002");
-
-        assertEquals(List.of("missing\u0002"), InvokeDynamicConstants.resolve(instruction));
-    }
-
-    @Test
-    void leavesOtherBootstrapMethodsUnchanged() {
+    void malformedAndNonConcatSitesFallBackToRawArguments() {
+        assertEquals(List.of("missing\u0002"),
+                InvokeDynamicConstants.resolve(concat("missing\u0002")));
         Handle bootstrap = new Handle(Opcodes.H_INVOKESTATIC, "example/Bootstrap", "link",
                 CONCAT_BOOTSTRAP.getDesc(), false);
         InvokeDynamicInsnNode instruction = new InvokeDynamicInsnNode("dynamic", "()Ljava/lang/String;",

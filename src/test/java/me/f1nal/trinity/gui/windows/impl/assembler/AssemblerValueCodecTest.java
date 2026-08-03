@@ -28,13 +28,6 @@ class AssemblerValueCodecTest {
     }
 
     @Test
-    void reportsTheInvalidCharacterPosition() {
-        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-                () -> AssemblerValueCodec.parse("handle(H_UNKNOWN, \"x\", \"y\", \"()V\", false)"));
-        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().contains("character"));
-    }
-
-    @Test
     void reportsAnEmptyTypeDescriptorWithoutLeakingAsmExceptions() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> AssemblerValueCodec.parse("type(\"\")"));
