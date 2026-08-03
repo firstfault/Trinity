@@ -96,6 +96,7 @@ public class MainMenuBar {
                 ImGui.separator();
 */
                 this.drawAction(ApplicationActionRegistry.XREF_SEARCH);
+                this.drawAction(ApplicationActionRegistry.MEMBER_SEARCH);
                 this.drawAction(ApplicationActionRegistry.CONSTANT_SEARCH);
                 this.drawAction(ApplicationActionRegistry.PATTERN_SEARCH);
                 ImGui.separator();

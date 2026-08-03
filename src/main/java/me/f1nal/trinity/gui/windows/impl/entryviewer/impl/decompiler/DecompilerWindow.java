@@ -22,6 +22,7 @@ import me.f1nal.trinity.database.IDatabaseSavable;
 import me.f1nal.trinity.database.object.DatabaseDecompiler;
 import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
+import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventMemberModified;
 import me.f1nal.trinity.events.api.IEventListener;
@@ -29,6 +30,7 @@ import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.ClassTarget;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.Input;
+import me.f1nal.trinity.execution.MemberInput;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.execution.packages.other.ExtractArchiveEntryRunnable;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
@@ -37,6 +39,9 @@ import me.f1nal.trinity.gui.components.popup.MenuBarProgress;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
 import me.f1nal.trinity.gui.navigation.NavigationAction;
+import me.f1nal.trinity.gui.viewport.notifications.Notification;
+import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
+import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructure;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
@@ -537,13 +542,19 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
         if (!this.searchBarFocused && !decompilerInputBlocked) cursor.handleInputs(mousePosX, mousePosY);
 
+        DecompilerAutoScroll pendingAutoScroll = this.autoscrollTo != null
+                && this.autoscrollTo.isNavigationPending() ? this.autoscrollTo : null;
+        DecompilerComponent autoScrollComponent = pendingAutoScroll == null
+                ? null : pendingAutoScroll.findComponent(decompiledClass);
+
         for (DecompilerLine line : decompiledClass.getLines()) {
             final float cursorScreenPosX = ImGui.getCursorScreenPosX();
+            float currentLineNumberSpacing = this.getLineNumberSpacing(line, lineNumberSpacing);
 
             this.drawNavigationHighlight(line, cursorScreenPosX, textSize);
 
             int textOffset = 0, sameLines = 0;
-            ImGui.setCursorPosX(cursorPosX + lineNumberSpacing);
+            ImGui.setCursorPosX(cursorPosX + currentLineNumberSpacing);
             line.pos = ImGui.getCursorScreenPos().minus(2.5F, 0.F);
             boolean textPositioned = false;
             for (DecompilerLineText text : line.getComponents()) {
@@ -560,13 +571,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                     textPositioned = false;
                 }
 
-                if (this.autoscrollTo != null && this.autoscrollTo.isNavigationPending()
-                        && text.getComponent() == this.autoscrollTo.findComponent(decompiledClass)) {
-                    DecompilerCoordinates coordinates = new DecompilerCoordinates(line, textOffset);
-                    cursor.navigateTo(coordinates);
-                    this.navigationHighlight = new DecompilerHighlight(line);
-                    this.autoscrollTo.markNavigated();
-                    if (!decompiledClass.isProgressive()) this.autoscrollTo = null;
+                if (pendingAutoScroll != null && pendingAutoScroll.isNavigationPending()
+                        && text.getComponent() == autoScrollComponent) {
+                    this.completeAutoScroll(pendingAutoScroll, decompiledClass, line, textOffset);
                 }
 
                 if (!decompilerInputBlocked && this.hoveredComponent == null && ImGui.isItemHovered()) {
@@ -583,14 +590,28 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                     && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
 
             if (hovered)
-                this.cursor.handleHoveredLineInputs(cursorScreenPosX, lineNumberSpacing, mousePosX, line);
+                this.cursor.handleHoveredLineInputs(
+                        cursorScreenPosX, currentLineNumberSpacing, mousePosX, line);
 
-            this.drawLineGutter(line, cursorPosX, textSize);
-            ImGui.sameLine(cursorPosX + lineNumberSpacing, 0.F);
+            this.drawLineGutter(line, cursorPosX);
+            ImGui.sameLine(cursorPosX + currentLineNumberSpacing, 0.F);
 
-            this.cursor.handleLineDrawing(line, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
+            this.cursor.handleLineDrawing(line, cursorScreenPosX, currentLineNumberSpacing,
+                    mousePosX, cursorPosY, textSize);
 
             ImGui.newLine();
+        }
+
+        if (pendingAutoScroll != null && pendingAutoScroll.isNavigationPending()
+                && pendingAutoScroll.isFallbackToClass() && autoScrollComponent == null
+                && !decompiledClass.isProgressive()) {
+            DecompilerLine classLine = decompiledClass.getStickyHeaders().classLine();
+            if (classLine == null && !decompiledClass.getLines().isEmpty()) {
+                classLine = decompiledClass.getLines().get(0);
+            }
+            if (classLine != null) {
+                this.completeAutoScroll(pendingAutoScroll, decompiledClass, classLine, 0);
+            }
         }
         DecompilerGhostTextRenderer.setInteractionBlocked(false);
 
@@ -669,7 +690,45 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.handleMemberKeyMappings();
     }
 
-    private void drawLineGutter(DecompilerLine line, float cursorPosX, ImVec2 textSize) {
+    private void completeAutoScroll(DecompilerAutoScroll autoScroll, DecompiledClass decompiledClass,
+                                    DecompilerLine line, int textOffset) {
+        this.cursor.navigateTo(new DecompilerCoordinates(line, textOffset));
+        this.navigationHighlight = new DecompilerHighlight(line);
+        boolean fallbackToClass = autoScroll.isFallbackToClass();
+        Input<?> requestedInput = autoScroll.getInput();
+        autoScroll.markNavigated();
+        if (fallbackToClass) this.showUnavailableMemberNotification(requestedInput);
+        if (!decompiledClass.isProgressive() && this.autoscrollTo == autoScroll) {
+            this.autoscrollTo = null;
+        }
+    }
+
+    private void showUnavailableMemberNotification(Input<?> requestedInput) {
+        if (!(requestedInput instanceof MemberInput<?> member)) return;
+
+        String kind = member instanceof MethodInput ? "Method" : "Field";
+        Notification notification = new Notification(NotificationType.WARNING,
+                new SimpleCaption("Member Unavailable"), ColoredStringBuilder.create()
+                .fmt(kind + " {} isn't available in the decompiler output.%nShowing class {} instead.",
+                        member.getDisplayName().getName(),
+                        member.getOwningClass().getDisplaySimpleName()).get());
+        notification.setExpireTime(5_000L);
+        Main.getDisplayManager().addNotification(notification);
+    }
+
+    private float getLineNumberSpacing(DecompilerLine line, float defaultSpacing) {
+        if (line.getRecursiveInvocation() == null) return defaultSpacing;
+
+        float lineNumberWidth = ImGui.calcTextSize(String.valueOf(line.getLineNumber())).x;
+        FontSettings decompilerFont = Main.getPreferences().getDecompilerFont();
+        float iconSize = Math.max(8.F, decompilerFont.getSize() * 0.65F);
+        ImGui.pushFont(decompilerFont.getIconFont(), iconSize);
+        float iconWidth = ImGui.calcTextSize(FontAwesomeIcons.RedoAlt).x;
+        ImGui.popFont();
+        return Math.max(defaultSpacing, lineNumberWidth + iconWidth + 7.F);
+    }
+
+    private void drawLineGutter(DecompilerLine line, float cursorPosX) {
         ImGui.setCursorPosX(cursorPosX);
         float gutterScreenX = ImGui.getCursorScreenPosX();
         float gutterScreenY = ImGui.getCursorScreenPosY();
@@ -684,11 +743,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         ImGui.pushFont(decompilerFont.getIconFont(), iconSize);
         ImVec2 iconBounds = ImGui.calcTextSize(FontAwesomeIcons.RedoAlt);
         ImGui.popFont();
-        float remainingNumberSpace = textSize.x - lineNumberWidth;
-        float iconX = remainingNumberSpace >= iconBounds.x + 1.F
-                ? cursorPosX + lineNumberWidth + 1.F
-                : Math.max(0.5F, cursorPosX - iconBounds.x - 1.F);
-        float iconScreenX = gutterScreenX + iconX - cursorPosX + 3.F;
+        float iconScreenX = gutterScreenX + lineNumberWidth + 4.F;
         float iconScreenY = gutterScreenY + 3.F;
         ImGui.getWindowDrawList().addText(decompilerFont.getIconFont(), Math.round(iconSize),
                 iconScreenX, iconScreenY, Main.getPreferences().getAccentColor().getColor(),

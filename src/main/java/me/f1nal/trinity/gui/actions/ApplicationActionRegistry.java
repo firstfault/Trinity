@@ -13,6 +13,7 @@ import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewFrame;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeString;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
 import me.f1nal.trinity.gui.windows.impl.navigation.NavigationHistoryWindow;
+import me.f1nal.trinity.gui.windows.impl.membersearch.MemberSearchFrame;
 import me.f1nal.trinity.gui.windows.impl.pattern.PatternSearchFrame;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.gui.windows.impl.project.settings.ProjectSettingsWindow;
@@ -40,6 +41,7 @@ public final class ApplicationActionRegistry {
     public static final String CLASS_STRUCTURE = "window.class_structure";
     public static final String NAVIGATION_HISTORY = "window.navigation_history";
     public static final String XREF_SEARCH = "inspect.xref_search";
+    public static final String MEMBER_SEARCH = "inspect.member_search";
     public static final String CONSTANT_SEARCH = "inspect.constant_search";
     public static final String PATTERN_SEARCH = "inspect.pattern_search";
     public static final String VIEW_ALL_STRINGS = "inspect.all_strings";
@@ -98,6 +100,10 @@ public final class ApplicationActionRegistry {
         this.register(XREF_SEARCH, "Cross-Reference Search", "Search bytecode cross-references", "Inspect",
                 FontAwesomeIcons.CodeBranch, List.of("xref", "references", "usages"), this::hasProject,
                 () -> this.openStatic(XrefSearchFrame.class));
+        this.register(MEMBER_SEARCH, "Member Search", "Find classes, fields, and methods", "Inspect",
+                FontAwesomeIcons.SearchPlus,
+                List.of("find class", "find method", "find field", "access flags", "signature search"),
+                this::hasProject, () -> this.openStatic(MemberSearchFrame.class));
         this.register(CONSTANT_SEARCH, "Constant Search", "Find strings, numbers, and other constants", "Inspect",
                 FontAwesomeIcons.Search, List.of("constant viewer", "find constant", "literal search"), this::hasProject,
                 () -> this.openStatic(ConstantSearchFrame.class));

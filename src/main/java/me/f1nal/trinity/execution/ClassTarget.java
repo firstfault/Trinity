@@ -15,6 +15,7 @@ import me.f1nal.trinity.gui.components.CodiconIcons;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
+import me.f1nal.trinity.gui.windows.impl.membersearch.MemberSearchPresets;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
@@ -61,6 +62,7 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
         }
         this.addXrefViewerMenuItem(Main.getTrinity(), builder);
         if (this.input != null) {
+            MemberSearchPresets.addContextAction(this.input, builder);
             builder.menu("Add", add -> add
                     .menuItem("Field...", () -> BytecodeEditorLauncher.addField(this.input))
                     .menuItem("Method...", () -> BytecodeEditorLauncher.addMethod(this.input)));

@@ -31,7 +31,9 @@ public class ColoredString {
         boolean lineStart = true;
         for (ColoredString detail : text) {
             if (detail.getText().equals("\n")) {
-                ImGui.newLine();
+                // textColored already advances the cursor once. Only advance here when this token
+                // represents an empty line (at the start or directly after another newline).
+                if (lineStart) ImGui.newLine();
                 lineStart = true;
                 continue;
             }

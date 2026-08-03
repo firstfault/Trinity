@@ -22,7 +22,20 @@ public class ColoredStringBuilder {
     }
 
     public ColoredStringBuilder text(int color, String text) {
-        return add(new ColoredString(text, color));
+        String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
+        int lineStart = 0;
+        int newline;
+        while ((newline = normalized.indexOf('\n', lineStart)) != -1) {
+            if (newline > lineStart) {
+                add(new ColoredString(normalized.substring(lineStart, newline), color));
+            }
+            this.newline();
+            lineStart = newline + 1;
+        }
+        if (lineStart < normalized.length() || normalized.isEmpty()) {
+            add(new ColoredString(normalized.substring(lineStart), color));
+        }
+        return this;
     }
 
     public ColoredStringBuilder fmt(String format, Object... args) {

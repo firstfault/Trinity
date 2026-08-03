@@ -50,6 +50,11 @@ public class TableColumn<T> {
         return this;
     }
 
+    public TableColumn<T> setComparator(Comparator<T> comparator) {
+        this.comparator = Objects.requireNonNull(comparator);
+        return this;
+    }
+
     Comparator<T> getComparator() {
         return comparator;
     }

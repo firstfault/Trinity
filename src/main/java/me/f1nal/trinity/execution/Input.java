@@ -9,6 +9,7 @@ import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.gui.windows.impl.cp.IRenameHandler;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
+import me.f1nal.trinity.gui.windows.impl.membersearch.MemberSearchPresets;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.remap.DisplayName;
 import me.f1nal.trinity.remap.IDisplayNameProvider;
@@ -49,6 +50,7 @@ public abstract class Input<N> implements AccessFlagsMaskProvider, RenameHandler
         builder.menuItem("Edit " + typeName, Main.getKeyBindManager().DECOMPILER_EDIT.getKeyName(),
                 () -> BytecodeEditorLauncher.edit(this));
         addXrefViewerMenuItem(trinity, builder);
+        MemberSearchPresets.addContextAction(this, builder);
         builder.menuItem("View Member", Main.getKeyBindManager().DECOMPILER_VIEW_MEMBER.getKeyName(),
                 () -> Main.getDisplayManager().followDecompilerView(this, NavigationAction.FOLLOW_MEMBER));
 
