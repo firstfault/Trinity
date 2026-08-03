@@ -17,18 +17,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Temporarily emphasizes matching invocation types while an invocation cell is hovered. */
+/** Emphasizes hovered invocation types and supports a persistent type selection. */
 public final class TableColumnRendererXrefInvocation implements ITableCellRenderer<AbstractXref> {
     private InvocationType focusedType;
     private InvocationType hoveredType;
     private InvocationType selectedType;
-    private AbstractXref focusedXref;
-    private AbstractXref hoveredXref;
+    private AbstractXref selectedXref;
     private final Map<InvocationType, Integer> typeCounts = new HashMap<>();
 
     public void beginFrame(List<AbstractXref> xrefs) {
         this.hoveredType = null;
-        this.hoveredXref = null;
         this.typeCounts.clear();
         for (AbstractXref xref : xrefs) {
             InvocationType type = resolveType(xref.getKind(), xref.getInvocation());
@@ -42,7 +40,9 @@ public final class TableColumnRendererXrefInvocation implements ITableCellRender
         InvocationType type = resolveType(xref.getKind(), invocation);
         int color = this.focusedType == null || Objects.equals(this.focusedType, type)
                 ? CodeColorScheme.TEXT : CodeColorScheme.DISABLED;
-        boolean showCount = this.focusedXref == xref;
+        boolean showCount = this.selectedType != null
+                && this.selectedXref == xref
+                && Objects.equals(this.selectedType, type);
         String countText = showCount ? " (" + this.typeCounts.getOrDefault(type, 0) + ")" : "";
         ImVec2 textSize = ImGui.calcTextSize(invocation);
         float countWidth = showCount ? ImGui.calcTextSize(countText).x : 0.F;
@@ -56,11 +56,16 @@ public final class TableColumnRendererXrefInvocation implements ITableCellRender
         }
         if (ImGui.isItemHovered()) {
             this.hoveredType = type;
-            this.hoveredXref = xref;
             ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
         }
         if (clicked) {
-            this.selectedType = Objects.equals(this.selectedType, type) ? null : type;
+            if (Objects.equals(this.selectedType, type)) {
+                this.selectedType = null;
+                this.selectedXref = null;
+            } else {
+                this.selectedType = type;
+                this.selectedXref = xref;
+            }
         }
         if (ImGui.isItemClicked(ImGuiMouseButton.Right)) {
             Main.getDisplayManager().showPopup(this.createContextMenu(xref, false));
@@ -69,7 +74,6 @@ public final class TableColumnRendererXrefInvocation implements ITableCellRender
 
     public void endFrame() {
         this.focusedType = this.hoveredType;
-        this.focusedXref = this.hoveredXref;
     }
 
     public List<AbstractXref> filterSelectedType(List<AbstractXref> xrefs) {
@@ -112,7 +116,10 @@ public final class TableColumnRendererXrefInvocation implements ITableCellRender
         InvocationType type = resolveType(xref.getKind(), xref.getInvocation());
         boolean selected = Objects.equals(this.selectedType, type);
         popup.menuItem(selected ? "Show All Invocation Types" : "Show Only \"" + type.name() + "\"",
-                () -> this.selectedType = selected ? null : type);
+                () -> {
+                    this.selectedType = selected ? null : type;
+                    this.selectedXref = selected ? null : xref;
+                });
     }
 
     private static void addNavigationActions(PopupItemBuilder popup, AbstractXref xref) {

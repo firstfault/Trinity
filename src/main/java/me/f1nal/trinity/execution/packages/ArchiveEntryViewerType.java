@@ -45,6 +45,10 @@ public enum ArchiveEntryViewerType implements INameable {
         return valid;
     }
 
+    public boolean owns(ArchiveEntryViewerWindow<?> window) {
+        return this.viewerClass.isInstance(window);
+    }
+
     public ArchiveEntryViewerWindow<?> getWindow(ArchiveEntry archiveEntry) {
         List<ClosableWindow> windows = Main.getWindowManager().getWindows(w -> w.getClass() == this.viewerClass);
 

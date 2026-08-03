@@ -19,6 +19,7 @@ import me.f1nal.trinity.util.SystemUtil;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -123,9 +124,14 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
      * Creates a popup for this archive entry. Inheritors can override the super method and adapt the builder correspondingly.
      */
     public PopupItemBuilder createPopup(PopupItemBuilder builder) {
+        return this.createPopup(builder, null);
+    }
+
+    /** Creates an entry popup while omitting the viewer that already owns it. */
+    public PopupItemBuilder createPopup(PopupItemBuilder builder, ArchiveEntryViewerType currentViewer) {
         if (getPackage() == null) throw new NullPointerException(String.format("Archive entry '%s' does not have a package.", this.getDisplayOrRealName()));
 
-        this.addOpenActions(builder);
+        this.addOpenActions(builder, currentViewer);
         this.addEntryActions(builder);
         if (this.getContainer() != null && this.getContainer().isJar()) {
             builder.menuItem("Edit JAR Entry...", () -> EditJarWindow.openEntry(Main.getTrinity(), this));
@@ -147,16 +153,22 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         return builder;
     }
 
-    private void addOpenActions(PopupItemBuilder builder) {
-        ArchiveEntryViewerType[] available = this.getViewerTypes();
-        if (available.length == 0) return;
+    private void addOpenActions(PopupItemBuilder builder, ArchiveEntryViewerType currentViewer) {
+        List<ArchiveEntryViewerType> available = Arrays.stream(this.getViewerTypes())
+                .filter(viewerType -> viewerType != currentViewer)
+                .toList();
+        if (available.isEmpty()) return;
 
-        ArchiveEntryViewerType defaultViewer = available[0];
-        builder.menuItem("Open in " + defaultViewer.getName(), () -> this.openViewer(defaultViewer));
-        if (available.length > 1) {
+        if (currentViewer == null || available.size() == 1) {
+            ArchiveEntryViewerType viewer = available.get(0);
+            builder.menuItem("Open in " + viewer.getName(), () -> this.openViewer(viewer));
+        }
+
+        int submenuStart = currentViewer == null ? 1 : 0;
+        if (available.size() > 1) {
             builder.menu("Open With", open -> {
-                for (int i = 1; i < available.length; i++) {
-                    ArchiveEntryViewerType viewerType = available[i];
+                for (int i = submenuStart; i < available.size(); i++) {
+                    ArchiveEntryViewerType viewerType = available.get(i);
                     open.menuItem(viewerType.getName(), () -> this.openViewer(viewerType));
                 }
             });

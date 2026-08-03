@@ -5,6 +5,7 @@ import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
+import me.f1nal.trinity.execution.packages.ArchiveEntryViewerType;
 import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
@@ -12,6 +13,8 @@ import me.f1nal.trinity.gui.viewport.notifications.ICaption;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.util.ByteUtil;
+
+import java.util.Arrays;
 
 public abstract class ArchiveEntryViewerWindow<T extends ArchiveEntry> extends ClosableWindow {
     private final T archiveEntry;
@@ -50,7 +53,12 @@ public abstract class ArchiveEntryViewerWindow<T extends ArchiveEntry> extends C
             tabPopup.menuItem("Close All", () -> Main.getWindowManager().closeAll(wnd -> wnd instanceof ArchiveEntryViewerWindow<?>));
             tabPopup.separator();
 
-            Main.getDisplayManager().getPopupMenu().show(archiveEntry.createPopup(tabPopup));
+            ArchiveEntryViewerType currentViewer = Arrays.stream(ArchiveEntryViewerType.values())
+                    .filter(viewerType -> viewerType.owns(this))
+                    .findFirst()
+                    .orElse(null);
+            Main.getDisplayManager().getPopupMenu().show(
+                    archiveEntry.createPopup(tabPopup, currentViewer));
         }
         return state;
     }
