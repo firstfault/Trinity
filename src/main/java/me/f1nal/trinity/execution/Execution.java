@@ -281,6 +281,12 @@ public final class Execution {
         }
     }
 
+    public void moveDependency(DependencyArchive archive, int offset) {
+        if (dependencies.moveArchive(archive, offset)) {
+            trinity.getEventManager().postEvent(new EventDependenciesChanged());
+        }
+    }
+
     public void addContainer(ProjectContainer container) {
         if (containers.stream().anyMatch(existing -> existing.getId().equals(container.getId()))) {
             throw new IllegalArgumentException("Duplicate project container ID: " + container.getId());

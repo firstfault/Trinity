@@ -13,6 +13,7 @@ import me.f1nal.trinity.gui.windows.impl.cp.BrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.IBrowserViewerNode;
 import me.f1nal.trinity.gui.windows.impl.cp.IRenameHandler;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
+import me.f1nal.trinity.gui.windows.impl.project.EditJarWindow;
 import me.f1nal.trinity.util.ByteUtil;
 import me.f1nal.trinity.util.SystemUtil;
 
@@ -124,24 +125,84 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
     public PopupItemBuilder createPopup(PopupItemBuilder builder) {
         if (getPackage() == null) throw new NullPointerException(String.format("Archive entry '%s' does not have a package.", this.getDisplayOrRealName()));
 
-        return builder.
-                menu("Open", (open) -> {
-                    for (ArchiveEntryViewerType viewerType : this.getViewerTypes()) {
-                        open.menuItem(viewerType.getName(), () -> this.openViewer(viewerType));
-                    }
-                }).
-                menu("Copy", (copy) -> {
-                    copy.menuItem("Full Path", () -> SystemUtil.copyToClipboard(this.getDisplayOrRealName()))
-                            .menuItem("Name", () -> SystemUtil.copyToClipboard(this.getDisplaySimpleName()));
-                }).
-                separator().
-                predicate(() -> getPackage() != null && getPackage().isOpen() && getBrowserViewerNode().isRenameAvailable(),
-                        items -> items.menuItem("Rename", () -> this.getBrowserViewerNode().beginRenaming())).
-                predicate(() -> this instanceof ResourceArchiveEntry,
-                        items -> items
-                                .menuItem("Search References", this::openResourceReferenceSearch)
-                                .menuItem(FontAwesomeIcons.TrashAlt + " Delete", () -> Main.getTrinity().getExecution().deleteResource((ResourceArchiveEntry) this))).
-                menuItem(FontAwesomeIcons.FileDownload + " Extract", new ExtractArchiveEntryRunnable(this));
+        this.addOpenActions(builder);
+        this.addEntryActions(builder);
+        if (this.getContainer() != null && this.getContainer().isJar()) {
+            builder.menuItem("Edit JAR Entry...", () -> EditJarWindow.openEntry(Main.getTrinity(), this));
+        }
+
+        builder.separator();
+        if (this.getBrowserViewerNode().isRenameAvailable()) {
+            builder.menuItem(this.getRenameActionLabel(), () -> this.getBrowserViewerNode().beginRenaming());
+        }
+        this.addAfterRenameActions(builder);
+        builder.menu("Copy", this::addCopyActions)
+                .menuItem(FontAwesomeIcons.FileDownload + " Extract " + this.getExtractActionName() + "...",
+                        new ExtractArchiveEntryRunnable(this));
+
+        if (this instanceof ResourceArchiveEntry resource) {
+            builder.separator().menuItem(FontAwesomeIcons.TrashAlt + " Delete Resource...",
+                    () -> this.confirmResourceDeletion(resource));
+        }
+        return builder;
+    }
+
+    private void addOpenActions(PopupItemBuilder builder) {
+        ArchiveEntryViewerType[] available = this.getViewerTypes();
+        if (available.length == 0) return;
+
+        ArchiveEntryViewerType defaultViewer = available[0];
+        builder.menuItem("Open in " + defaultViewer.getName(), () -> this.openViewer(defaultViewer));
+        if (available.length > 1) {
+            builder.menu("Open With", open -> {
+                for (int i = 1; i < available.length; i++) {
+                    ArchiveEntryViewerType viewerType = available[i];
+                    open.menuItem(viewerType.getName(), () -> this.openViewer(viewerType));
+                }
+            });
+        }
+    }
+
+    /** Adds actions specific to an entry subtype directly below its open actions. */
+    protected void addEntryActions(PopupItemBuilder builder) {
+        if (this instanceof ResourceArchiveEntry) {
+            builder.menuItem("Find Resource References", this::openResourceReferenceSearch);
+        }
+    }
+
+    /** Adds the copy formats appropriate for this entry subtype. */
+    protected void addCopyActions(PopupItemBuilder copy) {
+        String name = this.getDisplaySimpleName();
+        String path = this.getDisplayOrRealName();
+        copy.menuItem("Name", () -> SystemUtil.copyToClipboard(name));
+        if (!path.equals(name)) {
+            copy.menuItem("Resource Path", () -> SystemUtil.copyToClipboard(path));
+        }
+    }
+
+    /** Adds actions that belong with rename/extract rather than open/inspect. */
+    protected void addAfterRenameActions(PopupItemBuilder builder) {
+    }
+
+    protected String getRenameActionLabel() {
+        return this instanceof ClassTarget ? "Rename Class..." : "Rename File...";
+    }
+
+    private String getExtractActionName() {
+        return this instanceof ClassTarget ? "Class" : "File";
+    }
+
+    private void confirmResourceDeletion(ResourceArchiveEntry resource) {
+        Main.getWindowManager()
+                .dialog("Delete Resource")
+                .message("Delete " + resource.getDisplayOrRealName() + " from this project?")
+                .confirm("Delete Resource", () -> {
+                    Main.getWindowManager().closeAll(window ->
+                            window instanceof ArchiveEntryViewerWindow<?> viewer
+                                    && viewer.getArchiveEntry() == resource);
+                    Main.getTrinity().getExecution().deleteResource(resource);
+                })
+                .show();
     }
 
     private void openResourceReferenceSearch() {
@@ -150,7 +211,7 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
         Main.getWindowManager().requestFocus(searchFrame);
     }
 
-    private void openViewer(ArchiveEntryViewerType viewerType) {
+    protected final void openViewer(ArchiveEntryViewerType viewerType) {
         if (viewerType == ArchiveEntryViewerType.DECOMPILER
                 && this instanceof ClassTarget classTarget && classTarget.getInput() != null) {
             Main.getDisplayManager().openDecompilerView(classTarget.getInput());

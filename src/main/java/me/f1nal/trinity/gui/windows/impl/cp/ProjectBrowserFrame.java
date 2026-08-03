@@ -9,6 +9,7 @@ import imgui.flag.ImGuiTreeNodeFlags;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.database.inputs.DependencyImporter;
+import me.f1nal.trinity.database.inputs.ProjectInputImporter;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.events.EventClassModified;
 import me.f1nal.trinity.events.EventClassesLoaded;
@@ -30,7 +31,9 @@ import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.theme.CodeColorScheme;
+import me.f1nal.trinity.util.SystemUtil;
 
+import java.io.File;
 import java.util.*;
 
 public class ProjectBrowserFrame extends StaticWindow implements IEventListener {
@@ -116,6 +119,7 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
         if (ImGui.beginChild(getId("ViewTree"), 0.F, 0.F)) {
             for (ProjectBrowserTreeNodePackage root : this.rootNodes) root.draw(this);
             this.drawDependencies();
+            this.drawBackgroundContextMenu();
         }
         ImGui.endChild();
         ImGui.popStyleColor(2);
@@ -134,15 +138,7 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
             ImGui.setTooltip("Store a JAR, ZIP, or JMOD on this project's dependency classpath.");
         }
         if (rootContextMenu) {
-            PopupItemBuilder popup = PopupItemBuilder.create()
-                    .menuItem("Add Dependency Archives...", () -> DependencyImporter.chooseAndImport(trinity));
-            boolean hasJavaBase = trinity.getExecution().getDependencies().getArchives().stream()
-                    .anyMatch(archive -> archive.getKind() == DependencyKind.RUNTIME_MODULE
-                            && "java.base".equals(archive.getRuntimeModule()));
-            if (!hasJavaBase) {
-                popup.menuItem("Restore java.base...", () -> DependencyImporter.restoreJavaBase(trinity));
-            }
-            Main.getDisplayManager().getPopupMenu().show(popup);
+            Main.getDisplayManager().getPopupMenu().show(this.createDependenciesPopup());
         }
 
         if (!open) return;
@@ -161,17 +157,76 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
                 if (ImGui.isItemHovered()) ImGui.setTooltip(archive.getResolutionError());
             }
             if (archiveContextMenu) {
-                PopupItemBuilder popup = PopupItemBuilder.create();
-                if (archive.getKind() == DependencyKind.ARCHIVE) {
-                    popup.menuItem(archive.isResolved() ? "Change Location..." : "Locate Dependency...",
-                            () -> DependencyImporter.rebind(trinity, archive));
-                }
-                popup.menuItem("Remove Dependency...",
-                        () -> this.confirmDependencyRemoval(archive));
-                Main.getDisplayManager().getPopupMenu().show(popup);
+                Main.getDisplayManager().getPopupMenu().show(this.createDependencyPopup(archive));
             }
         }
         ImGui.treePop();
+    }
+
+    private void drawBackgroundContextMenu() {
+        if (!ImGui.isWindowHovered() || ImGui.isAnyItemHovered() || !ImGui.isMouseClicked(1)) return;
+        Main.getDisplayManager().getPopupMenu().show(PopupItemBuilder.create()
+                .menuItem("Add Project Input...", () -> ProjectInputImporter.chooseAndImport(trinity))
+                .menuItem("Add Dependency...", () -> DependencyImporter.chooseAndImport(trinity)));
+    }
+
+    PopupItemBuilder createDependenciesPopup() {
+        PopupItemBuilder popup = PopupItemBuilder.create()
+                .menuItem("Add Dependency...", () -> DependencyImporter.chooseAndImport(trinity));
+        boolean hasJavaBase = trinity.getExecution().getDependencies().getArchives().stream()
+                .anyMatch(archive -> archive.getKind() == DependencyKind.RUNTIME_MODULE
+                        && "java.base".equals(archive.getRuntimeModule()));
+        if (!hasJavaBase) {
+            popup.menuItem("Restore java.base...", () -> DependencyImporter.restoreJavaBase(trinity));
+        }
+        return popup;
+    }
+
+    PopupItemBuilder createDependencyPopup(DependencyArchive archive) {
+        PopupItemBuilder popup = PopupItemBuilder.create();
+        if (archive.getKind() == DependencyKind.ARCHIVE) {
+            popup.menuItem(archive.isResolved() ? "Change Location..." : "Locate Dependency...",
+                    () -> DependencyImporter.rebind(trinity, archive));
+            if (canOpenContainingFolder(archive)) {
+                popup.menuItem("Open Containing Folder", () -> openContainingFolder(archive));
+            }
+        }
+
+        List<DependencyArchive> archives = trinity.getExecution().getDependencies().getArchives();
+        int index = archives.indexOf(archive);
+        if (index > 0) {
+            popup.menuItem("Move Up", () -> trinity.getExecution().moveDependency(archive, -1));
+        }
+        if (index != -1 && index < archives.size() - 1) {
+            popup.menuItem("Move Down", () -> trinity.getExecution().moveDependency(archive, 1));
+        }
+
+        popup.separator().menu("Copy", copy -> {
+            copy.menuItem("Name", () -> SystemUtil.copyToClipboard(archive.getName()));
+            if (archive.getKind() == DependencyKind.RUNTIME_MODULE) {
+                copy.menuItem("Module Name", () -> SystemUtil.copyToClipboard(archive.getRuntimeModule()));
+            } else {
+                copy.menuItem("Stored Path", () -> SystemUtil.copyToClipboard(archive.getStoredReference()));
+            }
+            if (archive.isResolved()) {
+                copy.menuItem("Resolved Location", () -> SystemUtil.copyToClipboard(archive.getResolvedLocation()));
+            } else {
+                copy.menuItem("Resolution Error", () -> SystemUtil.copyToClipboard(archive.getResolutionError()));
+            }
+        });
+        return popup.separator().menuItem("Remove Dependency...",
+                () -> this.confirmDependencyRemoval(archive));
+    }
+
+    private static boolean canOpenContainingFolder(DependencyArchive archive) {
+        if (archive.getKind() != DependencyKind.ARCHIVE || !archive.isResolved()) return false;
+        File location = new File(archive.getResolvedLocation()).getAbsoluteFile();
+        return location.isFile() && location.getParentFile() != null;
+    }
+
+    private static void openContainingFolder(DependencyArchive archive) {
+        File location = new File(archive.getResolvedLocation()).getAbsoluteFile();
+        SystemUtil.openDirectory(location.getParentFile());
     }
 
     private void confirmDependencyRemoval(DependencyArchive archive) {

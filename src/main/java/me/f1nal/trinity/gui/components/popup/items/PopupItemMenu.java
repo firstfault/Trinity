@@ -14,6 +14,14 @@ public class PopupItemMenu extends PopupItem {
         this.popupItems = popupItems;
     }
 
+    public String getLabel() {
+        return label;
+    }
+
+    public List<PopupItem> getPopupItems() {
+        return popupItems;
+    }
+
     @Override
     public void draw(PopupMenuState state) {
         if (ImGui.beginMenu(this.label)) {

@@ -25,6 +25,7 @@ import me.f1nal.trinity.remap.Remapper;
 import me.f1nal.trinity.remap.RenameType;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.NameUtil;
+import me.f1nal.trinity.util.SystemUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,15 +55,35 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
     }
 
     @Override
-    public PopupItemBuilder createPopup(PopupItemBuilder builder) {
+    protected void addEntryActions(PopupItemBuilder builder) {
         if (this.input != null) {
-            builder.menuItem("Edit Class", () -> BytecodeEditorLauncher.edit(this.input))
-                    .menuItem("Add Field", () -> BytecodeEditorLauncher.addField(this.input))
-                    .menuItem("Add Method", () -> BytecodeEditorLauncher.addMethod(this.input))
-                    .separator();
+            builder.menuItem("Edit Class...", () -> BytecodeEditorLauncher.edit(this.input));
         }
         this.addXrefViewerMenuItem(Main.getTrinity(), builder);
-        return super.createPopup(builder);
+        if (this.input != null) {
+            builder.menu("Add", add -> add
+                    .menuItem("Field...", () -> BytecodeEditorLauncher.addField(this.input))
+                    .menuItem("Method...", () -> BytecodeEditorLauncher.addMethod(this.input)));
+        }
+    }
+
+    @Override
+    protected void addCopyActions(PopupItemBuilder copy) {
+        String internalName = this.getDisplayOrRealName();
+        copy.menuItem("Name", () -> SystemUtil.copyToClipboard(this.getDisplaySimpleName()))
+                .menuItem("Qualified Name", () -> SystemUtil.copyToClipboard(internalName.replace('/', '.')))
+                .menuItem("Internal Name", () -> SystemUtil.copyToClipboard(internalName));
+        if (this.displayName.getType() != RenameType.NONE) {
+            copy.separator().menuItem("Original Internal Name",
+                    () -> SystemUtil.copyToClipboard(this.displayName.getOriginalName()));
+        }
+    }
+
+    @Override
+    protected void addAfterRenameActions(PopupItemBuilder builder) {
+        if (this.displayName.getType() == RenameType.NONE) return;
+        builder.menuItem("Revert Class Name", () -> this.getRenameHandler().renameFully(
+                Main.getTrinity().getRemapper(), this.displayName.getOriginalName()));
     }
 
     @Override

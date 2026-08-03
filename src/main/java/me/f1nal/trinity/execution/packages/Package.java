@@ -70,43 +70,77 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
                 this::rename);
         this.browserViewerNode.addMouseClickHandler(clickType -> {
             if (clickType == MouseClickType.RIGHT_CLICK) {
-                PopupItemBuilder popup = PopupItemBuilder.create();
-                ProjectContainer container = this.getContainer();
-                if (this.isArchive() && container != null && container.isJar()) {
-                    popup.menuItem("Edit JAR...", () -> Main.getWindowManager()
-                            .addClosableWindow(new EditJarWindow(Main.getTrinity(), container)))
-                            .menuItem("Export JAR...", () -> Main.getWindowManager()
-                            .addClosableWindow(new ExportJarWindow(Main.getTrinity(), container)))
-                            .separator();
-                } else if (this.isArchive() && container != null) {
-                    popup.menuItem("Export Directory...", new ExportLooseFilesRunnable(container))
-                            .separator();
-                }
-                popup.
-                        menu("Copy", (copy) -> {
-                            copy.menuItem("Full Path", () -> SystemUtil.copyToClipboard(this.getPrettyPath().replace('.', '/')))
-                                    .menuItem("Name", () -> SystemUtil.copyToClipboard(this.getDisplayName()));
-                        }).
-                        menuItem("Add Class", () -> BytecodeEditorLauncher.addClass(this)).
-                        menu("Create...", (menu) -> {
-                            menu.menuItem("Empty File", () -> {
-                                ArchiveEntry newFile = Main.getTrinity().getExecution().createResource(this, "New File", new byte[0]);
-                                if (newFile != null) {
-                                    newFile.getBrowserViewerNode().beginRenaming();
-                                }
-                            });
-                        });
-
-                if (browserViewerNode.isRenameAvailable()) popup.menuItem("Rename", () -> this.getBrowserViewerNode().beginRenaming());
-                if (this.isArchive() && container != null && container.isJar()) {
-                    popup.separator().menuItem("Remove Archive...",
-                            () -> this.confirmArchiveRemoval(container));
-                }
-
-                Main.getDisplayManager().getPopupMenu().show(popup);
+                Main.getDisplayManager().getPopupMenu().show(this.createPopup());
             }
         });
         this.updateBrowserViewerNode();
+    }
+
+    public PopupItemBuilder createPopup() {
+        PopupItemBuilder popup = PopupItemBuilder.create();
+        ProjectContainer container = this.getContainer();
+        if (this.isArchive() && container != null) {
+            if (container.isJar()) {
+                popup.menuItem("Edit JAR...", () -> Main.getWindowManager()
+                                .addClosableWindow(new EditJarWindow(Main.getTrinity(), container)))
+                        .menuItem("Export JAR...", () -> Main.getWindowManager()
+                                .addClosableWindow(new ExportJarWindow(Main.getTrinity(), container)));
+            } else {
+                popup.menuItem("Export Directory...", new ExportLooseFilesRunnable(container));
+            }
+            popup.separator();
+        }
+
+        popup.menu("New", menu -> menu
+                .menuItem("Class...", () -> BytecodeEditorLauncher.addClass(this))
+                .menuItem("Empty File...", this::createEmptyFile));
+
+        if (!this.getPackages().isEmpty()) {
+            popup.menu("Tree", tree -> tree
+                    .menuItem("Expand All", () -> this.setSubtreeOpen(true))
+                    .menuItem("Collapse All", () -> this.setSubtreeOpen(false)));
+        }
+
+        popup.separator().menu("Copy", this::addCopyActions);
+        if (this.browserViewerNode.isRenameAvailable()) {
+            String label = this.isArchive()
+                    ? container != null && container.isJar() ? "Rename Archive..." : "Rename Container..."
+                    : "Rename Package...";
+            popup.menuItem(label, () -> this.getBrowserViewerNode().beginRenaming());
+        }
+
+        if (this.isArchive() && container != null && container.isJar()) {
+            popup.separator().menuItem("Remove Archive...",
+                    () -> this.confirmArchiveRemoval(container));
+        }
+        return popup;
+    }
+
+    private void createEmptyFile() {
+        ArchiveEntry newFile = null;
+        for (int suffix = 1; newFile == null; suffix++) {
+            String name = suffix == 1 ? "New File" : "New File " + suffix;
+            newFile = Main.getTrinity().getExecution().createResource(this, name, new byte[0]);
+        }
+        newFile.getBrowserViewerNode().beginRenaming();
+    }
+
+    private void addCopyActions(PopupItemBuilder copy) {
+        if (this.isArchive()) {
+            copy.menuItem("Name", () -> SystemUtil.copyToClipboard(this.getDisplayName()));
+            return;
+        }
+
+        copy.menuItem("Name", () -> SystemUtil.copyToClipboard(this.getName()))
+                .menuItem("Qualified Name", () -> SystemUtil.copyToClipboard(this.getPrettyPath()))
+                .menuItem("Internal Path", () -> SystemUtil.copyToClipboard(
+                        this.getPrettyPath().replace('.', '/')));
+    }
+
+    private void setSubtreeOpen(boolean open) {
+        this.setOpenForced(open);
+        this.save();
+        for (Package child : this.getPackages()) child.setSubtreeOpen(open);
     }
 
     private void confirmArchiveRemoval(ProjectContainer container) {

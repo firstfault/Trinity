@@ -35,6 +35,20 @@ public final class DependencyManager {
         return true;
     }
 
+    /** Moves an archive within the ordered classpath and rebuilds first-match resolution. */
+    public synchronized boolean moveArchive(DependencyArchive archive, int offset) {
+        if (offset == 0) return false;
+        int sourceIndex = archives.indexOf(archive);
+        if (sourceIndex == -1) return false;
+        int targetIndex = sourceIndex + offset;
+        if (targetIndex < 0 || targetIndex >= archives.size()) return false;
+
+        archives.remove(sourceIndex);
+        archives.add(targetIndex, archive);
+        rebuildIndex();
+        return true;
+    }
+
     public synchronized void replaceArchive(DependencyArchive previous, DependencyArchive replacement) {
         int index = archives.indexOf(previous);
         if (index == -1) throw new IllegalArgumentException("Dependency archive is not registered");

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -29,6 +30,25 @@ class DependencyManagerTest {
 
         manager.removeArchive(second);
         assertNull(manager.getClass("example/Shared"));
+    }
+
+    @Test
+    void movingAnArchiveChangesFirstMatchResolution() {
+        DependencyArchive first = resolvedArchive("first.jar",
+                classBytes("example/Shared", "first/Base"));
+        DependencyArchive second = resolvedArchive("second.jar",
+                classBytes("example/Shared", "second/Base"));
+        DependencyManager manager = new DependencyManager();
+        manager.addArchive(first);
+        manager.addArchive(second);
+
+        assertTrue(manager.moveArchive(second, -1));
+        assertEquals(java.util.List.of(second, first), manager.getArchives());
+        assertEquals("second/Base", manager.getClass("example/Shared").superName);
+
+        assertFalse(manager.moveArchive(second, -1));
+        assertFalse(manager.moveArchive(first, 1));
+        assertEquals(java.util.List.of(second, first), manager.getArchives());
     }
 
     private static DependencyArchive resolvedArchive(String name, byte[] bytes) {

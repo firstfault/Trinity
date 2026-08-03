@@ -6,9 +6,11 @@ import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImInt;
 import imgui.type.ImString;
+import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.events.EventPackageStructureReload;
 import me.f1nal.trinity.execution.ClassTarget;
+import me.f1nal.trinity.execution.packages.ArchiveEntry;
 import me.f1nal.trinity.execution.packages.ArchiveDirectoryEntry;
 import me.f1nal.trinity.execution.packages.ProjectContainer;
 import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
@@ -65,6 +67,50 @@ public final class EditJarWindow extends ClosableWindow {
         container.getDirectories().forEach(directory -> entries.add(EntryDraft.forDirectory(directory)));
         entries.sort(Comparator.comparingInt(entry -> entry.metadata.getOrder()));
         this.setDialog(true);
+    }
+
+    /** Opens this container's metadata editor and selects the requested entry. */
+    public static void openEntry(Trinity trinity, ArchiveEntry archiveEntry) {
+        ProjectContainer container = archiveEntry.getContainer();
+        if (container == null || !container.isJar()) {
+            throw new IllegalArgumentException("Entry does not belong to a JAR container");
+        }
+
+        EditJarWindow window = Main.getWindowManager()
+                .getWindows(candidate -> candidate instanceof EditJarWindow editor
+                        && !editor.isCloseRequested()
+                        && editor.container.getId().equals(container.getId()))
+                .stream()
+                .map(EditJarWindow.class::cast)
+                .findFirst()
+                .orElse(null);
+        if (window == null) {
+            window = new EditJarWindow(trinity, container);
+            Main.getWindowManager().addClosableWindow(window);
+        } else {
+            window.setVisible(true);
+        }
+        window.selectEntry(archiveEntry);
+        Main.getWindowManager().requestFocus(window);
+    }
+
+    public void selectEntry(ArchiveEntry archiveEntry) {
+        String path;
+        if (archiveEntry instanceof ClassTarget target && target.getInput() != null) {
+            path = target.getInput().getExportEntryName();
+        } else if (archiveEntry instanceof ResourceArchiveEntry resource) {
+            path = resource.getRealName();
+        } else {
+            return;
+        }
+
+        entries.stream()
+                .filter(entry -> entry.path.equals(path))
+                .findFirst()
+                .ifPresent(entry -> {
+                    filter.set("");
+                    selectEntry(entry);
+                });
     }
 
     @Override
