@@ -8,7 +8,6 @@ import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.execution.constant.ConstantStatisticsCache;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
 import me.f1nal.trinity.execution.xref.XrefViewerSettings;
-import me.f1nal.trinity.input.JrtInput;
 import me.f1nal.trinity.refactor.RefactorManager;
 import me.f1nal.trinity.remap.Remapper;
 
@@ -24,10 +23,6 @@ public final class Trinity {
      * Remapping of members (fields, methods, classes) of this Trinity database.
      */
     private final Remapper remapper;
-    /**
-     * Input from the current Java runtime.
-     */
-    private static final JrtInput jrtInput = new JrtInput();
     /**
      * Database this Trinity instance is operating on.
      * @see Database
@@ -72,10 +67,6 @@ public final class Trinity {
 
     public Remapper getRemapper() {
         return remapper;
-    }
-
-    public JrtInput getJrtInput() {
-        return jrtInput;
     }
 
     public Database getDatabase() {
