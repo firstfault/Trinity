@@ -7,10 +7,12 @@ import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiFocusedFlags;
+import imgui.flag.ImGuiHoveredFlags;
 import imgui.flag.ImGuiInputTextFlags;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
+import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import imgui.type.ImString;
@@ -48,6 +50,7 @@ import me.f1nal.trinity.util.Stopwatch;
 import me.f1nal.trinity.util.SystemUtil;
 import me.f1nal.trinity.util.animation.Animation;
 import me.f1nal.trinity.util.animation.Easing;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.io.IOException;
@@ -62,6 +65,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private static final int MIN_LINE_NUMBER_DIGITS = 4;
     private static final int SELECTION_MATCH_BORDER = ImColor.rgba(145, 145, 145, 220);
     private static final float STICKY_HOVER_ALPHA = 28.F;
+    private static final float ENUM_CARD_WIDTH = 174.F;
+    private static final float ENUM_CARD_HEIGHT = 41.F;
+    private static final float ENUM_CARD_MARGIN = 11.F;
     private ClassInput selectedClass;
     private Input<?> navigationTarget;
     private AbstractInsnNode navigationInstruction;
@@ -69,6 +75,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
      * Notifies the selected class must be refreshed.
      */
     private boolean forceRefresh = true;
+    /** Whether this window decompiles enum bytecode as an ordinary class. */
+    private boolean treatEnumAsClass;
     /**
      * Text component that is currently hovered.
      */
@@ -104,6 +112,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
     public DecompilerWindow(ClassTarget classTarget, Trinity trinity) {
         super(trinity, classTarget);
+        this.treatEnumAsClass = Main.getPreferences().isDecompilerEnumClass();
         trinity.getEventManager().registerListener(this);
         this.setDecompileTarget(Objects.requireNonNull(classTarget.getInput()));
         this.setMenuBar(new PopupMenuBar(PopupItemBuilder.create().
@@ -195,6 +204,13 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         return selectedClass;
     }
 
+    /** Restores a saved enum presentation before this window's first rendered decompilation. */
+    public void restoreEnumPresentation(boolean treatEnumAsClass) {
+        if (this.treatEnumAsClass == treatEnumAsClass) return;
+        this.treatEnumAsClass = treatEnumAsClass;
+        this.forceRefresh = true;
+    }
+
     @Override
     public void render() {
         super.render();
@@ -261,17 +277,21 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
 
         ImGui.setCursorPosY(ImGui.getCursorPosY() - 3.F);
-        ImGui.beginChild("DecompilerWindowChild", 0.F, 0.F, false, ImGuiWindowFlags.HorizontalScrollbar);
+        if (ImGui.beginChild("DecompilerWindowChild", 0.F, 0.F, false,
+                ImGuiWindowFlags.HorizontalScrollbar)) {
+            EnumCardBounds enumCard = this.getEnumCardBounds();
+            boolean enumCardHovered = enumCard != null && enumCard.isHovered();
 
-        if (decompiledClass == null) {
-            ImGui.textUnformatted("...");
-        } else {
-            FontSettings decompilerFont = Main.getPreferences().getDecompilerFont();
-            decompilerFont.pushFont();
-            this.drawDecompiledOutput(decompiledClass);
-            decompilerFont.popFont();
+            if (decompiledClass == null) {
+                ImGui.textUnformatted("...");
+            } else {
+                FontSettings decompilerFont = Main.getPreferences().getDecompilerFont();
+                decompilerFont.pushFont();
+                this.drawDecompiledOutput(decompiledClass, enumCardHovered);
+                decompilerFont.popFont();
+            }
+            if (enumCard != null) this.drawEnumPresentationCard(enumCard);
         }
-
         ImGui.endChild();
         this.handleNavigationKeyMappings();
     }
@@ -281,7 +301,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             this.forceRefresh = false;
 
             try {
-                trinity.getDecompiler().decompile(selectedClass, null);
+                trinity.getDecompiler().decompile(selectedClass, this.treatEnumAsClass, null);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -290,6 +310,58 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (trinity.getDecompiler().isDecompileFailed(selectedClass)) {
             ImGui.textColored(ImColor.rgb(245, 80, 80), "Decompilation failed");
         }
+    }
+
+    private EnumCardBounds getEnumCardBounds() {
+        if (this.selectedClass == null
+                || (this.selectedClass.getNode().access & Opcodes.ACC_ENUM) == 0) {
+            return null;
+        }
+
+        float availableWidth = ImGui.getWindowWidth()
+                - ENUM_CARD_MARGIN * 2.F - ImGui.getStyle().getScrollbarSize();
+        if (availableWidth < 126.F) return null;
+
+        float width = Math.min(ENUM_CARD_WIDTH, availableWidth);
+        float right = ImGui.getWindowPosX() + ImGui.getWindowWidth()
+                - ENUM_CARD_MARGIN - ImGui.getStyle().getScrollbarSize();
+        float top = ImGui.getWindowPosY() + ENUM_CARD_MARGIN;
+        return new EnumCardBounds(right - width, top, width, ENUM_CARD_HEIGHT);
+    }
+
+    private void drawEnumPresentationCard(EnumCardBounds bounds) {
+        ImVec2 previousCursor = ImGui.getCursorScreenPos();
+        ImDrawList drawList = ImGui.getWindowDrawList();
+        drawList.addRectFilled(bounds.left() + 2.F, bounds.top() + 3.F,
+                bounds.right() + 2.F, bounds.bottom() + 3.F,
+                ImColor.rgba(0, 0, 0, 32));
+        drawList.addRectFilled(bounds.left(), bounds.top(), bounds.right(), bounds.bottom(),
+                CodeColorScheme.setAlpha(CodeColorScheme.POPUP_BACKGROUND, 135));
+        drawList.addRect(bounds.left(), bounds.top(), bounds.right(), bounds.bottom(),
+                CodeColorScheme.setAlpha(Main.getPreferences().getAccentColor().getColor(), 62),
+                0.F, 0, 1.F);
+
+        float horizontalPadding = 9.F;
+        String label = this.treatEnumAsClass ? "View as enum" : "View as class";
+        ImGui.setCursorScreenPos(bounds.left() + horizontalPadding, bounds.top() + 8.F);
+        ImGui.pushStyleVar(ImGuiStyleVar.Alpha, 0.68F);
+        boolean toggle = ImGui.button(label + "###" + this.getId("ToggleEnumPresentation"),
+                bounds.width() - horizontalPadding * 2.F, 0.F);
+        ImGui.popStyleVar();
+        GuiUtil.tooltip("Change how this enum is shown in this decompiler window.");
+        ImGui.setCursorScreenPos(previousCursor);
+        ImGui.dummy(0.F, 0.F);
+
+        if (toggle) this.setTreatEnumAsClass(!this.treatEnumAsClass);
+    }
+
+    private void setTreatEnumAsClass(boolean treatEnumAsClass) {
+        if (this.treatEnumAsClass == treatEnumAsClass) return;
+        this.treatEnumAsClass = treatEnumAsClass;
+        this.forceRefresh = true;
+        this.searchDirty = true;
+        this.selectionMatchesDirty = true;
+        if (!this.trinity.getDatabase().isLoading()) this.save();
     }
 
     private void drawSearchBar(DecompiledClass decompiledClass) {
@@ -448,7 +520,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         return false;
     }
 
-    private void drawDecompiledOutput(DecompiledClass decompiledClass) {
+    private void drawDecompiledOutput(DecompiledClass decompiledClass, boolean enumCardHovered) {
         this.hoveredComponent = null;
         this.cursor.updateScrollAnimation();
 
@@ -460,10 +532,10 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         ImVec2 textSize = ImGui.calcTextSize("0".repeat(lineNumberDigits));
         float lineNumberSpacing = 3.F + textSize.x;
         float cursorPosX = ImGui.getCursorPosX();
-        boolean stickyInputBlocked = this.blockStickyHeaderInput();
-        DecompilerGhostTextRenderer.setInteractionBlocked(stickyInputBlocked);
+        boolean decompilerInputBlocked = enumCardHovered || this.blockStickyHeaderInput();
+        DecompilerGhostTextRenderer.setInteractionBlocked(decompilerInputBlocked);
 
-        if (!this.searchBarFocused) cursor.handleInputs(mousePosX, mousePosY);
+        if (!this.searchBarFocused && !decompilerInputBlocked) cursor.handleInputs(mousePosX, mousePosY);
 
         for (DecompilerLine line : decompiledClass.getLines()) {
             final float cursorScreenPosX = ImGui.getCursorScreenPosX();
@@ -497,7 +569,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                     if (!decompiledClass.isProgressive()) this.autoscrollTo = null;
                 }
 
-                if (!stickyInputBlocked && this.hoveredComponent == null && ImGui.isItemHovered()) {
+                if (!decompilerInputBlocked && this.hoveredComponent == null && ImGui.isItemHovered()) {
                     this.hoveredComponent = text.getComponent();
                 }
 
@@ -506,7 +578,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             }
 
             float cursorPosY = ImGui.getCursorPosY();
-            final boolean hovered = !stickyInputBlocked && ImGui.isWindowHovered()
+            final boolean hovered = !decompilerInputBlocked && ImGui.isWindowHovered()
                     && mousePosY >= cursorPosY
                     && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
 
@@ -525,11 +597,12 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.drawSearchResults();
         this.cursor.drawSelectionBox();
         this.drawSelectionMatches(decompiledClass);
-        boolean stickyHovered = this.drawStickyHeaders(decompiledClass, lineNumberSpacing, textSize);
+        boolean stickyHovered = this.drawStickyHeaders(
+                decompiledClass, lineNumberSpacing, textSize, enumCardHovered);
 
-        boolean rightClick = !stickyHovered && ImGui.isWindowHovered()
+        boolean rightClick = !stickyHovered && !enumCardHovered && ImGui.isWindowHovered()
                 && ImGui.isMouseClicked(ImGuiMouseButton.Right);
-        boolean leftClick = !stickyHovered && !rightClick && ImGui.isWindowHovered()
+        boolean leftClick = !stickyHovered && !enumCardHovered && !rightClick && ImGui.isWindowHovered()
                 && ImGui.isMouseClicked(ImGuiMouseButton.Left);
 
         if (this.hoveredComponent != null) {
@@ -687,7 +760,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 && ImGui.isMouseHoveringRect(left, top, right, top + this.stickyHeaderHeight);
     }
 
-    private boolean drawStickyHeaders(DecompiledClass decompiledClass, float lineNumberSpacing, ImVec2 textSize) {
+    private boolean drawStickyHeaders(DecompiledClass decompiledClass, float lineNumberSpacing,
+                                      ImVec2 textSize, boolean enumCardHovered) {
         DecompiledClass.StickyHeaders stickyHeaders = decompiledClass.getStickyHeaders();
         float visibleTop = ImGui.getWindowPosY();
         float lineHeight = textSize.y + ImGui.getStyle().getItemSpacingY();
@@ -720,7 +794,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         float rowTop = visibleTop;
         boolean classHovered = false;
         boolean methodHovered = false;
-        boolean windowHovered = ImGui.isWindowHovered();
+        boolean windowHovered = ImGui.isWindowHovered() && !enumCardHovered;
         for (DecompilerLine line : visibleHeaders) {
             boolean rowHovered = windowHovered
                     && ImGui.isMouseHoveringRect(left, rowTop, right, rowTop + lineHeight);
@@ -884,7 +958,23 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
     @Override
     public DatabaseDecompiler createDatabaseObject() {
-        return new DatabaseDecompiler(this.selectedClass.getRealName());
+        return new DatabaseDecompiler(this.selectedClass.getRealName(),
+                DatabaseDecompiler.createFlags(this.treatEnumAsClass));
+    }
+
+    private record EnumCardBounds(float left, float top, float width, float height) {
+        float right() {
+            return this.left + this.width;
+        }
+
+        float bottom() {
+            return this.top + this.height;
+        }
+
+        boolean isHovered() {
+            return ImGui.isWindowHovered(ImGuiHoveredFlags.RootAndChildWindows)
+                    && ImGui.isMouseHoveringRect(this.left, this.top, this.right(), this.bottom());
+        }
     }
 
     private record DecompilerSearchResult(DecompilerLine line, int start, int end) {

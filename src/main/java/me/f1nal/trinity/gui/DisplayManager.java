@@ -424,12 +424,12 @@ public final class DisplayManager extends ImGuiApplication {
         after.run();
     }
 
-    public void openDecompilerView(Input<?> input) {
-        this.navigateDecompilerView(input, null, NavigationAction.NAVIGATE, null);
+    public DecompilerWindow openDecompilerView(Input<?> input) {
+        return this.navigateDecompilerView(input, null, NavigationAction.NAVIGATE, null);
     }
 
-    public void openDecompilerView(Input<?> input, AbstractInsnNode instruction) {
-        this.navigateDecompilerView(input, instruction, NavigationAction.NAVIGATE, null);
+    public DecompilerWindow openDecompilerView(Input<?> input, AbstractInsnNode instruction) {
+        return this.navigateDecompilerView(input, instruction, NavigationAction.NAVIGATE, null);
     }
 
     public void followDecompilerView(Input<?> input, NavigationAction action) {
@@ -445,8 +445,8 @@ public final class DisplayManager extends ImGuiApplication {
         this.navigateDecompilerView(input, instruction, action, displayText);
     }
 
-    private void navigateDecompilerView(Input<?> input, AbstractInsnNode instruction,
-                                        NavigationAction action, String displayText) {
+    private DecompilerWindow navigateDecompilerView(Input<?> input, AbstractInsnNode instruction,
+                                                    NavigationAction action, String displayText) {
         NavigationTarget target = NavigationTarget.capture(input, instruction);
         boolean track = trinity != null && !trinity.getDatabase().isLoading();
         if (track) {
@@ -455,17 +455,20 @@ public final class DisplayManager extends ImGuiApplication {
             }
             this.navigationHistory.record(target, action, displayText);
         }
-        this.openDecompilerViewDirect(input, instruction);
+        DecompilerWindow window = this.openDecompilerViewDirect(input, instruction);
         this.currentDecompilerTarget = target;
         if (track) {
             showNavigationNotification(action.getNotificationPrefix() + " " + target.describe(trinity));
         }
+        return window;
     }
 
-    private void openDecompilerViewDirect(Input<?> input, AbstractInsnNode instruction) {
+    private DecompilerWindow openDecompilerViewDirect(Input<?> input, AbstractInsnNode instruction) {
         ArchiveEntryViewerWindow<?> viewerWindow = ArchiveEntryViewerType.DECOMPILER.getWindow(input.getOwningClass().getClassTarget());
         this.windowManager.addClosableWindow(viewerWindow);
-        ((DecompilerWindow) Objects.requireNonNull(viewerWindow)).setDecompileTarget(input, instruction);
+        DecompilerWindow decompilerWindow = (DecompilerWindow) Objects.requireNonNull(viewerWindow);
+        decompilerWindow.setDecompileTarget(input, instruction);
+        return decompilerWindow;
     }
 
     public void trackCurrentDecompilerView(Input<?> input, AbstractInsnNode instruction) {

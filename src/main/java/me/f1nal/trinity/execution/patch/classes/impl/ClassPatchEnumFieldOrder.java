@@ -1,6 +1,5 @@
 package me.f1nal.trinity.execution.patch.classes.impl;
 
-import me.f1nal.trinity.Main;
 import me.f1nal.trinity.execution.patch.classes.ClassPatch;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
@@ -34,6 +33,6 @@ public class ClassPatchEnumFieldOrder extends ClassPatch {
 
     @Override
     public boolean isEnabled(ClassNode classNode) {
-        return (classNode.access & Opcodes.ACC_ENUM) != 0 && !Main.getPreferences().isDecompilerEnumClass();
+        return (classNode.access & Opcodes.ACC_ENUM) != 0;
     }
 }

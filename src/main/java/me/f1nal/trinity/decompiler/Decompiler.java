@@ -36,6 +36,7 @@ public final class Decompiler implements IEventListener {
     private final Set<ClassInput> decompileStack = ConcurrentHashMap.newKeySet();
     private final Set<ClassInput> failedList = ConcurrentHashMap.newKeySet();
     private final Map<ClassInput, Long> decompileGenerations = new ConcurrentHashMap<>();
+    private final Map<ClassInput, Boolean> enumClassModes = new ConcurrentHashMap<>();
     private final Map<Object, Long> memberRefreshGenerations = new ConcurrentHashMap<>();
     private final Set<DecompiledClass> staleRenderedText = ConcurrentHashMap.newKeySet();
     private final AtomicLong generationCounter = new AtomicLong();
@@ -53,8 +54,13 @@ public final class Decompiler implements IEventListener {
     }
 
     public void decompile(ClassInput classInput, Callback<DecompiledClass> decompileCallback) throws IOException {
+        this.decompile(classInput, Main.getPreferences().isDecompilerEnumClass(), decompileCallback);
+    }
+
+    public void decompile(ClassInput classInput, boolean treatEnumAsClass,
+                          Callback<DecompiledClass> decompileCallback) throws IOException {
         try {
-            decompileInternal(classInput, decompileCallback);
+            decompileInternal(classInput, treatEnumAsClass, decompileCallback);
         } catch (IOException ioException) {
             failedList.add(classInput);
             decompileStack.remove(classInput);
@@ -66,9 +72,11 @@ public final class Decompiler implements IEventListener {
         }
     }
 
-    private void decompileInternal(ClassInput classInput, Callback<DecompiledClass> decompileCallback) throws IOException {
+    private void decompileInternal(ClassInput classInput, boolean treatEnumAsClass,
+                                   Callback<DecompiledClass> decompileCallback) throws IOException {
         decompileStack.add(classInput);
         failedList.remove(classInput);
+        enumClassModes.put(classInput, treatEnumAsClass);
         long generation = generationCounter.incrementAndGet();
         decompileGenerations.put(classInput, generation);
 
@@ -78,7 +86,7 @@ public final class Decompiler implements IEventListener {
             staleRenderedText.remove(previousClass);
         }
 
-        Map<String, Object> options = createOptions();
+        Map<String, Object> options = createOptions(treatEnumAsClass);
 
         AtomicBoolean finished = new AtomicBoolean(false);
         Consumer<String> output = content -> {
@@ -133,7 +141,8 @@ public final class Decompiler implements IEventListener {
             }
         };
 
-        ClassDecompileTask classDecompileTask = new ClassDecompileTask(this.serializeClassBytes(classInput), options, output, progressListener);
+        ClassDecompileTask classDecompileTask = new ClassDecompileTask(
+                this.serializeClassBytes(classInput, treatEnumAsClass), options, output, progressListener);
         Thread thread = new Thread(classDecompileTask, "Decompiler");
         thread.start();
     }
@@ -145,9 +154,11 @@ public final class Decompiler implements IEventListener {
         if (displayedClass == null) {
             return;
         }
+        boolean treatEnumAsClass = enumClassModes.getOrDefault(
+                classInput, Main.getPreferences().isDecompilerEnumClass());
         if (displayedClass.isProgressive() || isDecompiling(classInput)) {
             try {
-                decompile(classInput, null);
+                decompile(classInput, treatEnumAsClass, null);
             } catch (IOException exception) {
                 exception.printStackTrace();
             }
@@ -161,7 +172,7 @@ public final class Decompiler implements IEventListener {
 
         final byte[] classBytes;
         try {
-            classBytes = serializeClassBytes(classInput);
+            classBytes = serializeClassBytes(classInput, treatEnumAsClass);
         } catch (IOException exception) {
             memberRefreshGenerations.remove(generationKey, generation);
             exception.printStackTrace();
@@ -189,7 +200,7 @@ public final class Decompiler implements IEventListener {
         };
 
         ClassDecompileTask task = new ClassDecompileTask(
-                classBytes, createOptions(), output, IDecompilationProgressListener.NONE);
+                classBytes, createOptions(treatEnumAsClass), output, IDecompilationProgressListener.NONE);
         new Thread(task, "Decompiler Member Refresh").start();
     }
 
@@ -214,21 +225,21 @@ public final class Decompiler implements IEventListener {
         return true;
     }
 
-    private Map<String, Object> createOptions() {
+    private Map<String, Object> createOptions(boolean treatEnumAsClass) {
         Map<String, Object> options = new HashMap<>();
         options.put(IFernflowerPreferences.BYTECODE_SOURCE_MAPPING, "1");
-        options.put(IFernflowerPreferences.DECOMPILE_ENUM, Main.getPreferences().isDecompilerEnumClass() ? "0" : "1");
+        options.put(IFernflowerPreferences.DECOMPILE_ENUM, treatEnumAsClass ? "0" : "1");
         options.put(IFernflowerPreferences.REMOVE_BRIDGE, "0");
         options.put(IFernflowerPreferences.REMOVE_SYNTHETIC, "0");
         return options;
     }
 
-    private byte[] serializeClassBytes(ClassInput classInput) throws IOException {
+    private byte[] serializeClassBytes(ClassInput classInput, boolean treatEnumAsClass) throws IOException {
         try {
             ClassWriter classWriter = new ClassWriter(0);
             ClassNode classNodeCopy = new ClassNode();
             classInput.getNode().accept(classNodeCopy);
-            ClassPatchManager.getClassPatchList().stream().filter(cp -> cp.isEnabled(classNodeCopy)).forEach(cp -> cp.patch(classNodeCopy));
+            ClassPatchManager.patchForDecompilation(classNodeCopy, treatEnumAsClass);
             classNodeCopy.accept(classWriter);
             return classWriter.toByteArray();
         } catch (Throwable throwable) {
@@ -265,6 +276,7 @@ public final class Decompiler implements IEventListener {
             staleRenderedText.remove(removedClass);
         }
         decompileGenerations.remove(owningClass);
+        enumClassModes.remove(owningClass);
         decompileStack.remove(owningClass);
     }
 }
