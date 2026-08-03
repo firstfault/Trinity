@@ -6,7 +6,7 @@
   <p>A next-generation Java reverse-engineering workspace for exploring, understanding, and rewriting bytecode.</p>
 
   <p>
-    <a href="https://github.com/firstfault/trinity/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/firstfault/trinity?display_name=tag&include_prereleases&sort=semver&style=flat-square&color=6e78ff"></a>
+    <a href="https://github.com/firstfault/trinity/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/firstfault/trinity?display_name=tag&sort=semver&style=flat-square&color=6e78ff"></a>
     <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache--2.0-6e78ff?style=flat-square"></a>
     <img alt="Java 17+" src="https://img.shields.io/badge/Java-17%2B-ed8b00?style=flat-square&logo=openjdk&logoColor=white">
     <img alt="Gradle 8.4" src="https://img.shields.io/badge/Gradle-8.4-02303a?style=flat-square&logo=gradle&logoColor=white">
