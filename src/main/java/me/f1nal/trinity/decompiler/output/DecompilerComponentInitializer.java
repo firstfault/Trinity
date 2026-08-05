@@ -72,6 +72,7 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
     public void visitClass(ClassOutputMember member) {
         ClassTarget target = trinity.getExecution().getClassTarget(member.getClassName());
         String arrayDims = getArrayDimensions(component.getText());
+        component.setImportDeclaration(member.isImport());
 
         if (target != null) {
             if (!member.isKeepText()) {

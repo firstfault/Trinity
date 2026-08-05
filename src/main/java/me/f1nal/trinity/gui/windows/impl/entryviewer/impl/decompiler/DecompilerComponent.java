@@ -47,6 +47,7 @@ public class DecompilerComponent {
     private IXrefBuilderProvider xrefBuilderProvider;
     private Runnable searchAllOccurrences;
     private boolean recursiveInvocation;
+    private boolean importDeclaration;
     private boolean constantValueSet;
     private Object constantValue;
     // Temporary
@@ -196,6 +197,14 @@ public class DecompilerComponent {
 
     public void setRecursiveInvocation(boolean recursiveInvocation) {
         this.recursiveInvocation = recursiveInvocation;
+    }
+
+    public boolean isImportDeclaration() {
+        return importDeclaration;
+    }
+
+    public void setImportDeclaration(boolean importDeclaration) {
+        this.importDeclaration = importDeclaration;
     }
 
     public void stopRenaming(@Nullable String newName) {

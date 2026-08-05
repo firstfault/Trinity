@@ -67,6 +67,11 @@ public class DecompilerLineText {
         return this.renderedMin != null && this.renderedMax != null;
     }
 
+    public void clearRenderedBounds() {
+        this.renderedMin = null;
+        this.renderedMax = null;
+    }
+
     public ImVec2 getRenderedMin() {
         return renderedMin;
     }

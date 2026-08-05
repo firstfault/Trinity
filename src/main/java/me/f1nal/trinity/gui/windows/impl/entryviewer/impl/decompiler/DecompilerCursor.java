@@ -183,9 +183,9 @@ public class DecompilerCursor {
         List<DecompilerLine> lines = window.getDecompiledClass().getLines();
         int indexOf = lines.indexOf(this.coordinates.getLine()) + delta;
 
-        if (indexOf < 0 || indexOf >= lines.size()) {
-            return;
-        }
+        while (indexOf >= 0 && indexOf < lines.size()
+                && window.isDecompilerLineHidden(lines.get(indexOf))) indexOf += delta;
+        if (indexOf < 0 || indexOf >= lines.size()) return;
 
         this.setCoordinates(new DecompilerCoordinates(lines.get(indexOf), this.coordinates.getCharacter()));
     }

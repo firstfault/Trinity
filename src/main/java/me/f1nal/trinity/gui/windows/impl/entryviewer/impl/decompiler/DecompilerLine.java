@@ -59,6 +59,10 @@ public class DecompilerLine {
         return null;
     }
 
+    public void clearRenderedBounds() {
+        this.components.forEach(DecompilerLineText::clearRenderedBounds);
+    }
+
     /**
      * Resolves a character range against the rectangles ImGui actually produced for each colored
      * component. Measuring the concatenated line drifts because it does not match separate

@@ -824,7 +824,7 @@ public class ClassWriter {
             VarVersionPair pair = new VarVersionPair(index, 0);
             if (methodWrapper.varproc.isParameterFinal(pair) ||
                 methodWrapper.varproc.getVarFinal(pair) == VarProcessor.VAR_EXPLICIT_FINAL) {
-              buffer.append("final ");
+              buffer.append(OutputMemberSerializer.keyword("final")).append(' ');
             }
 
             String typeName;
