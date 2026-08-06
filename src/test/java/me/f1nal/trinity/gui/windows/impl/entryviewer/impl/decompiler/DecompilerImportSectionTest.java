@@ -24,6 +24,7 @@ class DecompilerImportSectionTest {
         assertEquals(1, section.firstLineIndex());
         assertEquals(3, section.lastLineIndex());
         assertEquals(2, section.importLineCount());
+        assertTrue(section.isFoldable());
         assertTrue(section.contains(2));
         assertFalse(section.contains(4));
         assertFalse(section.isHiddenWhenCollapsed(1));
@@ -36,6 +37,15 @@ class DecompilerImportSectionTest {
     void returnsNoSectionWhenTheDecompilerEmitsNoImports() {
         assertNull(DecompilerImportSection.find(List.of(
                 line(component("public class Example {}", false)))));
+    }
+
+    @Test
+    void doesNotFoldASingleImport() {
+        DecompilerImportSection section = DecompilerImportSection.find(List.of(
+                line(component("java.util.List", true))));
+
+        assertFalse(section.isFoldable());
+        assertFalse(section.isHiddenWhenCollapsed(section.firstLineIndex()));
     }
 
     private static DecompilerComponent component(String text, boolean importDeclaration) {

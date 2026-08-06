@@ -50,7 +50,10 @@ public final class GlobalSearchOverlay {
     private static final float DESIRED_HEIGHT = 420.F;
     private static final float VIEWPORT_MARGIN = 28.F;
     private static final float PANEL_ROUNDING = 0.F;
-    private static final float ROW_HEIGHT = 17f;
+    private static final float CONTROL_ROUNDING = 1.F;
+    private static final float RESULT_ROUNDING = 1.F;
+    private static final float MINIMUM_ROW_HEIGHT = 30.F;
+    private static final float RESULT_ITEM_SPACING = 2.F;
     private static final float DIM_ALPHA = 44.F;
 
     private final DisplayManager displayManager;
@@ -206,7 +209,7 @@ public final class GlobalSearchOverlay {
 //                panelY + 3.F, withOpacity(Main.getPreferences().getAccentColor().getColor(), opacity),
 //                PANEL_ROUNDING);
 
-        ImGui.setCursorPos(10.F, 10.F);
+        ImGui.setCursorPos(8.F, 8.F);
         boolean changed = this.drawSearchBox(width);
         if (changed) {
             this.forceRefresh = true;
@@ -240,10 +243,11 @@ public final class GlobalSearchOverlay {
     }
 
     private boolean drawSearchBox(float width) {
-        ImGui.pushStyleVar(ImGuiStyleVar.FramePadding, 9.F, 8.F);
+        ImGui.pushStyleVar(ImGuiStyleVar.FramePadding, 7.F, 4.F);
+        ImGui.pushStyleVar(ImGuiStyleVar.FrameRounding, CONTROL_ROUNDING);
 
-        float clearWidth = query.isEmpty() ? 0.F : ImGui.getFrameHeight() + 6.F;
-        ImGui.setNextItemWidth(Math.max(80.F, width - ImGui.getCursorPosX() - clearWidth - 10.F));
+        float clearWidth = query.isEmpty() ? 0.F : ImGui.getFrameHeight() + 4.F;
+        ImGui.setNextItemWidth(Math.max(80.F, width - ImGui.getCursorPosX() - clearWidth - 8.F));
         if (focusSearch) {
             ImGui.setKeyboardFocusHere();
             focusSearch = false;
@@ -252,14 +256,14 @@ public final class GlobalSearchOverlay {
                 "Search...", query);
 
         if (!query.isEmpty()) {
-            ImGui.sameLine(0.F, 5.F);
+            ImGui.sameLine(0.F, 4.F);
             if (ImGui.button("×###TrinityGlobalSearchClear", ImGui.getFrameHeight(), ImGui.getFrameHeight())) {
                 query.set("");
                 focusSearch = true;
                 changed = true;
             }
         }
-        ImGui.popStyleVar();
+        ImGui.popStyleVar(2);
         return changed;
     }
 
@@ -397,6 +401,8 @@ public final class GlobalSearchOverlay {
     }
 
     private void drawResults(float opacity) {
+        ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing,
+                ImGui.getStyle().getItemSpacingX(), RESULT_ITEM_SPACING);
         int previouslyHoveredIndex = this.hoveredResultIndex;
         this.hoveredResultIndex = -1;
         boolean mouseInsideResults = ImGui.isWindowHovered();
@@ -416,6 +422,7 @@ public final class GlobalSearchOverlay {
             ImGui.getWindowDrawList().addText(x, y,
                     withOpacity(CodeColorScheme.DISABLED, opacity), message);
             this.resultsRefreshedThisFrame = false;
+            ImGui.popStyleVar();
             return;
         }
 
@@ -432,15 +439,16 @@ public final class GlobalSearchOverlay {
             }
         }
         this.resultsRefreshedThisFrame = false;
+        ImGui.popStyleVar();
     }
 
     private void drawGroupHeading(ResultKind kind) {
-        ImGui.setCursorPosX(ImGui.getCursorPosX() + 8.F);
+        ImGui.setCursorPosX(ImGui.getCursorPosX() + 6.F);
         ImGui.textDisabled(switch (kind) {
-            case ACTION -> "ACTIONS";
-            case METHOD -> "METHODS IN CURRENT CLASS";
-            case FIELD -> "FIELDS IN CURRENT CLASS";
-            case FILE -> "PROJECT FILES";
+            case ACTION -> "Actions";
+            case METHOD -> "Methods in Current Class";
+            case FIELD -> "Fields in Current Class";
+            case FILE -> "Project Files";
         });
     }
 
@@ -449,7 +457,12 @@ public final class GlobalSearchOverlay {
         float x = ImGui.getCursorScreenPosX();
         float y = ImGui.getCursorScreenPosY();
         float width = Math.max(1.F, ImGui.getContentRegionAvailX());
-        float rowHeight = Math.max(ROW_HEIGHT, ImGui.getTextLineHeight() * 2.F + 10.F);
+        ImFont textFont = ImGui.getFont();
+        int detailFontSize = Math.max(10, Math.round(ImGui.getFontSize() - 2.F));
+        float detailLineHeight = textFont.calcTextSizeA(
+                detailFontSize, Float.MAX_VALUE, -1.F, "Ag").y;
+        float rowHeight = Math.max(MINIMUM_ROW_HEIGHT,
+                ImGui.getTextLineHeight() + detailLineHeight + 6.F);
         boolean clicked = ImGui.invisibleButton("###TrinityGlobalSearchResult." + result.id(), width, rowHeight);
         boolean hovered = ImGui.isItemHovered();
         if (hovered) {
@@ -464,15 +477,14 @@ public final class GlobalSearchOverlay {
         int accent = Main.getPreferences().getAccentColor().getColor();
         if (index == selectedIndex && !suppressSelection) {
             drawList.addRectFilled(x + 2.F, y, x + width - 2.F, y + rowHeight,
-                    withOpacity(CodeColorScheme.setAlpha(accent, 42), opacity), 4.F);
-            drawList.addRectFilled(x + 2.F, y + 7.F, x + 4.F, y + rowHeight - 7.F,
-                    withOpacity(CodeColorScheme.setAlpha(accent, 205), opacity), 2.F);
+                    withOpacity(CodeColorScheme.setAlpha(accent, 42), opacity), RESULT_ROUNDING);
         } else if (hovered) {
             drawList.addRectFilled(x + 2.F, y, x + width - 2.F, y + rowHeight,
-                    withOpacity(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, 24), opacity), 4.F);
+                    withOpacity(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, 24), opacity),
+                    RESULT_ROUNDING);
         }
 
-        float iconX = x + 12.F;
+        float iconX = x + 9.F;
         float iconY = y + (rowHeight - ImGui.getFontSize()) * 0.5F;
         if (result.codicon()) {
             ImFont codicon = displayManager.getFontManager().getCodiconFont();
@@ -484,20 +496,21 @@ public final class GlobalSearchOverlay {
             drawList.addText(iconX, iconY, withOpacity(result.iconColor(), opacity), result.icon());
         }
 
-        float textX = x + 39.F;
+        float textX = x + 32.F;
         float badgeWidth = ImGui.calcTextSize(result.badge()).x;
-        float badgeX = x + width - badgeWidth - 12.F;
-        float maximumTextWidth = Math.max(30.F, badgeX - textX - 14.F);
+        float badgeX = x + width - badgeWidth - 9.F;
+        float maximumTextWidth = Math.max(30.F, badgeX - textX - 10.F);
         String title = ellipsize(result.title(), maximumTextWidth);
-        String detail = ellipsize(result.detail(), maximumTextWidth);
+        String detail = ellipsize(result.detail(), maximumTextWidth, textFont, detailFontSize);
         int highlightLimit = title.equals(result.title()) ? title.length() : Math.max(0, title.length() - 3);
-        float titleY = y + 5.F;
-        float detailY = y + 7.F + ImGui.getTextLineHeight();
+        float titleY = y + 3.F;
+        float detailY = y + 3.F + ImGui.getTextLineHeight();
 
         drawList.pushClipRect(textX, y, badgeX - 6.F, y + rowHeight, true);
         this.drawHighlightedTitle(drawList, textX, titleY, title, highlightLimit,
                 result.matchedCharacters(), opacity);
-        drawList.addText(textX, detailY, withOpacity(CodeColorScheme.DISABLED, opacity), detail);
+        drawList.addText(textFont, detailFontSize, textX, detailY,
+                withOpacity(CodeColorScheme.DISABLED, opacity), detail);
         drawList.popClipRect();
         drawList.addText(badgeX, y + (rowHeight - ImGui.getTextLineHeight()) * 0.5F,
                 withOpacity(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, 185), opacity), result.badge());
@@ -641,6 +654,26 @@ public final class GlobalSearchOverlay {
         while (low < high) {
             int middle = (low + high + 1) >>> 1;
             if (ImGui.calcTextSize(text.substring(0, middle) + ellipsis).x <= maximumWidth) {
+                low = middle;
+            } else {
+                high = middle - 1;
+            }
+        }
+        return low == 0 ? ellipsis : text.substring(0, low) + ellipsis;
+    }
+
+    private static String ellipsize(String text, float maximumWidth, ImFont font, float fontSize) {
+        if (text == null || text.isEmpty()
+                || font.calcTextSizeA(fontSize, Float.MAX_VALUE, -1.F, text).x <= maximumWidth) {
+            return text;
+        }
+        String ellipsis = "...";
+        int low = 0;
+        int high = text.length();
+        while (low < high) {
+            int middle = (low + high + 1) >>> 1;
+            String candidate = text.substring(0, middle) + ellipsis;
+            if (font.calcTextSizeA(fontSize, Float.MAX_VALUE, -1.F, candidate).x <= maximumWidth) {
                 low = middle;
             } else {
                 high = middle - 1;

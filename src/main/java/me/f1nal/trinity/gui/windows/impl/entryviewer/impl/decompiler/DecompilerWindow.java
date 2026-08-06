@@ -73,6 +73,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private static final float ENUM_CARD_WIDTH = 174.F;
     private static final float ENUM_CARD_HEIGHT = 41.F;
     private static final float ENUM_CARD_MARGIN = 11.F;
+    private static final float COLLAPSED_IMPORT_ALPHA = 0.30F;
+    private static final long IMPORT_ALPHA_ANIMATION_TIME = 120L;
     private ClassInput selectedClass;
     private Input<?> navigationTarget;
     private AbstractInsnNode navigationInstruction;
@@ -104,6 +106,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private float stickyHeaderHeight;
     private final Animation stickyClassHover = new Animation(Easing.EASE_OUT_QUAD, 110L);
     private final Animation stickyMethodHover = new Animation(Easing.EASE_OUT_QUAD, 110L);
+    private final Animation importAlpha = new Animation(
+            Easing.EASE_OUT_QUAD, IMPORT_ALPHA_ANIMATION_TIME, COLLAPSED_IMPORT_ALPHA);
     private final List<DecompilerSearchResult> selectionMatches = new ArrayList<>();
     private DecompiledClass selectionMatchesClass;
     private String selectionMatchText = "";
@@ -189,6 +193,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
         selectedClass = classInput;
         this.importsExpanded = false;
+        this.importAlpha.setValue(COLLAPSED_IMPORT_ALPHA);
         this.searchDirty = true;
         this.selectionMatchesDirty = true;
         if (classInput != null && !trinity.getDatabase().isLoading()) this.save();
@@ -553,22 +558,35 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
         List<DecompilerLine> lines = decompiledClass.getLines();
         DecompilerImportSection importSection = DecompilerImportSection.find(lines);
-        if (importSection != null && !this.importsExpanded) {
+        boolean importsFoldable = importSection != null && importSection.isFoldable();
+        if (importsFoldable && !this.importsExpanded) {
             importSection.clearCollapsedRenderedBounds(lines);
         }
 
         for (int lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
             DecompilerLine line = lines.get(lineIndex);
-            if (importSection != null && !this.importsExpanded
+            if (importsFoldable && !this.importsExpanded
                     && importSection.isHiddenWhenCollapsed(lineIndex)) {
                 lineIndex = importSection.lastLineIndex();
                 continue;
             }
-            boolean firstImportLine = importSection != null
+            boolean firstImportLine = importsFoldable
                     && lineIndex == importSection.firstLineIndex();
             final float cursorScreenPosX = ImGui.getCursorScreenPosX();
             float currentLineNumberSpacing = this.getLineNumberSpacing(
                     line, lineNumberSpacing, firstImportLine);
+            boolean collapsedImportHovered = firstImportLine && !this.importsExpanded
+                    && !decompilerInputBlocked && this.isCollapsedImportHovered(
+                    line, cursorScreenPosX, currentLineNumberSpacing, textSize);
+            boolean collapsedImportTextHovered = firstImportLine && !this.importsExpanded
+                    && !decompilerInputBlocked && this.isCollapsedImportTextHovered(
+                    line, cursorScreenPosX, currentLineNumberSpacing, textSize);
+            if (collapsedImportHovered) ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
+            if (firstImportLine) {
+                this.importAlpha.run(this.importsExpanded || collapsedImportHovered
+                        ? 1.F : COLLAPSED_IMPORT_ALPHA);
+                ImGui.pushStyleVar(ImGuiStyleVar.Alpha, this.importAlpha.getValue());
+            }
 
             this.drawNavigationHighlight(line, cursorScreenPosX, textSize);
 
@@ -595,7 +613,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                     this.completeAutoScroll(pendingAutoScroll, decompiledClass, line, textOffset);
                 }
 
-                if (!decompilerInputBlocked && this.hoveredComponent == null && ImGui.isItemHovered()) {
+                if (!decompilerInputBlocked && !collapsedImportTextHovered
+                        && this.hoveredComponent == null && ImGui.isItemHovered()) {
                     this.hoveredComponent = text.getComponent();
                 }
 
@@ -603,14 +622,19 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
             }
 
-            boolean ellipsisHovered = firstImportLine && !this.importsExpanded
-                    && this.drawCollapsedImportEllipsis(importSection, lines);
+            if (firstImportLine && !this.importsExpanded) {
+                this.drawCollapsedImportEllipsis(collapsedImportTextHovered);
+            }
+            if (firstImportLine) ImGui.popStyleVar();
+            if (collapsedImportTextHovered && ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
+                this.toggleImportSection(importSection, lines);
+            }
 
             float cursorPosY = ImGui.getCursorPosY();
             boolean disclosureHovered = this.drawLineGutter(line, cursorPosX,
                     currentLineNumberSpacing, firstImportLine, importSection, lines);
             final boolean hovered = !decompilerInputBlocked && ImGui.isWindowHovered()
-                    && !disclosureHovered && !ellipsisHovered
+                    && !disclosureHovered && !collapsedImportHovered
                     && mousePosY >= cursorPosY
                     && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
 
@@ -714,22 +738,31 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.handleMemberKeyMappings();
     }
 
-    private boolean drawCollapsedImportEllipsis(DecompilerImportSection section,
-                                                 List<DecompilerLine> lines) {
-        String ellipsis = " ...";
-        ImVec2 min = ImGui.getCursorScreenPos();
-        ImVec2 size = ImGui.calcTextSize(ellipsis);
-        boolean hovered = ImGui.isWindowHovered()
-                && ImGui.isMouseHoveringRect(min.x, min.y, min.x + size.x, min.y + size.y);
-        ImGui.textColored(hovered ? CodeColorScheme.TEXT : CodeColorScheme.DISABLED, ellipsis);
+    private void drawCollapsedImportEllipsis(boolean importLineHovered) {
+        ImGui.textColored(importLineHovered ? CodeColorScheme.TEXT : CodeColorScheme.DISABLED,
+                " ...");
         ImGui.sameLine(0.F, 0.F);
-        if (hovered) {
-            ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
-                this.toggleImportSection(section, lines);
-            }
-        }
-        return hovered;
+    }
+
+    private boolean isCollapsedImportHovered(DecompilerLine line, float gutterScreenX,
+                                             float lineNumberSpacing, ImVec2 textSize) {
+        float lineNumberWidth = ImGui.calcTextSize(String.valueOf(line.getLineNumber())).x;
+        float textScreenX = gutterScreenX + lineNumberSpacing;
+        float right = textScreenX + ImGui.calcTextSize(line.getText() + " ...").x;
+        float top = ImGui.getCursorScreenPosY();
+        return ImGui.isWindowHovered()
+                && ImGui.isMouseHoveringRect(gutterScreenX + lineNumberWidth + 2.F, top,
+                right, top + textSize.y + ImGui.getStyle().getItemSpacingY());
+    }
+
+    private boolean isCollapsedImportTextHovered(DecompilerLine line, float gutterScreenX,
+                                                 float lineNumberSpacing, ImVec2 textSize) {
+        float textScreenX = gutterScreenX + lineNumberSpacing;
+        float top = ImGui.getCursorScreenPosY();
+        return ImGui.isWindowHovered()
+                && ImGui.isMouseHoveringRect(textScreenX, top,
+                textScreenX + ImGui.calcTextSize(line.getText() + " ...").x,
+                top + textSize.y + ImGui.getStyle().getItemSpacingY());
     }
 
     private boolean drawImportDisclosure(float gutterScreenX, float gutterScreenY,
@@ -794,7 +827,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (decompiledClass == null) return false;
         List<DecompilerLine> lines = decompiledClass.getLines();
         DecompilerImportSection section = DecompilerImportSection.find(lines);
-        return section != null && section.isHiddenWhenCollapsed(lines.indexOf(line));
+        return section != null && section.isFoldable()
+                && section.isHiddenWhenCollapsed(lines.indexOf(line));
     }
 
     private void completeAutoScroll(DecompilerAutoScroll autoScroll, DecompiledClass decompiledClass,

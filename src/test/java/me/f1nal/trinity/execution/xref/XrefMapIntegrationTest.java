@@ -19,8 +19,10 @@ import org.objectweb.asm.tree.TypeAnnotationNode;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -94,6 +96,40 @@ class XrefMapIntegrationTest {
         method.desc = "()[Ltarget/After;";
         xrefs.refreshMethod(methodInput);
 
+        assertTrue(xrefs.queryClassReferences("target/Before").isEmpty());
+        assertFalse(xrefs.queryClassReferences("target/After").isEmpty());
+    }
+
+    @Test
+    void queriesReturnStableSnapshotsWhenTheIndexChanges() throws Exception {
+        Execution execution = emptyExecution();
+        ClassNode node = classNode("fixture/Owner");
+        MethodNode method = new MethodNode(
+                Opcodes.ACC_PUBLIC, "invoke", "()V", null, null);
+        MethodInsnNode invocation = new MethodInsnNode(
+                Opcodes.INVOKESTATIC, "target/Before", "call", "()V", false);
+        method.instructions.add(invocation);
+        node.methods.add(method);
+        ClassInput input = install(execution, node);
+        MethodInput methodInput = input.getDeclaredMethod("invoke", "()V");
+        XrefMap xrefs = new XrefMap(execution);
+        xrefs.rebuild();
+
+        Collection<AbstractXref> memberSnapshot = xrefs.queryMemberReferences(
+                "target/Before", "call", "()V");
+        Collection<ClassXref> classSnapshot = xrefs.queryClassReferences("target/Before");
+        int memberCount = memberSnapshot.size();
+        int classCount = classSnapshot.size();
+        assertTrue(memberCount > 0);
+        assertTrue(classCount > 0);
+
+        invocation.owner = "target/After";
+        xrefs.refreshMethod(methodInput);
+
+        assertEquals(memberCount, memberSnapshot.size());
+        assertEquals(classCount, classSnapshot.size());
+        assertTrue(xrefs.queryMemberReferences("target/Before", "call", "()V").isEmpty());
+        assertFalse(xrefs.queryMemberReferences("target/After", "call", "()V").isEmpty());
         assertTrue(xrefs.queryClassReferences("target/Before").isEmpty());
         assertFalse(xrefs.queryClassReferences("target/After").isEmpty());
     }

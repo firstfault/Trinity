@@ -23,8 +23,12 @@ record DecompilerImportSection(int firstLineIndex, int lastLineIndex, int import
         return lineIndex >= firstLineIndex && lineIndex <= lastLineIndex;
     }
 
+    boolean isFoldable() {
+        return importLineCount > 1;
+    }
+
     boolean isHiddenWhenCollapsed(int lineIndex) {
-        return lineIndex > firstLineIndex && lineIndex <= lastLineIndex;
+        return isFoldable() && lineIndex > firstLineIndex && lineIndex <= lastLineIndex;
     }
 
     void clearCollapsedRenderedBounds(List<DecompilerLine> lines) {

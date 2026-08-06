@@ -26,6 +26,8 @@ public final class XrefMap extends ProgressiveLoadTask {
      * The internal data structure that stores references.
      */
     private final ListMultimap<MemberDetails, AbstractXref> memberReferences = Multimaps.newListMultimap(new HashMap<>(), ArrayList::new);
+    /** Guards both member references and the class-reference lists owned by class targets. */
+    private final Object referencesLock = new Object();
     private final Execution execution;
 
     /**
@@ -60,9 +62,11 @@ public final class XrefMap extends ProgressiveLoadTask {
     }
 
     private void clearReferences() {
-        memberReferences.clear();
-        for (ClassTarget target : new ArrayList<>(execution.getClassTargetMap().values())) {
-            target.getReferences().clear();
+        synchronized (referencesLock) {
+            memberReferences.clear();
+            for (ClassTarget target : new ArrayList<>(execution.getClassTargetMap().values())) {
+                target.getReferences().clear();
+            }
         }
     }
 
@@ -72,9 +76,13 @@ public final class XrefMap extends ProgressiveLoadTask {
 
     /** Replaces every reference originating from one edited method. */
     public synchronized void refreshMethod(MethodInput methodInput) {
-        memberReferences.entries().removeIf(entry -> entry.getValue().getWhere().getInput() == methodInput);
-        for (ClassTarget target : execution.getClassTargetMap().values()) {
-            target.getReferences().removeIf(reference -> reference.getWhere().getInput() == methodInput);
+        synchronized (referencesLock) {
+            memberReferences.entries().removeIf(
+                    entry -> entry.getValue().getWhere().getInput() == methodInput);
+            for (ClassTarget target : execution.getClassTargetMap().values()) {
+                target.getReferences().removeIf(
+                        reference -> reference.getWhere().getInput() == methodInput);
+            }
         }
         indexScan(methodInput.getOwningClass(),
                 AsmReferenceScanner.scanMethod(methodInput.getNode()));
@@ -153,15 +161,19 @@ public final class XrefMap extends ProgressiveLoadTask {
     }
 
     private void putMemberReference(MemberDetails details, AbstractXref referencer) {
-        this.memberReferences.put(new MemberDetails(clearDescriptorFromOwner(details.getOwner()),
-                details.getName(), details.getDesc()), referencer);
+        synchronized (referencesLock) {
+            this.memberReferences.put(new MemberDetails(clearDescriptorFromOwner(details.getOwner()),
+                    details.getName(), details.getDesc()), referencer);
+        }
     }
 
     private void putClassReference(String owner, ClassXref ref) {
         final String className = clearDescriptorFromOwner(owner);
         final ClassTarget classTarget = execution.addClassTarget(className);
 
-        classTarget.getReferences().add(ref);
+        synchronized (referencesLock) {
+            classTarget.getReferences().add(ref);
+        }
     }
 
     private static String clearDescriptorFromOwner(String owner) {
@@ -205,10 +217,12 @@ public final class XrefMap extends ProgressiveLoadTask {
      */
     public Collection<AbstractXref> queryMemberReferences(String owner, String name, String desc) {
         final MemberDetails memberDetails = new MemberDetails(owner, name, desc);
-        if (!this.memberReferences.containsKey(memberDetails)) {
-            return this.translateMemberReferences(memberDetails);
+        synchronized (referencesLock) {
+            Collection<AbstractXref> references = this.memberReferences.containsKey(memberDetails)
+                    ? this.memberReferences.get(memberDetails)
+                    : this.translateMemberReferences(memberDetails);
+            return references.isEmpty() ? List.of() : List.copyOf(references);
         }
-        return this.memberReferences.get(memberDetails);
     }
 
     /**
@@ -255,7 +269,11 @@ public final class XrefMap extends ProgressiveLoadTask {
     }
 
     public Collection<ClassXref> queryClassReferences(ClassTarget classTarget) {
-        return classTarget == null ? Collections.emptyList() : classTarget.getReferences();
+        if (classTarget == null) return List.of();
+        synchronized (referencesLock) {
+            List<ClassXref> references = classTarget.getReferences();
+            return references.isEmpty() ? List.of() : List.copyOf(references);
+        }
     }
 
     public Collection<AbstractXref> queryMemberReferences(MemberDetails details) {
@@ -265,11 +283,13 @@ public final class XrefMap extends ProgressiveLoadTask {
     public List<AbstractXref> getMemberReferencesByPattern(Pattern pattern) {
         List<AbstractXref> list = new ArrayList<>();
 
-        this.memberReferences.asMap().forEach((memberDetails, xrefs) -> {
-            if (pattern.matcher(this.translateMemberAsDisplayNames(memberDetails).getKey()).matches()) {
-                list.addAll(this.memberReferences.get(memberDetails));
-            }
-        });
+        synchronized (referencesLock) {
+            this.memberReferences.asMap().forEach((memberDetails, xrefs) -> {
+                if (pattern.matcher(this.translateMemberAsDisplayNames(memberDetails).getKey()).matches()) {
+                    list.addAll(xrefs);
+                }
+            });
+        }
 
         return list;
     }

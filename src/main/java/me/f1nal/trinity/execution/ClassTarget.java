@@ -227,7 +227,8 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
         } else if (this.getReferences() != null) {
             Trinity trinity = Main.getTrinity();
             if (trinity != null && trinity.getExecution().getAsynchronousLoad().isFinished()) {
-                Collection<ClassXref> references = this.getReferences();
+                Collection<ClassXref> references = trinity.getExecution().getXrefMap()
+                        .queryClassReferences(this);
 
                 for (ClassXref reference : references) {
                     // Is this a good way...?
