@@ -29,7 +29,6 @@ import me.f1nal.trinity.gui.navigation.NavigationHistory;
 import me.f1nal.trinity.gui.navigation.NavigationTarget;
 import me.f1nal.trinity.gui.search.GlobalSearchOverlay;
 import me.f1nal.trinity.gui.windows.WindowManager;
-import me.f1nal.trinity.gui.windows.impl.AboutWindow;
 import me.f1nal.trinity.gui.windows.impl.LoadingDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.SavingDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
@@ -312,7 +311,7 @@ public final class DisplayManager extends ImGuiApplication {
         }
         ImGui.sameLine();
         if (ImGui.button(FontAwesomeIcons.Question + " About")) {
-            this.windowManager.addStaticWindow(AboutWindow.class);
+            this.showAboutDialog();
         }
         ImGui.sameLine();
         ImGui.end();
@@ -321,6 +320,17 @@ public final class DisplayManager extends ImGuiApplication {
     public void addNotification(Notification notification) {
         notification.setStopwatch(new Stopwatch());
         this.notificationRenderer.add(notification);
+    }
+
+    public void showAboutDialog() {
+        this.windowManager.dialog("About Trinity")
+                .message("Software reverse engineering suite for Java applications developed by final.")
+                .message("You are running version " + Main.VERSION + ".")
+                .action(FontAwesomeIcons.Link + " GitHub Page",
+                        () -> SystemUtil.browseURL("https://github.com/firstfault/Trinity"))
+                .cancel("Close", () -> {
+                })
+                .show();
     }
 
     public void showUpdateAvailable(UpdateRelease release) {

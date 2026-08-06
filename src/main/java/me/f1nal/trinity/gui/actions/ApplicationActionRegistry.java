@@ -4,7 +4,6 @@ import me.f1nal.trinity.gui.DisplayManager;
 import me.f1nal.trinity.database.inputs.ProjectInputImporter;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
-import me.f1nal.trinity.gui.windows.impl.AboutWindow;
 import me.f1nal.trinity.gui.windows.impl.PreferencesFrame;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.constant.ConstantSearchFrame;
@@ -82,7 +81,7 @@ public final class ApplicationActionRegistry {
                 () -> this.openStatic(ThemeEditorFrame.class));
         this.register(ABOUT, "About Trinity", "Show version and application information", "Help",
                 FontAwesomeIcons.QuestionCircle, List.of("version", "license"), () -> true,
-                () -> this.openStatic(AboutWindow.class));
+                displayManager::showAboutDialog);
         this.register(CHECK_UPDATES, "Check for Updates", "Check GitHub for a newer Trinity release", "Help",
                 FontAwesomeIcons.SyncAlt, List.of("update trinity", "latest version"), () -> true,
                 me.f1nal.trinity.Main::checkForUpdatesNow);
