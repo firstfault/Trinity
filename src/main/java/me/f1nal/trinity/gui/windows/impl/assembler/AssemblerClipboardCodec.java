@@ -56,7 +56,8 @@ public final class AssemblerClipboardCodec {
             if (!tokens.get(0).equalsIgnoreCase("label")) continue;
             requireCount(tokens, 2, sourceLine.number());
             String name = parseString(tokens.get(1), sourceLine.number());
-            LabelNode label = new LabelNode();
+            LabelNode label = existingLabelResolver == null ? null : existingLabelResolver.apply(name);
+            if (label == null) label = new LabelNode();
             if (declared.putIfAbsent(name, label) != null) {
                 throw lineError(sourceLine.number(), "Duplicate label " + AssemblerValueCodec.quote(name));
             }

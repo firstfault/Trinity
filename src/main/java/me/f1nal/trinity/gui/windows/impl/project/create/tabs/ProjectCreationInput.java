@@ -14,6 +14,9 @@ public class ProjectCreationInput extends AbstractProjectCreationTab {
     private static final FilenameFilter INPUT_FILTER = (dir, name) -> {
         final String[] extensions = {
                 "zip",
+                "apk",
+                "apkm",
+                "dex",
                 "jar",
                 "class"
         };

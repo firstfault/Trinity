@@ -12,15 +12,15 @@ public class UnsafeUtil {
     }
 
     static {
-        Field f;
+        Field field;
         try {
-            f = Unsafe.class.getDeclaredField("theUnsafe");
+            field = Unsafe.class.getDeclaredField("theUnsafe");
         } catch (NoSuchFieldException exception) {
             throw new RuntimeException(exception);
         }
-        f.setAccessible(true);
+        field.setAccessible(true);
         try {
-            unsafe = (Unsafe) f.get(null);
+            unsafe = (Unsafe) field.get(null);
         } catch (IllegalAccessException exception) {
             throw new RuntimeException(exception);
         }

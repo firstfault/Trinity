@@ -1,2 +1,2 @@
 rootProject.name = "Trinity"
-include("Decompiler")
+include("Application", "Decompiler", "MCP")

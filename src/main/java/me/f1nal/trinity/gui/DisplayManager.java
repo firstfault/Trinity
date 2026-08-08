@@ -108,6 +108,7 @@ public final class DisplayManager extends ImGuiApplication {
         this.currentDecompilerTarget = null;
 
         if (this.trinity != null) {
+            this.trinity.getExecution().getDexIndex().close();
             this.trinity.getEventManager().setRegistered(false);
         }
 

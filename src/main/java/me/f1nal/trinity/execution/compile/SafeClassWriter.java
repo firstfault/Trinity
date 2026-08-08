@@ -48,19 +48,30 @@ import java.util.function.Consumer;
  */
 public class SafeClassWriter extends ClassWriter {
     private final Function<String, ClassNode> classNodeRetriever;
-    private final Console console;
+    private final WarningSink warnings;
     private final Consumer<String> unresolvedTypeConsumer;
     private final boolean warnOnUnresolved;
 
     public SafeClassWriter(final int flags, Function<String, ClassNode> classNodeRetriever, Console console) {
-        this(flags, classNodeRetriever, console, ignored -> { }, true);
+        this(flags, classNodeRetriever, console::warn, ignored -> { }, true);
     }
 
     public SafeClassWriter(final int flags, Function<String, ClassNode> classNodeRetriever, Console console,
                            Consumer<String> unresolvedTypeConsumer, boolean warnOnUnresolved) {
+        this(flags, classNodeRetriever, console::warn, unresolvedTypeConsumer, warnOnUnresolved);
+    }
+
+    public SafeClassWriter(final int flags, Function<String, ClassNode> classNodeRetriever,
+                           WarningSink warnings) {
+        this(flags, classNodeRetriever, warnings, ignored -> { }, true);
+    }
+
+    private SafeClassWriter(final int flags, Function<String, ClassNode> classNodeRetriever,
+                            WarningSink warnings, Consumer<String> unresolvedTypeConsumer,
+                            boolean warnOnUnresolved) {
         super(flags);
         this.classNodeRetriever = classNodeRetriever;
-        this.console = console;
+        this.warnings = warnings;
         this.unresolvedTypeConsumer = unresolvedTypeConsumer;
         this.warnOnUnresolved = warnOnUnresolved;
     }
@@ -111,13 +122,13 @@ public class SafeClassWriter extends ClassWriter {
         } catch (TypeNotPresentException e) {
             unresolvedTypeConsumer.accept(e.typeName());
             if (warnOnUnresolved) {
-                console.warn("Unable to find common super class between {} and {} because {} isn't in the dependency classpath. Fallback to java/lang/Object",
+                warnings.warn("Unable to find common super class between {} and {} because {} isn't in the dependency classpath. Fallback to java/lang/Object",
                         type1, type2, e.typeName());
             }
             return "java/lang/Object";
         } catch (IOException e) {
             if (warnOnUnresolved) {
-                console.warn("Unable to find common super class between {} and {}. Fallback to java/lang/Object",
+                warnings.warn("Unable to find common super class between {} and {}. Fallback to java/lang/Object",
                         type1, type2);
             }
             return "java/lang/Object";
@@ -202,5 +213,10 @@ public class SafeClassWriter extends ClassWriter {
             throw new TypeNotPresentException(type, new NullPointerException(String.format("typeInfo for %s", type)));
         }
         return typeInfo;
+    }
+
+    @FunctionalInterface
+    public interface WarningSink {
+        void warn(String format, String... arguments);
     }
 }

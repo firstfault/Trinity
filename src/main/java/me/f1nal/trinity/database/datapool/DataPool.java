@@ -5,17 +5,20 @@ import me.f1nal.trinity.database.Database;
 import me.f1nal.trinity.database.inputs.ProjectContainerInput;
 import me.f1nal.trinity.database.inputs.ProjectInputSet;
 import me.f1nal.trinity.database.inputs.UnreadClassBytes;
+import me.f1nal.trinity.database.inputs.UnreadDexBytes;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.Execution;
 import me.f1nal.trinity.execution.dependency.DependencyArchive;
 import me.f1nal.trinity.execution.dependency.DependencyKind;
-import me.f1nal.trinity.execution.loading.tasks.DependencyArchiveLoadTask;
+import me.f1nal.trinity.execution.dex.DexFileUnit;
 import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
+import me.f1nal.trinity.execution.loading.tasks.DependencyArchiveLoadTask;
+import me.f1nal.trinity.execution.loading.tasks.DexInputReaderLoadTask;
 import me.f1nal.trinity.execution.loading.tasks.RuntimeDependencyLoadTask;
+import me.f1nal.trinity.execution.packages.ArchiveDirectoryEntry;
 import me.f1nal.trinity.execution.packages.ProjectContainer;
 import me.f1nal.trinity.execution.packages.ProjectContainerKind;
 import me.f1nal.trinity.execution.packages.ResourceArchiveEntry;
-import me.f1nal.trinity.execution.packages.ArchiveDirectoryEntry;
 import me.f1nal.trinity.execution.packages.ZipEntryMetadata;
 import me.f1nal.trinity.logging.Logging;
 import org.objectweb.asm.ClassWriter;
@@ -31,8 +34,11 @@ import java.util.UUID;
 
 /** Binary project data, including project containers and dependency references. */
 public class DataPool {
-    private static final int VERSION = 4;
+    private static final int VERSION = 5;
     private static final int OLDEST_SUPPORTED_VERSION = 2;
+    static final int MAX_ENTRY_BYTES = 256 * 1024 * 1024;
+    private static final int MAX_PROJECT_CONTAINERS = 10_000;
+    private static final int MAX_CONTAINER_ENTRIES = 1_000_000;
     private static final int MAX_DEPENDENCY_ARCHIVES = 10_000;
     private static final int MAX_DEPENDENCY_CLASSES = 100_000;
 
@@ -45,8 +51,7 @@ public class DataPool {
 
         long started = System.currentTimeMillis();
         ProjectInputSet projectInput = new ProjectInputSet();
-        int containerCount = input.readInt();
-        if (containerCount < 0) throw new IOException("Negative project container count");
+        int containerCount = readCount(input, "project container", MAX_PROJECT_CONTAINERS);
 
         for (int i = 0; i < containerCount; i++) {
             UUID id = new UUID(input.readLong(), input.readLong());
@@ -59,7 +64,7 @@ public class DataPool {
             ClassPath classPath = new ClassPath();
             classPath.setArchiveComment(readString(input));
 
-            int classCount = readCount(input, "class");
+            int classCount = readCount(input, "class", MAX_CONTAINER_ENTRIES);
             for (int j = 0; j < classCount; j++) {
                 String entryName = input.readUTF();
                 boolean rebuildRequired = input.readBoolean();
@@ -67,19 +72,18 @@ public class DataPool {
                 classPath.addClass(new UnreadClassBytes(entryName, readBytes(input), metadata, rebuildRequired));
             }
 
-            int resourceCount = readCount(input, "resource");
+            int resourceCount = readCount(input, "resource", MAX_CONTAINER_ENTRIES);
             for (int j = 0; j < resourceCount; j++) {
                 String entryName = input.readUTF();
                 ZipEntryMetadata metadata = readMetadata(input);
                 classPath.putResource(entryName, readBytes(input), metadata);
             }
-            int directoryCount = readCount(input, "directory");
+            int directoryCount = readCount(input, "directory", MAX_CONTAINER_ENTRIES);
             for (int j = 0; j < directoryCount; j++) {
                 classPath.getDirectories().add(new ArchiveDirectoryEntry(input.readUTF(), readMetadata(input)));
             }
             projectInput.add(new ProjectContainerInput(id, name, kind, classPath));
         }
-
         if (version >= 4) {
             database.loadTasks.add(new DependencyArchiveLoadTask(readDependencyArchives(input)));
         } else if (version == 3) {
@@ -91,6 +95,12 @@ public class DataPool {
             database.loadTasks.add(new RuntimeDependencyLoadTask());
         }
         database.loadTasks.add(new ClassInputReaderLoadTask(projectInput));
+        if (version >= 5) {
+            List<UnreadDexBytes> dexFiles = readDexFiles(input);
+            if (!dexFiles.isEmpty()) {
+                database.loadTasks.add(new DexInputReaderLoadTask(dexFiles));
+            }
+        }
         database.setDataPoolLoadTime(System.currentTimeMillis() - started);
     }
 
@@ -136,13 +146,11 @@ public class DataPool {
         }
 
         writeDependencyArchives(output, execution.getDependencies().getArchives());
+        writeDexFiles(output, execution.getDexIndex().getFiles());
     }
 
     static List<DependencyArchive> readDependencyArchives(DataInputStream input) throws IOException {
-        int dependencyCount = readCount(input, "dependency");
-        if (dependencyCount > MAX_DEPENDENCY_ARCHIVES) {
-            throw new IOException("Too many dependency archives: " + dependencyCount);
-        }
+        int dependencyCount = readCount(input, "dependency", MAX_DEPENDENCY_ARCHIVES);
         List<DependencyArchive> dependencies = new ArrayList<>(dependencyCount);
         for (int i = 0; i < dependencyCount; i++) {
             UUID id = new UUID(input.readLong(), input.readLong());
@@ -163,18 +171,12 @@ public class DataPool {
 
     static List<DependencyArchive> readEmbeddedDependencyArchives(DataInputStream input)
             throws IOException {
-        int dependencyCount = readCount(input, "dependency");
-        if (dependencyCount > MAX_DEPENDENCY_ARCHIVES) {
-            throw new IOException("Too many dependency archives: " + dependencyCount);
-        }
+        int dependencyCount = readCount(input, "dependency", MAX_DEPENDENCY_ARCHIVES);
         List<DependencyArchive> dependencies = new ArrayList<>(dependencyCount);
         for (int i = 0; i < dependencyCount; i++) {
             UUID id = new UUID(input.readLong(), input.readLong());
             String name = input.readUTF();
-            int classCount = readCount(input, "dependency class");
-            if (classCount > MAX_DEPENDENCY_CLASSES) {
-                throw new IOException("Too many classes in dependency archive " + name + ": " + classCount);
-            }
+            int classCount = readCount(input, "dependency class", MAX_DEPENDENCY_CLASSES);
             for (int j = 0; j < classCount; j++) {
                 input.readUTF();
                 readBytes(input);
@@ -202,15 +204,38 @@ public class DataPool {
         }
     }
 
-    private static int readCount(DataInputStream input, String type) throws IOException {
+    private static List<UnreadDexBytes> readDexFiles(DataInputStream input) throws IOException {
+        int count = readCount(input, "DEX file", MAX_CONTAINER_ENTRIES);
+        List<UnreadDexBytes> dexFiles = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            dexFiles.add(new UnreadDexBytes(input.readUTF(), readBytes(input)));
+        }
+        return dexFiles;
+    }
+
+    private static void writeDexFiles(DataOutputStream output, Iterable<DexFileUnit> dexFiles)
+            throws IOException {
+        List<DexFileUnit> files = new ArrayList<>();
+        dexFiles.forEach(files::add);
+        output.writeInt(files.size());
+        for (DexFileUnit dexFile : files) {
+            output.writeUTF(dexFile.getName());
+            writeBytes(output, dexFile.getBytes());
+        }
+    }
+
+    private static int readCount(DataInputStream input, String type, int maximum) throws IOException {
         int count = input.readInt();
         if (count < 0) throw new IOException("Negative " + type + " entry count");
+        if (count > maximum) throw new IOException("Too many " + type + " entries: " + count);
         return count;
     }
 
     private static byte[] readBytes(DataInputStream input) throws IOException {
         int length = input.readInt();
-        if (length < 0) throw new IOException("Negative entry size");
+        if (length < 0 || length > MAX_ENTRY_BYTES || length > input.available()) {
+            throw new IOException("Invalid data pool entry size: " + length);
+        }
         byte[] bytes = new byte[length];
         input.readFully(bytes);
         return bytes;
@@ -251,7 +276,9 @@ public class DataPool {
     private static byte[] readNullableBytes(DataInputStream input) throws IOException {
         int length = input.readInt();
         if (length == -1) return null;
-        if (length < -1) throw new IOException("Negative optional data size");
+        if (length < -1 || length > MAX_ENTRY_BYTES || length > input.available()) {
+            throw new IOException("Invalid optional data size: " + length);
+        }
         byte[] bytes = new byte[length];
         input.readFully(bytes);
         return bytes;

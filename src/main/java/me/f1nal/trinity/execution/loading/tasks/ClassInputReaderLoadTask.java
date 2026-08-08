@@ -193,13 +193,13 @@ public class ClassInputReaderLoadTask extends ProgressiveLoadTask implements ICa
 
         for (ClassTarget target : parsed.targets()) {
             execution.addClassTarget(target);
-            target.setPackage(container.getRootPackage());
+            target.setPackage(container.getRootPackage(), false);
             execution.getClassList().add(target.getInput());
         }
         ProjectContainer installedContainer = container;
         input.getClassPath().getResources().forEach((name, bytes) ->
                 new ResourceArchiveEntry(name, bytes,
-                        input.getClassPath().getResourceMetadata(name)).setPackage(installedContainer.getRootPackage()));
+                        input.getClassPath().getResourceMetadata(name)).setPackage(installedContainer.getRootPackage(), false));
     }
 
     private void notifyRejected(String container, String reason) {

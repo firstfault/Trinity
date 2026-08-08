@@ -16,6 +16,6 @@ public class DatabaseCompressionTypeRaw extends DatabaseCompressionType {
 
     @Override
     public byte[] decompress(InputStream stream) throws IOException {
-        return stream.readAllBytes();
+        return readDecompressed(stream);
     }
 }

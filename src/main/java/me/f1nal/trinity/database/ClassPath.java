@@ -1,6 +1,9 @@
 package me.f1nal.trinity.database;
 
 import me.f1nal.trinity.database.inputs.UnreadClassBytes;
+import me.f1nal.trinity.database.inputs.UnreadDexBytes;
+import me.f1nal.trinity.execution.packages.ArchiveDirectoryEntry;
+import me.f1nal.trinity.execution.packages.ZipEntryMetadata;
 import me.f1nal.trinity.logging.Logging;
 import me.f1nal.trinity.util.ByteUtil;
 
@@ -13,11 +16,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
-import me.f1nal.trinity.execution.packages.ArchiveDirectoryEntry;
-import me.f1nal.trinity.execution.packages.ZipEntryMetadata;
 
 public class ClassPath {
     private final List<UnreadClassBytes> classes = new ArrayList<>();
+    private final List<UnreadDexBytes> dexFiles = new ArrayList<>();
     private final Map<String, byte[]> resources = new LinkedHashMap<>();
     private final Map<String, ZipEntryMetadata> resourceMetadata = new HashMap<>();
     private final List<ArchiveDirectoryEntry> directories = new ArrayList<>();
@@ -55,6 +57,10 @@ public class ClassPath {
         return this.classes.stream().map(UnreadClassBytes::getBytes).collect(Collectors.toCollection(() -> new ArrayList<>(this.classes.size())));
     }
 
+    public List<UnreadDexBytes> getDexFiles() {
+        return dexFiles;
+    }
+
     public void addClass(UnreadClassBytes classBytes) {
         this.classes.add(classBytes);
     }
@@ -85,6 +91,7 @@ public class ClassPath {
 
     public void addClassPath(ClassPath classPath) {
         this.getClasses().addAll(classPath.getClasses());
+        this.getDexFiles().addAll(classPath.getDexFiles());
         classPath.getResources().forEach((name, bytes) ->
                 this.putResource(name, bytes, classPath.getResourceMetadata(name)));
         classPath.getDirectories().forEach(directory -> this.directories.add(
@@ -102,6 +109,7 @@ public class ClassPath {
 
     public void clear() {
         this.getClasses().clear();
+        this.getDexFiles().clear();
         this.getResources().clear();
         this.resourceMetadata.clear();
         this.directories.clear();

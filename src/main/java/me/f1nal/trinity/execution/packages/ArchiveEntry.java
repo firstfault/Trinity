@@ -18,7 +18,6 @@ import me.f1nal.trinity.util.ByteUtil;
 import me.f1nal.trinity.util.SystemUtil;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -91,6 +90,10 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
     }
 
     public void setPackage(Package root) {
+        setPackage(root, true);
+    }
+
+    public void setPackage(Package root, boolean notify) {
         Main.assertRenderThread();
         ProjectContainer previousContainer = this.container;
         if (getPackage() != null) {
@@ -115,9 +118,10 @@ public abstract class ArchiveEntry implements IBrowserViewerNode, IRenameHandler
             this.zipMetadata.setOrder(Integer.MAX_VALUE);
         }
         if (this.container != null) this.container.register(this);
-        targetPackage.getEntries().add(this);
-        this.targetPackage.getEntries().sort(Comparator.comparing(ArchiveEntry::getDisplaySimpleName));
-        Main.getTrinity().getEventManager().postEvent(new EventPackageStructureReload());
+        targetPackage.add(this);
+        if (notify) {
+            Main.getTrinity().getEventManager().postEvent(new EventPackageStructureReload());
+        }
     }
 
     /**

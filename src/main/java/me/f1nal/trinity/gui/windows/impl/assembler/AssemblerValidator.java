@@ -171,8 +171,10 @@ public final class AssemblerValidator {
             if (block.handler != null) requireLabel(block.handler, labels, "Try/catch handler", result);
         }
         if (method.localVariables != null) for (LocalVariableNode local : method.localVariables) {
-            requireLabel(local.start, labels, "Local variable start", result);
-            requireLabel(local.end, labels, "Local variable end", result);
+            if (!labels.contains(local.start) || !labels.contains(local.end)) {
+                result.warning("Local variable " + local.name
+                        + " references debug labels outside the instruction list");
+            }
         }
         validateLocalAnnotations(method.visibleLocalVariableAnnotations, labels, result);
         validateLocalAnnotations(method.invisibleLocalVariableAnnotations, labels, result);

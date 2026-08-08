@@ -10,11 +10,13 @@ import me.f1nal.trinity.events.EventClassesLoaded;
 import me.f1nal.trinity.events.EventDependenciesChanged;
 import me.f1nal.trinity.execution.dependency.DependencyArchive;
 import me.f1nal.trinity.execution.dependency.DependencyManager;
+import me.f1nal.trinity.execution.dex.DexIndex;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
 import me.f1nal.trinity.execution.hierarchy.ObjectHierarchyLoadTask;
 import me.f1nal.trinity.execution.hierarchy.ClassHierarchy;
 import me.f1nal.trinity.execution.loading.AsynchronousLoad;
 import me.f1nal.trinity.execution.loading.tasks.ClassInputReaderLoadTask;
+import me.f1nal.trinity.execution.loading.tasks.DexInputReaderLoadTask;
 import me.f1nal.trinity.execution.loading.tasks.RuntimeDependencyLoadTask;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.execution.packages.ArchiveEntry;
@@ -41,6 +43,7 @@ public final class Execution {
      * Reference map containing all references.
      */
     private final XrefMap xrefMap;
+    private final DexIndex dexIndex;
     private final AsynchronousLoad asynchronousLoad;
     private final Trinity trinity;
     private boolean classesLoaded;
@@ -48,6 +51,7 @@ public final class Execution {
     public Execution(Trinity trinity, ProjectInputSet projectInput) throws MissingEntryPointException {
         this.trinity = trinity;
         this.xrefMap = new XrefMap(this);
+        this.dexIndex = new DexIndex(this);
 
         this.asynchronousLoad = new AsynchronousLoad(this.getTrinity());
 
@@ -55,6 +59,12 @@ public final class Execution {
         if (!this.trinity.getDatabase().addLoadTasks(this.asynchronousLoad)) {
             this.asynchronousLoad.add(new RuntimeDependencyLoadTask());
             this.asynchronousLoad.add(new ClassInputReaderLoadTask(projectInput));
+            var dexFiles = projectInput.getContainers().stream()
+                    .flatMap(input -> input.getClassPath().getDexFiles().stream())
+                    .toList();
+            if (!dexFiles.isEmpty()) {
+                this.asynchronousLoad.add(new DexInputReaderLoadTask(dexFiles));
+            }
         }
 
         this.asynchronousLoad.add(new ObjectHierarchyLoadTask(this));
@@ -267,6 +277,10 @@ public final class Execution {
         return trinity;
     }
 
+    public DexIndex getDexIndex() {
+        return dexIndex;
+    }
+
     public List<ProjectContainer> getContainers() {
         return Collections.unmodifiableList(containers);
     }
@@ -328,5 +342,16 @@ public final class Execution {
 
     public Collection<ResourceArchiveEntry> getResources() {
         return containers.stream().flatMap(container -> container.getResources().stream()).toList();
+    }
+
+    /** Flattened read-only resource view used by headless application services. */
+    public Map<String, byte[]> getResourceMap() {
+        Map<String, byte[]> resources = new LinkedHashMap<>();
+        for (ProjectContainer container : containers) {
+            for (ResourceArchiveEntry resource : container.getResources()) {
+                resources.putIfAbsent(resource.getRealName(), resource.getBytes());
+            }
+        }
+        return Collections.unmodifiableMap(resources);
     }
 }

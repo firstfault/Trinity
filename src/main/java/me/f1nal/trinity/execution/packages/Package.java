@@ -23,6 +23,7 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.SystemUtil;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -35,6 +36,7 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
     private Package parent;
     private final List<Package> packages = new ArrayList<>();
     private final List<ArchiveEntry> archiveEntries = new ArrayList<>();
+    private boolean archiveEntriesSorted = true;
     private PackageHierarchy packageHierarchy;
     private final BrowserViewerNode browserViewerNode;
     private boolean open;
@@ -280,7 +282,16 @@ public class Package implements IDatabaseSavable<DatabasePackage>, IBrowserViewe
     }
 
     public List<ArchiveEntry> getEntries() {
+        if (!archiveEntriesSorted) {
+            archiveEntries.sort(Comparator.comparing(ArchiveEntry::getDisplaySimpleName));
+            archiveEntriesSorted = true;
+        }
         return archiveEntries;
+    }
+
+    public void add(ArchiveEntry entry) {
+        archiveEntries.add(entry);
+        archiveEntriesSorted = false;
     }
 
     public void remove(ArchiveEntry classTarget) {
