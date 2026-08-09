@@ -89,8 +89,13 @@ public class Main {
         appDataManager.load();
         displayManager = new DisplayManager("Trinity: " + VERSION);
         mcpActivityLog = new McpActivityLog();
-        startMcpServer();
+        if (Boolean.parseBoolean(System.getProperty("trinity.mcp.enabled", "false"))) {
+            startMcpServer();
+        } else {
+            Logging.info("Built-in MCP server is disabled");
+        }
         appDataManager.getState().setLastLaunchedVersion(VERSION);
+        addShutdownHook(new ShutdownHook("MCP Server", Main::stopMcpServer));
         addShutdownHook(new ShutdownHook("Database Save", new DatabaseSaveShutdownHook()));
         ImGuiApplication.launch(displayManager);
         System.out.println("see you later!");
@@ -138,30 +143,48 @@ public class Main {
         return true;
     }
 
-    private static void startMcpServer() {
-        if (!Boolean.parseBoolean(System.getProperty("trinity.mcp.enabled", "true"))) {
-            Logging.info("Built-in MCP server is disabled");
-            return;
-        }
-
+    public static synchronized boolean startMcpServer() {
+        if (mcpServer != null && mcpServer.isRunning()) return true;
         String host = System.getProperty("trinity.mcp.host", "127.0.0.1");
         int port = Integer.getInteger("trinity.mcp.port", 7331);
+        TrinityMcpServer server;
         try {
-            mcpServer = new TrinityMcpServer(new LiveTrinityApplication(), host, port, mcpActivityLog);
-            mcpServer.start();
-            Logging.info("MCP server listening at {}", mcpServer.endpoint());
+            server = new TrinityMcpServer(new LiveTrinityApplication(), host, port, mcpActivityLog);
+        } catch (RuntimeException exception) {
+            Logging.error("Unable to configure MCP server: {}", exception.getMessage());
+            return false;
+        }
+
+        try {
+            server.start();
+            mcpServer = server;
+            Logging.info("MCP server listening at {}", server.endpoint());
+            return true;
         } catch (Exception exception) {
             mcpServer = null;
             Logging.error("Unable to start MCP server: {}", exception.getMessage());
+            return false;
         }
+    }
+
+    public static synchronized boolean stopMcpServer() {
+        TrinityMcpServer server = mcpServer;
+        mcpServer = null;
+        if (server == null) return false;
+        try {
+            server.close();
+        } catch (RuntimeException exception) {
+            Logging.error("Unable to stop MCP server cleanly: {}", exception.getMessage());
+        }
+        return true;
     }
 
     public static McpActivityLog getMcpActivityLog() {
         return mcpActivityLog;
     }
 
-    public static TrinityMcpServer getMcpServer() {
-        return mcpServer;
+    public static synchronized boolean isMcpServerRunning() {
+        return mcpServer != null && mcpServer.isRunning();
     }
 
     public static void checkForUpdatesOnStartup() {

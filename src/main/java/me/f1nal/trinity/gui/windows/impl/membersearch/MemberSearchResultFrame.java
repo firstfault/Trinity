@@ -64,7 +64,7 @@ public final class MemberSearchResultFrame extends ClosableWindow implements IEv
         if (unresolvedHierarchyComparisons > 0) {
             ImGui.sameLine();
             ImGui.textColored(CodeColorScheme.NOTIFY_WARN,
-                    "  |  " + unresolvedHierarchyComparisons + " unresolved hierarchy "
+                    "    " + unresolvedHierarchyComparisons + " unresolved hierarchy "
                             + (unresolvedHierarchyComparisons == 1 ? "comparison" : "comparisons"));
         }
 

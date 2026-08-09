@@ -35,6 +35,7 @@ public final class McpActivityLog implements McpActivityListener {
         } else if (event.getType() == McpActivityEvent.Type.SERVER_STOPPED
                 || event.getType() == McpActivityEvent.Type.SERVER_FAILED) {
             serverRunning = false;
+            endpoint = "";
             if (event.getType() == McpActivityEvent.Type.SERVER_STOPPED) {
                 agents.clear();
             }

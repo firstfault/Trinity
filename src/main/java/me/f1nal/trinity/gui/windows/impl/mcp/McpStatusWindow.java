@@ -3,11 +3,15 @@ package me.f1nal.trinity.gui.windows.impl.mcp;
 import imgui.ImDrawList;
 import imgui.ImGui;
 import imgui.ImVec2;
-import imgui.flag.ImGuiWindowFlags;
+import imgui.flag.ImGuiMouseButton;
+import imgui.flag.ImGuiStyleVar;
+import imgui.flag.ImGuiTableColumnFlags;
+import imgui.flag.ImGuiTableFlags;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
+import me.f1nal.trinity.gui.components.FontAwesomeIcons;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.mcp.McpActivityEvent;
@@ -18,26 +22,29 @@ import me.f1nal.trinity.util.GuiUtil;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Console-style window that surfaces MCP server activity: lifecycle events,
- * connected agents, and every tool invocation with its origin agent.
- */
+/** Compact server controls and a readable stream of MCP activity. */
 public final class McpStatusWindow extends StaticWindow {
     private static final DateTimeFormatter TIME_FORMAT =
             DateTimeFormatter.ofPattern("HH:mm:ss", Locale.ENGLISH);
     private static final int MAX_LINE_EVENTS = 512;
-    private static final int SEPARATOR_ALPHA = 110;
-    private static final int DETAIL_ALPHA = 175;
-    private static final float GROUP_SPACING = 14.F;
-    private static final float ITEM_SPACING = 5.F;
+    private static final int MUTED_ALPHA = 175;
+    private static final int QUIET_ALPHA = 125;
+    private static final int HOVER_ALPHA = 28;
+    private static final float COMPACT_PADDING_X = 5.F;
+    private static final float COMPACT_PADDING_Y = 1.F;
+    private static final float COMPACT_ROUNDING = 1.F;
+    private static final float COMPACT_VERTICAL_SPACING = 2.F;
+    private static final float ROW_PADDING_Y = 1.F;
+    private static final float ROW_MARKER_RADIUS = 2.5F;
+    private static final float ROW_LEFT_PADDING = 6.F;
 
     private boolean autoScroll = true;
     private int lastRenderedRevision = -1;
     private boolean stuckToBottom = true;
+    private boolean forceScrollToBottom;
 
     public McpStatusWindow(Trinity trinity) {
         super("MCP Status", 540.F, 340.F, trinity);
@@ -54,282 +61,385 @@ public final class McpStatusWindow extends StaticWindow {
     @Override
     protected void renderFrame() {
         McpActivityLog log = Main.getMcpActivityLog();
-        drawStatusRow(log);
-        drawToolbarRow(log);
-        drawAgentsSummary(log);
+        ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing,
+                ImGui.getStyle().getItemSpacingX(), COMPACT_VERTICAL_SPACING);
+        drawServerHeader(log);
         ImGui.separator();
-        drawConsole(log);
+        drawActivity(log);
+        ImGui.popStyleVar();
     }
 
-    private void drawStatusRow(McpActivityLog log) {
-        boolean running = log != null && log.isServerRunning();
-        int statusColor = running ? CodeColorScheme.NOTIFY_SUCCESS : CodeColorScheme.NOTIFY_WARN;
-        String statusText = running ? "Running" : (log == null ? "Disabled" : "Stopped");
+    private void drawServerHeader(McpActivityLog log) {
+        boolean running = Main.isMcpServerRunning();
+        String action = running ? "Stop" : "Start";
 
-        ImDrawList drawList = ImGui.getWindowDrawList();
-        ImVec2 cursor = ImGui.getCursorScreenPos();
-        float rowHeight = ImGui.getTextLineHeight();
-        float dotRadius = rowHeight * 0.32F;
-        float dotCenterX = cursor.x + dotRadius + 2.F;
-        float dotCenterY = cursor.y + rowHeight * 0.5F;
-        if (running) {
-            drawList.addCircleFilled(dotCenterX, dotCenterY, dotRadius, statusColor, 18);
-        } else {
-            drawList.addCircle(dotCenterX, dotCenterY, dotRadius, statusColor, 18, 2.F);
+        pushCompactControls();
+        float actionWidth = ImGui.calcTextSize(action).x + COMPACT_PADDING_X * 2.F
+                + ImGui.getStyle().getCellPaddingX() * 2.F;
+        int tableFlags = ImGuiTableFlags.SizingStretchProp
+                | ImGuiTableFlags.NoSavedSettings | ImGuiTableFlags.NoPadOuterX;
+        if (ImGui.beginTable(getId("McpServerHeader"), 2, tableFlags)) {
+            ImGui.tableSetupColumn("Server", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.tableSetupColumn("Action", ImGuiTableColumnFlags.WidthFixed, actionWidth);
+            ImGui.tableNextRow();
+
+            ImGui.tableNextColumn();
+            drawServerIdentity(log, running);
+
+            ImGui.tableNextColumn();
+            if (ImGui.button(action + "###McpServerToggle")) {
+                if (running) Main.stopMcpServer();
+                else Main.startMcpServer();
+            }
+            GuiUtil.tooltip(running ? "Stop the local MCP server" : "Start the local MCP server");
+            ImGui.endTable();
         }
+        ImGui.popStyleVar(3);
 
-        ImGui.dummy(dotRadius * 2.F + 8.F, rowHeight);
-        ImGui.sameLine();
-        ImGui.textColored(statusColor, statusText);
-
-        ImGui.sameLine(0.F, GROUP_SPACING);
-        ImGui.textDisabled("Endpoint");
-        ImGui.sameLine(0.F, ITEM_SPACING);
-        String endpoint = log == null ? "" : log.getEndpoint();
-        if (endpoint.isEmpty()) endpoint = "-";
-        ImGui.textColored(CodeColorScheme.DISABLED, endpoint);
-
-        ImGui.sameLine(0.F, ITEM_SPACING);
-        if (ImGui.button("Copy URL###CopyEndpoint")) {
-            ImGui.setClipboardText(endpoint);
-        }
-        GuiUtil.tooltip("Copy MCP endpoint URL");
+        drawConnectedClients(log);
     }
 
-    private void drawToolbarRow(McpActivityLog log) {
-        drawStat("Calls", log == null ? 0 : log.getTotalToolCalls(), CodeColorScheme.TEXT);
-        ImGui.sameLine(0.F, GROUP_SPACING);
-        int failed = log == null ? 0 : log.getFailedToolCalls();
-        drawStat("Failed", failed, failed == 0 ? CodeColorScheme.DISABLED : CodeColorScheme.NOTIFY_ERROR);
-        ImGui.sameLine(0.F, GROUP_SPACING);
-        drawStat("Agents", log == null ? 0 : log.snapshotAgents().size(), CodeColorScheme.PARAM_REF);
+    private void drawServerIdentity(McpActivityLog log, boolean running) {
+        float rowHeight = ImGui.getFrameHeight();
+        ImVec2 position = ImGui.getCursorScreenPos();
+        int statusColor = running ? CodeColorScheme.NOTIFY_SUCCESS
+                : CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, MUTED_ALPHA);
+        ImGui.getWindowDrawList().addCircleFilled(
+                position.x + ROW_MARKER_RADIUS,
+                position.y + rowHeight * 0.5F,
+                ROW_MARKER_RADIUS, statusColor, 12);
 
-        ImGui.sameLine(0.F, GROUP_SPACING);
-        if (ImGui.button("Clear###ClearMcpLog")) {
-            if (log != null) log.clear();
-            lastRenderedRevision = -1;
-        }
+        ImGui.dummy(ROW_MARKER_RADIUS * 2.F + 4.F, rowHeight);
+        ImGui.sameLine(0.F, 5.F);
+        ImGui.alignTextToFramePadding();
+        String endpoint = running && log != null ? log.getEndpoint() : "";
+        String identity = endpoint.isEmpty() ? "MCP is off" : endpoint;
+        ImGui.textColored(running ? CodeColorScheme.TEXT : CodeColorScheme.DISABLED, identity);
 
-        ImGui.sameLine(0.F, ITEM_SPACING);
-        if (ImGui.checkbox("Auto-scroll", autoScroll)) {
-            autoScroll = !autoScroll;
+        if (running && !endpoint.isEmpty()) {
+            ImGui.sameLine(0.F, 4.F);
+            if (ImGui.button(FontAwesomeIcons.Copy + "###CopyMcpEndpoint")) {
+                ImGui.setClipboardText(endpoint);
+            }
+            GuiUtil.tooltip("Copy endpoint");
         }
-        GuiUtil.tooltip("Keep the console pinned to the latest event.");
     }
 
-    private static void drawStat(String label, int value, int valueColor) {
-        ImGui.textDisabled(label);
-        ImGui.sameLine(0.F, ITEM_SPACING);
-        ImGui.textColored(valueColor, String.valueOf(value));
-    }
+    private void drawConnectedClients(McpActivityLog log) {
+        List<McpActivityLog.AgentSnapshot> clients = log == null
+                ? List.of() : log.snapshotAgents();
+        if (clients.isEmpty()) return;
 
-    private void drawAgentsSummary(McpActivityLog log) {
-        List<McpActivityLog.AgentSnapshot> agents = log == null ? List.of() : log.snapshotAgents();
-        if (agents.isEmpty()) return;
-        ColoredStringBuilder csb = ColoredStringBuilder.create();
-        csb.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, DETAIL_ALPHA), "Connected: ");
-        for (int i = 0; i < agents.size(); i++) {
-            McpActivityLog.AgentSnapshot agent = agents.get(i);
+        ColoredStringBuilder text = ColoredStringBuilder.create()
+                .text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, MUTED_ALPHA),
+                        FontAwesomeIcons.Users + "  ");
+        for (int i = 0; i < clients.size(); i++) {
+            McpActivityLog.AgentSnapshot client = clients.get(i);
             if (i > 0) {
-                csb.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, SEPARATOR_ALPHA), "  |  ");
+                text.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, QUIET_ALPHA), "  ·  ");
             }
-            csb.text(CodeColorScheme.NOTIFY_SUCCESS, "* ");
-            csb.text(CodeColorScheme.PARAM_REF, agent.name().isEmpty() ? "agent" : agent.name());
-            if (!agent.version().isEmpty()) {
-                csb.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, DETAIL_ALPHA),
-                        " v" + agent.version());
+            text.text(CodeColorScheme.PARAM_REF, displayClientName(client.name()));
+            if (!client.version().isEmpty()) {
+                text.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, MUTED_ALPHA),
+                        " " + client.version());
             }
         }
-        ColoredString.drawText(csb.get());
+        ColoredString.drawText(text.get());
     }
 
-    private void drawConsole(McpActivityLog log) {
-        float footerHeight = ImGui.getFrameHeightWithSpacing();
-        if (ImGui.beginChild(getId("McpConsole"), 0.F, -footerHeight, false,
-                ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
-            float prevScrollY = ImGui.getScrollY();
-            float prevScrollMax = ImGui.getScrollMaxY();
-            boolean wasAtBottom = prevScrollMax <= 0.F || prevScrollY >= prevScrollMax - 4.F;
+    private void drawActivity(McpActivityLog log) {
+        float footerHeight = compactControlHeight()
+                + ImGui.getStyle().getItemSpacingY() * 2.F
+                + 2.F;
+        if (ImGui.beginChild(getId("McpActivity"), 0.F, -footerHeight, false)) {
+            float previousScrollY = ImGui.getScrollY();
+            float previousScrollMax = ImGui.getScrollMaxY();
+            boolean wasAtBottom = previousScrollMax <= 0.F
+                    || previousScrollY >= previousScrollMax - 4.F;
             if (wasAtBottom) stuckToBottom = true;
-            if (prevScrollMax > 0.F && prevScrollY < prevScrollMax - 8.F) stuckToBottom = false;
+            if (previousScrollMax > 0.F && previousScrollY < previousScrollMax - 8.F) {
+                stuckToBottom = false;
+            }
 
             List<McpActivityEvent> events = log == null ? List.of() : log.snapshotEvents();
-            List<LineRecord> lines = new ArrayList<>();
+            boolean openedRowContext = false;
+            ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing,
+                    ImGui.getStyle().getItemSpacingX(), 0.F);
             if (events.isEmpty()) {
-                ImGui.textDisabled("No MCP activity yet.");
+                ImGui.setCursorPosX(ImGui.getCursorPosX() + ROW_LEFT_PADDING);
+                ImGui.setCursorPosY(ImGui.getCursorPosY() + 2.F);
+                ImGui.textDisabled("No activity");
             } else {
                 int from = Math.max(0, events.size() - MAX_LINE_EVENTS);
                 for (int i = from; i < events.size(); i++) {
-                    McpActivityEvent event = events.get(i);
-                    float topY = ImGui.getCursorScreenPos().y;
-                    ColoredString.drawText(formatEvent(event));
-                    float bottomY = ImGui.getCursorScreenPos().y;
-                    lines.add(new LineRecord(toPlainText(event), topY, bottomY));
+                    openedRowContext |= drawEventRow(log, events.get(i), i);
                 }
             }
+            ImGui.popStyleVar();
 
-            handleRightClick(log, lines);
+            if (!openedRowContext && ImGui.isWindowHovered()
+                    && ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
+                showActivityMenu(log, null);
+            }
 
             int revision = log == null ? 0 : log.getRevision();
             boolean newContent = lastRenderedRevision != revision;
-            if (newContent && autoScroll && stuckToBottom) {
+            if (forceScrollToBottom || (newContent && autoScroll && stuckToBottom)) {
                 ImGui.setScrollHereY(1.F);
+                forceScrollToBottom = false;
             }
             lastRenderedRevision = revision;
         }
         ImGui.endChild();
 
-        drawConsoleFooter(log);
+        ImGui.separator();
+        drawFooter(log);
     }
 
-    private void handleRightClick(McpActivityLog log, List<LineRecord> lines) {
-        if (!ImGui.isWindowHovered()) return;
-        if (!ImGui.isMouseClicked(1)) return;
+    private boolean drawEventRow(McpActivityLog log, McpActivityEvent event, int index) {
+        EventPresentation presentation = presentation(event);
+        float lineHeight = ImGui.getTextLineHeight();
+        boolean hasDetail = !presentation.detail().isEmpty();
+        float rowHeight = lineHeight + ROW_PADDING_Y * 2.F + (hasDetail ? lineHeight : 0.F);
+        float width = Math.max(1.F, ImGui.getContentRegionAvailX());
+        float x = ImGui.getCursorScreenPosX();
+        float y = ImGui.getCursorScreenPosY();
 
-        ImVec2 mouse = ImGui.getMousePos();
-        String hitLine = null;
-        for (LineRecord line : lines) {
-            if (mouse.y >= line.topY && mouse.y <= line.bottomY) {
-                hitLine = line.text;
-                break;
+        ImGui.invisibleButton("###McpEvent." + event.getTimestamp() + "." + index, width, rowHeight);
+        boolean hovered = ImGui.isItemHovered();
+        ImDrawList drawList = ImGui.getWindowDrawList();
+        if (hovered) {
+            drawList.addRectFilled(x, y, x + width, y + rowHeight,
+                    CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, HOVER_ALPHA));
+        }
+
+        float textY = y + ROW_PADDING_Y;
+        float markerX = x + ROW_LEFT_PADDING + ROW_MARKER_RADIUS;
+        float markerY = textY + lineHeight * 0.5F;
+        drawList.addCircleFilled(markerX, markerY, ROW_MARKER_RADIUS,
+                presentation.color(), 12);
+
+        float timestampX = markerX + ROW_MARKER_RADIUS + 7.F;
+        String timestamp = formatTime(event.getTimestamp());
+        drawList.addText(timestampX, textY,
+                CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, MUTED_ALPHA), timestamp);
+
+        float timestampWidth = ImGui.calcTextSize("00:00:00").x;
+        float messageX = timestampX + timestampWidth + 13.F;
+        ColoredString.drawText(drawList, messageX, textY, presentation.message());
+
+        if (hasDetail) {
+            float maximumWidth = Math.max(20.F, x + width - messageX - 6.F);
+            String visibleDetail = ellipsize(presentation.detail(), maximumWidth);
+            drawList.addText(messageX, textY + lineHeight,
+                    CodeColorScheme.setAlpha(presentation.color(), MUTED_ALPHA), visibleDetail);
+            if (hovered && !visibleDetail.equals(presentation.detail())) {
+                GuiUtil.tooltip(presentation.detail());
             }
         }
 
+        if (hovered && ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
+            showActivityMenu(log, toPlainText(event));
+            return true;
+        }
+        return false;
+    }
+
+    private void drawFooter(McpActivityLog log) {
+        int total = log == null ? 0 : log.snapshotEvents().size();
+        int shown = Math.min(total, MAX_LINE_EVENTS);
+        int calls = log == null ? 0 : log.getTotalToolCalls();
+        int clients = log == null ? 0 : log.snapshotAgents().size();
+        int failed = log == null ? 0 : log.getFailedToolCalls();
+
+        StringBuilder summary = new StringBuilder();
+        if (shown != total) summary.append(shown).append('/').append(total);
+        else summary.append(total);
+        summary.append(total == 1 ? " event" : " events");
+        summary.append("  ·  ").append(calls).append(calls == 1 ? " call" : " calls");
+        summary.append("  ·  ").append(clients).append(clients == 1 ? " client" : " clients");
+        if (failed > 0) summary.append("  ·  ").append(failed).append(" failed");
+
+        pushCompactControls();
+        String followText = FontAwesomeIcons.Check + " Follow";
+        float followWidth = ImGui.calcTextSize(followText).x + COMPACT_PADDING_X * 2.F;
+        float clearWidth = ImGui.calcTextSize(FontAwesomeIcons.TrashAlt).x + COMPACT_PADDING_X * 2.F;
+        float controlsWidth = followWidth + clearWidth + ImGui.getStyle().getItemSpacingX()
+                + ImGui.getStyle().getCellPaddingX() * 2.F;
+        int tableFlags = ImGuiTableFlags.SizingStretchProp
+                | ImGuiTableFlags.NoSavedSettings | ImGuiTableFlags.NoPadOuterX;
+        if (ImGui.beginTable(getId("McpActivityFooter"), 2, tableFlags)) {
+            ImGui.tableSetupColumn("Summary", ImGuiTableColumnFlags.WidthStretch);
+            ImGui.tableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, controlsWidth);
+            ImGui.tableNextRow();
+
+            ImGui.tableNextColumn();
+            ImGui.alignTextToFramePadding();
+            ImGui.textColored(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, MUTED_ALPHA),
+                    summary.toString());
+
+            ImGui.tableNextColumn();
+            String followLabel = (autoScroll ? FontAwesomeIcons.Check + " " : "")
+                    + "Follow###McpFollow";
+            if (ImGui.button(followLabel, followWidth, 0.F)) {
+                autoScroll = !autoScroll;
+                if (autoScroll) {
+                    stuckToBottom = true;
+                    forceScrollToBottom = true;
+                }
+            }
+            GuiUtil.tooltip(autoScroll
+                    ? "Following new activity" : "Keep the current scroll position");
+
+            ImGui.sameLine();
+            if (total == 0) ImGui.beginDisabled();
+            if (ImGui.button(FontAwesomeIcons.TrashAlt + "###ClearMcpActivity",
+                    clearWidth, 0.F)) {
+                log.clear();
+                lastRenderedRevision = -1;
+            }
+            if (total == 0) ImGui.endDisabled();
+            GuiUtil.tooltip("Clear activity");
+            ImGui.endTable();
+        }
+        ImGui.popStyleVar(3);
+    }
+
+    private void showActivityMenu(McpActivityLog log, String eventText) {
         PopupItemBuilder popup = PopupItemBuilder.create();
-        final String lineText = hitLine;
-        if (lineText != null) {
-            popup.menuItem("Copy Line", () -> ImGui.setClipboardText(lineText));
+        if (eventText == null) {
+            popup.menuItem("Copy Event", "", false, () -> { });
         } else {
-            popup.menuItem("Copy Line", "", false, () -> {});
+            popup.menuItem("Copy Event", () -> ImGui.setClipboardText(eventText));
         }
         String allText = buildAllText(log);
         popup.menuItem("Copy All", allText.isEmpty(), () -> ImGui.setClipboardText(allText));
         popup.separator();
-        popup.menuItem("Clear Log", log == null || log.snapshotEvents().isEmpty(),
+        popup.menuItem("Clear Activity", log == null || log.snapshotEvents().isEmpty(),
                 () -> { if (log != null) log.clear(); });
         Main.getDisplayManager().getPopupMenu().show(popup);
     }
 
-    private static String buildAllText(McpActivityLog log) {
-        if (log == null) return "";
-        StringBuilder sb = new StringBuilder();
-        for (McpActivityEvent event : log.snapshotEvents()) {
-            if (!sb.isEmpty()) sb.append('\n');
-            sb.append(toPlainText(event));
-        }
-        return sb.toString();
-    }
+    private static EventPresentation presentation(McpActivityEvent event) {
+        ColoredStringBuilder text = ColoredStringBuilder.create();
+        int color = eventColor(event);
+        String detail = "";
+        String client = displayClientName(event.getAgentName());
 
-    private void drawConsoleFooter(McpActivityLog log) {
-        int total = log == null ? 0 : log.snapshotEvents().size();
-        int shown = Math.min(total, MAX_LINE_EVENTS);
-        ImGui.textDisabled("Showing");
-        ImGui.sameLine(0.F, ITEM_SPACING);
-        ImGui.textColored(CodeColorScheme.TEXT, shown + "/" + total);
-        ImGui.sameLine(0.F, GROUP_SPACING);
-        ImGui.textDisabled("Latest");
-        ImGui.sameLine(0.F, ITEM_SPACING);
-        long latest = log == null ? 0 : log.getLastEventMillis();
-        ImGui.textColored(CodeColorScheme.DISABLED,
-                latest == 0 ? "-" : TIME_FORMAT.format(Instant.ofEpochMilli(latest)
-                        .atZone(ZoneId.systemDefault())));
-        ImGui.sameLine(0.F, GROUP_SPACING);
-        ImGui.textDisabled("Right-click a line to copy");
-    }
-
-    private static List<ColoredString> formatEvent(McpActivityEvent event) {
-        ColoredStringBuilder csb = ColoredStringBuilder.create();
-        String time = TIME_FORMAT.format(Instant.ofEpochMilli(event.getTimestamp())
-                .atZone(ZoneId.systemDefault()));
-        csb.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, DETAIL_ALPHA), time);
-        csb.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, SEPARATOR_ALPHA), "  ");
-
-        LevelStyle style = LevelStyle.of(event);
-        csb.text(style.color, style.tag);
-        csb.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, SEPARATOR_ALPHA), "  ");
-
-        String agent = event.getAgentName().isEmpty() ? "server" : event.getAgentName();
-        csb.text(CodeColorScheme.VAR_REF, agent);
-        csb.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, SEPARATOR_ALPHA), " > ");
-
-        appendMessage(csb, event, style);
-        return csb.get();
-    }
-
-    private static String toPlainText(McpActivityEvent event) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(TIME_FORMAT.format(Instant.ofEpochMilli(event.getTimestamp())
-                .atZone(ZoneId.systemDefault()))).append("  ");
-        sb.append(LevelStyle.of(event).tag.strip()).append("  ");
-        String agent = event.getAgentName().isEmpty() ? "server" : event.getAgentName();
-        sb.append(agent).append(" > ");
         switch (event.getType()) {
-            case SERVER_STARTED, SERVER_STOPPED, SERVER_FAILED,
-                 AGENT_CONNECTED, AGENT_DISCONNECTED -> {
-                sb.append(event.getMessage());
-                if (!event.getDetail().isEmpty()) sb.append("  ").append(event.getDetail());
+            case SERVER_STARTED -> {
+                text.text(CodeColorScheme.TEXT, "Server started");
+                String endpoint = extractEndpoint(event.getMessage());
+                if (!endpoint.isEmpty()) {
+                    text.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, MUTED_ALPHA),
+                            "  " + endpoint);
+                }
+            }
+            case SERVER_STOPPED -> text.text(CodeColorScheme.TEXT, "Server stopped");
+            case SERVER_FAILED -> {
+                text.text(CodeColorScheme.NOTIFY_ERROR, "Server failed");
+                detail = event.getDetail();
+            }
+            case AGENT_CONNECTED -> {
+                text.text(CodeColorScheme.PARAM_REF, client);
+                text.text(CodeColorScheme.TEXT, " connected");
+                if (!event.getAgentVersion().isEmpty()) {
+                    text.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, MUTED_ALPHA),
+                            "  " + event.getAgentVersion());
+                }
+            }
+            case AGENT_DISCONNECTED -> {
+                text.text(CodeColorScheme.PARAM_REF, client);
+                text.text(CodeColorScheme.TEXT, " disconnected");
             }
             case TOOL_CALLED -> {
-                sb.append("called ").append(event.getToolName());
-                if (!event.getDetail().isEmpty()) sb.append("(").append(event.getDetail()).append(")");
-            }
-            case TOOL_RESULT -> {
-                sb.append(event.getMessage());
-                if (!event.getDetail().isEmpty()) sb.append("  ").append(event.getDetail());
-            }
-        }
-        return sb.toString();
-    }
-
-    private static void appendMessage(ColoredStringBuilder csb, McpActivityEvent event,
-                                      LevelStyle style) {
-        switch (event.getType()) {
-            case SERVER_STARTED, SERVER_STOPPED, SERVER_FAILED,
-                 AGENT_CONNECTED, AGENT_DISCONNECTED -> {
-                csb.text(style.color, event.getMessage());
+                text.text(CodeColorScheme.PARAM_REF, client);
+                text.text(CodeColorScheme.TEXT, " called ");
+                text.text(CodeColorScheme.METHOD_REF, event.getToolName());
                 if (!event.getDetail().isEmpty()) {
-                    csb.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, DETAIL_ALPHA),
+                    text.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, MUTED_ALPHA),
                             "  " + event.getDetail());
                 }
             }
-            case TOOL_CALLED -> {
-                csb.text(CodeColorScheme.TEXT, "called ");
-                csb.text(CodeColorScheme.METHOD_REF, event.getToolName());
-                if (!event.getDetail().isEmpty()) {
-                    csb.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, 200),
-                            "(" + event.getDetail() + ")");
-                }
-            }
             case TOOL_RESULT -> {
-                csb.text(style.color, event.getMessage());
-                if (!event.getDetail().isEmpty()) {
-                    csb.text(CodeColorScheme.setAlpha(CodeColorScheme.NOTIFY_ERROR, 220),
-                            "  " + truncate(event.getDetail(), 140));
-                }
+                text.text(CodeColorScheme.METHOD_REF, event.getToolName());
+                text.text(event.isSuccess() ? CodeColorScheme.TEXT : CodeColorScheme.NOTIFY_ERROR,
+                        event.isSuccess() ? " completed" : " failed");
+                text.text(CodeColorScheme.setAlpha(CodeColorScheme.DISABLED, MUTED_ALPHA),
+                        "  " + event.getDurationMillis() + " ms");
+                if (!event.isSuccess()) detail = event.getDetail();
             }
         }
+        return new EventPresentation(text.get(), detail, color);
     }
 
-    private static String truncate(String text, int max) {
-        if (text.length() <= max) return text;
-        return text.substring(0, max - 3) + "...";
+    private static int eventColor(McpActivityEvent event) {
+        return switch (event.getType()) {
+            case SERVER_STARTED, AGENT_CONNECTED -> CodeColorScheme.NOTIFY_SUCCESS;
+            case SERVER_STOPPED, AGENT_DISCONNECTED -> CodeColorScheme.DISABLED;
+            case SERVER_FAILED -> CodeColorScheme.NOTIFY_ERROR;
+            case TOOL_CALLED -> CodeColorScheme.NOTIFY_INFORMATION;
+            case TOOL_RESULT -> event.isSuccess()
+                    ? CodeColorScheme.NOTIFY_SUCCESS : CodeColorScheme.NOTIFY_ERROR;
+        };
     }
 
-    private record LineRecord(String text, float topY, float bottomY) { }
+    private static String toPlainText(McpActivityEvent event) {
+        EventPresentation presentation = presentation(event);
+        StringBuilder text = new StringBuilder(formatTime(event.getTimestamp())).append("  ");
+        for (ColoredString part : presentation.message()) text.append(part.getText());
+        if (!presentation.detail().isEmpty()) text.append("  ").append(presentation.detail());
+        return text.toString();
+    }
 
-    private record LevelStyle(String tag, int color) {
-        static LevelStyle of(McpActivityEvent event) {
-            return switch (event.getType()) {
-                case SERVER_STARTED -> new LevelStyle("START", CodeColorScheme.NOTIFY_SUCCESS);
-                case SERVER_STOPPED -> new LevelStyle("STOP ", CodeColorScheme.NOTIFY_WARN);
-                case SERVER_FAILED -> new LevelStyle("FAIL ", CodeColorScheme.NOTIFY_ERROR);
-                case AGENT_CONNECTED -> new LevelStyle("CONN ", CodeColorScheme.NOTIFY_SUCCESS);
-                case AGENT_DISCONNECTED -> new LevelStyle("DROP ", CodeColorScheme.NOTIFY_WARN);
-                case TOOL_CALLED -> new LevelStyle("CALL ", CodeColorScheme.NOTIFY_INFORMATION);
-                case TOOL_RESULT -> event.isSuccess()
-                        ? new LevelStyle(" OK  ", CodeColorScheme.NOTIFY_SUCCESS)
-                        : new LevelStyle("ERR  ", CodeColorScheme.NOTIFY_ERROR);
-            };
+    private static String buildAllText(McpActivityLog log) {
+        if (log == null) return "";
+        StringBuilder text = new StringBuilder();
+        for (McpActivityEvent event : log.snapshotEvents()) {
+            if (!text.isEmpty()) text.append('\n');
+            text.append(toPlainText(event));
         }
+        return text.toString();
     }
+
+    private static String ellipsize(String text, float maximumWidth) {
+        if (text.isEmpty() || ImGui.calcTextSize(text).x <= maximumWidth) return text;
+        String suffix = "...";
+        float available = Math.max(0.F, maximumWidth - ImGui.calcTextSize(suffix).x);
+        int low = 0;
+        int high = text.length();
+        while (low < high) {
+            int middle = (low + high + 1) >>> 1;
+            if (ImGui.calcTextSize(text.substring(0, middle)).x <= available) low = middle;
+            else high = middle - 1;
+        }
+        return text.substring(0, low) + suffix;
+    }
+
+    private static String extractEndpoint(String message) {
+        int index = message.lastIndexOf("http");
+        return index < 0 ? "" : message.substring(index).trim();
+    }
+
+    private static String displayClientName(String name) {
+        return name == null || name.isBlank() ? "Client" : name;
+    }
+
+    private static String formatTime(long timestamp) {
+        return TIME_FORMAT.format(Instant.ofEpochMilli(timestamp)
+                .atZone(ZoneId.systemDefault()));
+    }
+
+    private static void pushCompactControls() {
+        ImGui.pushStyleVar(ImGuiStyleVar.FramePadding, COMPACT_PADDING_X, COMPACT_PADDING_Y);
+        ImGui.pushStyleVar(ImGuiStyleVar.FrameRounding, COMPACT_ROUNDING);
+        ImGui.pushStyleVar(ImGuiStyleVar.CellPadding,
+                ImGui.getStyle().getCellPaddingX(), 0.F);
+    }
+
+    private static float compactControlHeight() {
+        return ImGui.getFontSize() + COMPACT_PADDING_Y * 2.F;
+    }
+
+    private record EventPresentation(List<ColoredString> message, String detail, int color) { }
 }
