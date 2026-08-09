@@ -934,7 +934,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 BytecodeEditorLauncher.edit(input);
             }
         } else if (bindings.DECOMPILER_VIEW_XREFS.isPressed()) {
-            if (target.getXrefBuilderProvider() != null) {
+            if (target.getViewXrefs() != null) {
+                target.getViewXrefs().run();
+            } else if (target.getXrefBuilderProvider() != null) {
                 target.getXrefBuilderProvider().viewXrefs(trinity);
             } else if (target.getSearchAllOccurrences() != null) {
                 target.getSearchAllOccurrences().run();
@@ -1160,6 +1162,22 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.navigationTarget = input;
         this.navigationInstruction = instruction;
         this.autoscrollTo = new DecompilerAutoScroll(input, instruction);
+    }
+
+    public void setDecompileVariableTarget(MethodInput methodInput, int variableIndex,
+                                           int componentOccurrence) {
+        this.setDecompileTarget(methodInput.getOwningClass());
+        this.navigationTarget = methodInput;
+        this.navigationInstruction = null;
+        this.autoscrollTo = DecompilerAutoScroll.forVariable(
+                methodInput, variableIndex, componentOccurrence);
+    }
+
+    public void setDecompileVariableDeclarationTarget(MethodInput methodInput, int variableIndex) {
+        this.setDecompileTarget(methodInput.getOwningClass());
+        this.navigationTarget = methodInput;
+        this.navigationInstruction = null;
+        this.autoscrollTo = DecompilerAutoScroll.forVariableDeclaration(methodInput, variableIndex);
     }
 
     @Override

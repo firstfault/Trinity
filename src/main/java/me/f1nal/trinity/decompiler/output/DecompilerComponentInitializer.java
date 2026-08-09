@@ -3,6 +3,7 @@ package me.f1nal.trinity.decompiler.output;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.DecompiledMethod;
+import me.f1nal.trinity.decompiler.DecompiledClass;
 import me.f1nal.trinity.decompiler.modules.decompiler.exps.VarExprent;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
@@ -27,6 +28,7 @@ import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureSignatureF
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderMemberRef;
+import me.f1nal.trinity.gui.windows.impl.variablexref.VariableXrefViewerFrame;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.util.ByteUtil;
 import me.f1nal.trinity.util.StringUtil;
@@ -54,13 +56,18 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
      * The method that this component corresponds to.
      */
     private final DecompiledMethod decompilingMethod;
+    private final DecompiledClass decompiledClass;
 
-    public DecompilerComponentInitializer(Trinity trinity, DecompilerComponent component, String originalText, ClassInput decompilingClass, DecompiledMethod decompilingMethod) {
+    public DecompilerComponentInitializer(Trinity trinity, DecompilerComponent component,
+                                          String originalText, ClassInput decompilingClass,
+                                          DecompiledMethod decompilingMethod,
+                                          DecompiledClass decompiledClass) {
         this.trinity = trinity;
         this.component = component;
         this.originalText = originalText;
         this.decompilingClass = decompilingClass;
         this.decompilingMethod = decompilingMethod;
+        this.decompiledClass = decompiledClass;
     }
 
     @Override
@@ -435,6 +442,11 @@ public class DecompilerComponentInitializer implements OutputMemberVisitor {
 
         if (methodInput != null) {
             component.setPreviewVariable(methodInput, varIndex, variableMember.isDefinition());
+            Runnable viewXrefs = () -> Main.getWindowManager().addClosableWindow(
+                    new VariableXrefViewerFrame(trinity, decompiledClass, methodInput, varIndex));
+            component.setViewXrefs(viewXrefs);
+            component.addPopupBuilder(builder -> builder.menuItem("View Xrefs",
+                    Main.getKeyBindManager().DECOMPILER_VIEW_XREFS.getKeyName(), viewXrefs));
         }
 
         if (variable != null) {

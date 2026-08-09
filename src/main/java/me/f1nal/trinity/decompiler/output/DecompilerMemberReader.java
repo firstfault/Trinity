@@ -215,7 +215,9 @@ public class DecompilerMemberReader {
             }
 
             DecompilerComponent component = new DecompilerComponent(componentText);
-            DecompilerComponentInitializer initializer = new DecompilerComponentInitializer(decompiledClass.getTrinity(), component, componentText, decompiledClass.getClassInput(), currentMethod);
+            DecompilerComponentInitializer initializer = new DecompilerComponentInitializer(
+                    decompiledClass.getTrinity(), component, componentText,
+                    decompiledClass.getClassInput(), currentMethod, decompiledClass);
             outputMember.visit(initializer);
             this.addComponent(component);
 

@@ -15,6 +15,7 @@ import me.f1nal.trinity.database.DatabaseLoader;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.decompiler.output.colors.ColoredStringBuilder;
 import me.f1nal.trinity.execution.Input;
+import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.execution.packages.ArchiveEntryViewerType;
 import me.f1nal.trinity.gui.backend.ImGuiApplication;
 import me.f1nal.trinity.gui.actions.ApplicationActionRegistry;
@@ -461,6 +462,20 @@ public final class DisplayManager extends ImGuiApplication {
     public void followDecompilerView(Input<?> input, AbstractInsnNode instruction,
                                      NavigationAction action, String displayText) {
         this.navigateDecompilerView(input, instruction, action, displayText);
+    }
+
+    public void followDecompilerVariable(MethodInput methodInput, int variableIndex,
+                                         int componentOccurrence, NavigationAction action) {
+        DecompilerWindow window = this.navigateDecompilerView(
+                methodInput, null, action, null);
+        window.setDecompileVariableTarget(methodInput, variableIndex, componentOccurrence);
+    }
+
+    public void followDecompilerVariableDeclaration(MethodInput methodInput, int variableIndex,
+                                                    NavigationAction action) {
+        DecompilerWindow window = this.navigateDecompilerView(
+                methodInput, null, action, null);
+        window.setDecompileVariableDeclarationTarget(methodInput, variableIndex);
     }
 
     private DecompilerWindow navigateDecompilerView(Input<?> input, AbstractInsnNode instruction,

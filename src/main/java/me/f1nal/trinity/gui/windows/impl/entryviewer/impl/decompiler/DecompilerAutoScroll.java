@@ -11,19 +11,52 @@ import java.util.List;
 public class DecompilerAutoScroll {
     private final Input<?> input;
     private final AbstractInsnNode instruction;
+    private final Integer variableIndex;
+    private final Integer variableOccurrence;
+    private final boolean variableDeclaration;
     private DecompilerComponent component;
     private boolean found;
     private boolean fallbackToClass;
     private boolean navigationPending = true;
 
     public DecompilerAutoScroll(Input<?> input, AbstractInsnNode instruction) {
+        this(input, instruction, null, null, false);
+    }
+
+    private DecompilerAutoScroll(Input<?> input, AbstractInsnNode instruction,
+                                 Integer variableIndex, Integer variableOccurrence,
+                                 boolean variableDeclaration) {
         this.input = input;
         this.instruction = instruction;
+        this.variableIndex = variableIndex;
+        this.variableOccurrence = variableOccurrence;
+        this.variableDeclaration = variableDeclaration;
+    }
+
+    public static DecompilerAutoScroll forVariable(MethodInput methodInput, int variableIndex,
+                                                   int componentOccurrence) {
+        return new DecompilerAutoScroll(methodInput, null, variableIndex,
+                componentOccurrence, false);
+    }
+
+    public static DecompilerAutoScroll forVariableDeclaration(MethodInput methodInput,
+                                                              int variableIndex) {
+        return new DecompilerAutoScroll(methodInput, null, variableIndex, null, true);
     }
 
     public DecompilerComponent findComponent(DecompiledClass decompiledClass) {
         if (!this.found) {
-            if (this.instruction != null && this.input instanceof MethodInput methodInput) {
+            if (this.variableIndex != null && this.input instanceof MethodInput methodInput) {
+                if (decompiledClass.isProgressive()) return null;
+                this.component = this.variableDeclaration
+                        ? decompiledClass.findVariableDeclarationComponent(methodInput, this.variableIndex)
+                        : decompiledClass.findVariableComponent(
+                                methodInput, this.variableIndex, this.variableOccurrence);
+                if (this.component != null) {
+                    this.found = true;
+                    return this.component;
+                }
+            } else if (this.instruction != null && this.input instanceof MethodInput methodInput) {
                 if (decompiledClass.isProgressive()) {
                     return null;
                 }

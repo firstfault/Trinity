@@ -597,6 +597,26 @@ public final class DecompiledClass {
                 ? findInstructionConstantComponent(
                         methodInput, instruction, constantValue, constantOccurrence)
                 : findInstructionComponent(methodInput, instruction);
+        DecompilerComponent highlightedComponent = highlightOwnerClass && usageComponent != null
+                ? findInstructionOwnerComponent(usageComponent, instruction)
+                : usageComponent;
+        return createComponentUsagePreview(
+                methodInput, usageComponent, highlightedComponent, surroundingLines);
+    }
+
+    public MethodUsagePreview getVariableUsagePreview(MethodInput methodInput, int variableIndex,
+                                                       int componentOccurrence,
+                                                       int surroundingLines) {
+        DecompilerComponent usageComponent = findVariableComponent(
+                methodInput, variableIndex, componentOccurrence);
+        return createComponentUsagePreview(
+                methodInput, usageComponent, usageComponent, surroundingLines);
+    }
+
+    private MethodUsagePreview createComponentUsagePreview(MethodInput methodInput,
+                                                            DecompilerComponent usageComponent,
+                                                            DecompilerComponent highlightedComponent,
+                                                            int surroundingLines) {
         DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(methodInput.getDetails());
         if (usageComponent == null || boundaries == null) {
             return MethodUsagePreview.EMPTY;
@@ -645,9 +665,6 @@ public final class DecompiledClass {
         firstLine = Math.max(0, lastLine - contextLineCount);
 
         List<List<DecompilerLineText>> context = List.copyOf(bodyLines.subList(firstLine, lastLine));
-        DecompilerComponent highlightedComponent = highlightOwnerClass
-                ? findInstructionOwnerComponent(usageComponent, instruction)
-                : usageComponent;
         return new MethodUsagePreview(methodLines.get(signatureLine), context, highlightedComponent,
                 firstLine > 0, lastLine < bodyLines.size());
     }
@@ -822,6 +839,84 @@ public final class DecompiledClass {
         VariablePreviewKey key = new VariablePreviewKey(methodInput.getDetails(), variableIndex);
         return variablePreviewCache.computeIfAbsent(key,
                 ignored -> createVariableDeclarationPreview(methodInput.getDetails(), variableIndex));
+    }
+
+    public List<DecompilerVariableReference> getVariableReferences(MethodInput methodInput,
+                                                                    int variableIndex) {
+        DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(methodInput.getDetails());
+        if (boundaries == null) return List.of();
+
+        int startIndex = componentList.indexOf(boundaries.start());
+        int endIndex = componentList.indexOf(boundaries.end());
+        if (startIndex < 0 || endIndex < startIndex) return List.of();
+
+        Set<DecompilerComponent> methodComponentSet = Collections.newSetFromMap(new IdentityHashMap<>());
+        methodComponentSet.addAll(componentList.subList(startIndex, endIndex + 1));
+        String methodKey = methodInput.getDetails().toString();
+        DecompilerLine signatureLine = lines.stream()
+                .filter(line -> line.getComponents().stream().anyMatch(text ->
+                        methodComponentSet.contains(text.getComponent())
+                                && methodKey.equals(text.getComponent().memberKey)))
+                .findFirst().orElse(null);
+
+        List<DecompilerVariableReference> references = new ArrayList<>();
+        int componentOccurrence = 0;
+        for (DecompilerLine line : lines) {
+            int textOffset = 0;
+            String lineText = line.getText();
+            for (DecompilerLineText text : line.getComponents()) {
+                DecompilerComponent component = text.getComponent();
+                DecompilerComponent.VariablePreview variable = component.getPreviewVariable();
+                int textEnd = textOffset + text.getText().length();
+                if (methodComponentSet.contains(component)
+                        && isVariable(variable, methodInput, variableIndex)) {
+                    DecompilerVariableAccess access = DecompilerVariableAccessClassifier.classify(
+                            lineText, textOffset, textEnd, variable.declaration(), line == signatureLine);
+                    if (access != null) {
+                        references.add(new DecompilerVariableReference(
+                                methodInput, variableIndex, componentOccurrence, access,
+                                line.getLineNumber(), lineText,
+                                List.copyOf(line.getComponents()), component));
+                    }
+                    componentOccurrence++;
+                }
+                textOffset = textEnd;
+            }
+        }
+        return List.copyOf(references);
+    }
+
+    public DecompilerComponent findVariableComponent(MethodInput methodInput, int variableIndex,
+                                                      int componentOccurrence) {
+        int occurrence = 0;
+        for (DecompilerLine line : lines) {
+            for (DecompilerLineText text : line.getComponents()) {
+                DecompilerComponent component = text.getComponent();
+                if (!isVariable(component.getPreviewVariable(), methodInput, variableIndex)) continue;
+                if (occurrence++ == componentOccurrence) return component;
+            }
+        }
+        return null;
+    }
+
+    public DecompilerComponent findVariableDeclarationComponent(MethodInput methodInput,
+                                                                 int variableIndex) {
+        for (DecompilerLine line : lines) {
+            for (DecompilerLineText text : line.getComponents()) {
+                DecompilerComponent component = text.getComponent();
+                DecompilerComponent.VariablePreview variable = component.getPreviewVariable();
+                if (isVariable(variable, methodInput, variableIndex) && variable.declaration()) {
+                    return component;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean isVariable(DecompilerComponent.VariablePreview variable,
+                                      MethodInput methodInput, int variableIndex) {
+        return variable != null && variable.index() == variableIndex
+                && variable.methodInput().getDetails().equals(methodInput.getDetails());
     }
 
     private List<DecompilerLineText> createVariableDeclarationPreview(MemberDetails method, int variableIndex) {

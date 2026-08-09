@@ -45,6 +45,7 @@ public class DecompilerComponent {
     private FieldInput previewField;
     private VariablePreview previewVariable;
     private IXrefBuilderProvider xrefBuilderProvider;
+    private Runnable viewXrefs;
     private Runnable searchAllOccurrences;
     private boolean recursiveInvocation;
     private boolean importDeclaration;
@@ -181,6 +182,14 @@ public class DecompilerComponent {
 
     public IXrefBuilderProvider getXrefBuilderProvider() {
         return xrefBuilderProvider;
+    }
+
+    public void setViewXrefs(Runnable viewXrefs) {
+        this.viewXrefs = viewXrefs;
+    }
+
+    public Runnable getViewXrefs() {
+        return viewXrefs;
     }
 
     public void setSearchAllOccurrences(Runnable searchAllOccurrences) {

@@ -147,6 +147,21 @@ public final class DecompilerPreviewRenderer {
                 constantValue, constantOccurrence);
     }
 
+    public void drawVariableUsagePreview(DecompiledClass decompiledClass, MethodInput methodInput,
+                                         int variableIndex, int componentOccurrence) {
+        drawDetails(methodSignature(methodInput));
+        trinity.getDecompiler().refreshRenderedText(decompiledClass);
+        decompiledClass.applyPendingOutput();
+        DecompiledClass.MethodUsagePreview preview = decompiledClass.getVariableUsagePreview(
+                methodInput, variableIndex, componentOccurrence, METHOD_USAGE_SURROUNDING_LINES);
+        if (preview.signature().isEmpty()) {
+            drawVariablePreview(decompiledClass,
+                    new DecompilerComponent.VariablePreview(methodInput, variableIndex, false), true);
+            return;
+        }
+        drawUsagePreview(preview);
+    }
+
     public void drawMethodPatternUsagePreview(MethodInput methodInput,
                                               List<AbstractInsnNode> instructions) {
         drawDetails(methodSignature(methodInput));
@@ -197,6 +212,10 @@ public final class DecompilerPreviewRenderer {
             return;
         }
 
+        drawUsagePreview(preview);
+    }
+
+    private void drawUsagePreview(DecompiledClass.MethodUsagePreview preview) {
         ImGui.separator();
         int classIndent = getLeadingWhitespace(preview.signature());
         for (List<DecompilerLineText> line : preview.lines()) {
