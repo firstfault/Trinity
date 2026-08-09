@@ -34,6 +34,7 @@ import me.f1nal.trinity.gui.windows.impl.SavingDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.ArchiveEntryViewerWindow;
 import me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler.DecompilerWindow;
+import me.f1nal.trinity.gui.windows.impl.mcp.McpStatusWindow;
 import me.f1nal.trinity.gui.windows.impl.navigation.NavigationHistoryWindow;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.gui.viewport.FontManager;
@@ -95,6 +96,9 @@ public final class DisplayManager extends ImGuiApplication {
         } else {
             this.windowManager.addStaticWindow(NewProjectFrame.class);
         }
+        if (Main.getPreferences().isMcpStatusVisible()) {
+            Main.runLater(() -> this.windowManager.addStaticWindow(McpStatusWindow.class));
+        }
     }
 
     @Override
@@ -126,6 +130,9 @@ public final class DisplayManager extends ImGuiApplication {
         Main.runLater(() -> this.windowManager.addStaticWindow(ProjectBrowserFrame.class));
         if (Main.getPreferences().isNavigationHistoryVisible()) {
             Main.runLater(() -> this.windowManager.addStaticWindow(NavigationHistoryWindow.class));
+        }
+        if (Main.getPreferences().isMcpStatusVisible()) {
+            Main.runLater(() -> this.windowManager.addStaticWindow(McpStatusWindow.class));
         }
     }
 

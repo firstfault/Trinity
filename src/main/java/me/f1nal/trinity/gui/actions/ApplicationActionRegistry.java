@@ -12,6 +12,7 @@ import me.f1nal.trinity.gui.windows.impl.constant.ConstantViewFrame;
 import me.f1nal.trinity.gui.windows.impl.constant.search.ConstantSearchTypeString;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
 import me.f1nal.trinity.gui.windows.impl.navigation.NavigationHistoryWindow;
+import me.f1nal.trinity.gui.windows.impl.mcp.McpStatusWindow;
 import me.f1nal.trinity.gui.windows.impl.membersearch.MemberSearchFrame;
 import me.f1nal.trinity.gui.windows.impl.pattern.PatternSearchFrame;
 import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
@@ -39,6 +40,7 @@ public final class ApplicationActionRegistry {
     public static final String PROJECT_BROWSER = "window.project_browser";
     public static final String CLASS_STRUCTURE = "window.class_structure";
     public static final String NAVIGATION_HISTORY = "window.navigation_history";
+    public static final String MCP_STATUS = "window.mcp_status";
     public static final String XREF_SEARCH = "inspect.xref_search";
     public static final String MEMBER_SEARCH = "inspect.member_search";
     public static final String CONSTANT_SEARCH = "inspect.constant_search";
@@ -95,6 +97,10 @@ public final class ApplicationActionRegistry {
         this.register(NAVIGATION_HISTORY, "Navigation History", "Show previous decompiler navigations", "Window",
                 FontAwesomeIcons.History, List.of("recent navigation", "back forward"), this::hasProject,
                 () -> this.openStatic(NavigationHistoryWindow.class));
+
+        this.register(MCP_STATUS, "MCP Status", "Show MCP server activity, connected agents, and tool calls", "Window",
+                FontAwesomeIcons.Terminal, List.of("mcp console", "mcp log", "agent activity"), () -> true,
+                () -> this.openStatic(McpStatusWindow.class));
 
         this.register(XREF_SEARCH, "Cross-Reference Search", "Search bytecode cross-references", "Inspect",
                 FontAwesomeIcons.CodeBranch, List.of("xref", "references", "usages"), this::hasProject,

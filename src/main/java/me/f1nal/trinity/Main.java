@@ -11,6 +11,7 @@ import me.f1nal.trinity.gui.backend.ImGuiApplication;
 import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.keybindings.KeyBindManager;
 import me.f1nal.trinity.logging.Logging;
+import me.f1nal.trinity.mcp.McpActivityLog;
 import me.f1nal.trinity.mcp.TrinityMcpServer;
 import me.f1nal.trinity.theme.ThemeManager;
 import me.f1nal.trinity.update.UpdateChecker;
@@ -34,7 +35,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class Main {
-    public static final String VERSION = "0.0.4-alpha1";
+    public static final String VERSION = "0.0.1";
     private static final String MACOS_FIRST_THREAD_PROPERTY = "trinity.macos.firstThread";
 
     /**
@@ -47,6 +48,7 @@ public class Main {
     private static KeyBindManager keyBindManager;
     private static ThemeManager themeManager;
     private static TrinityMcpServer mcpServer;
+    private static McpActivityLog mcpActivityLog;
     private static final List<ShutdownHook> shutdownHooks = new ArrayList<>();
     private static final Queue<FutureTask<?>> scheduledTasks = Queues.newArrayDeque();
     private static final Object updateCheckLock = new Object();
@@ -86,6 +88,7 @@ public class Main {
         appDataManager = new AppDataManager();
         appDataManager.load();
         displayManager = new DisplayManager("Trinity: " + VERSION);
+        mcpActivityLog = new McpActivityLog();
         startMcpServer();
         appDataManager.getState().setLastLaunchedVersion(VERSION);
         addShutdownHook(new ShutdownHook("Database Save", new DatabaseSaveShutdownHook()));
@@ -144,13 +147,21 @@ public class Main {
         String host = System.getProperty("trinity.mcp.host", "127.0.0.1");
         int port = Integer.getInteger("trinity.mcp.port", 7331);
         try {
-            mcpServer = new TrinityMcpServer(new LiveTrinityApplication(), host, port);
+            mcpServer = new TrinityMcpServer(new LiveTrinityApplication(), host, port, mcpActivityLog);
             mcpServer.start();
             Logging.info("MCP server listening at {}", mcpServer.endpoint());
         } catch (Exception exception) {
             mcpServer = null;
             Logging.error("Unable to start MCP server: {}", exception.getMessage());
         }
+    }
+
+    public static McpActivityLog getMcpActivityLog() {
+        return mcpActivityLog;
+    }
+
+    public static TrinityMcpServer getMcpServer() {
+        return mcpServer;
     }
 
     public static void checkForUpdatesOnStartup() {

@@ -18,8 +18,9 @@ import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.classstructure.ClassStructureWindow;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
-import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
+import me.f1nal.trinity.gui.windows.impl.mcp.McpStatusWindow;
 import me.f1nal.trinity.gui.windows.impl.navigation.NavigationHistoryWindow;
+import me.f1nal.trinity.gui.windows.impl.project.create.NewProjectFrame;
 import me.f1nal.trinity.theme.CodeColorScheme;
 import me.f1nal.trinity.theme.AccentColor;
 import me.f1nal.trinity.theme.Theme;
@@ -46,6 +47,7 @@ public class MainMenuBar {
         windowsToolbar.put(ProjectBrowserFrame.class, "Project Browser");
         windowsToolbar.put(ClassStructureWindow.class, "Class Structure");
         windowsToolbar.put(NavigationHistoryWindow.class, "Navigation History");
+        windowsToolbar.put(McpStatusWindow.class, "MCP Status");
     }
 
     public void draw(ProjectNavigationBand navigationBand) {

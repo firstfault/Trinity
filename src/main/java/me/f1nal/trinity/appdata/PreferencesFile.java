@@ -30,6 +30,7 @@ public class PreferencesFile extends AppDataFile {
     private boolean checkForUpdates = true;
     private boolean navigationNotifications = false;
     private boolean navigationHistoryVisible = false;
+    private boolean mcpStatusVisible = false;
     private boolean assemblerHideMetadata = false;
     private AccentColor accentColor = AccentColor.SAPPHIRE;
     private String currentTheme;
@@ -163,6 +164,14 @@ public class PreferencesFile extends AppDataFile {
 
     public void setNavigationHistoryVisible(boolean navigationHistoryVisible) {
         this.navigationHistoryVisible = navigationHistoryVisible;
+    }
+
+    public boolean isMcpStatusVisible() {
+        return mcpStatusVisible;
+    }
+
+    public void setMcpStatusVisible(boolean mcpStatusVisible) {
+        this.mcpStatusVisible = mcpStatusVisible;
     }
 
     public boolean isAssemblerHideMetadata() {
