@@ -44,6 +44,8 @@ public class WindowManager {
     private final InputManager inputHandler = new InputManager();
     private AbstractWindow focusRequested;
     private int focusFramesRemaining;
+    private AbstractWindow topDialogThisFrame;
+    private AbstractWindow modalYieldedForFocus;
     private final Animation dialogDimAnimation = new Animation(Easing.EASE_IN_OUT_QUAD, 220L);
     private boolean resettingWindows;
 
@@ -56,6 +58,8 @@ public class WindowManager {
         StaticWindow[] staticWindows = staticWindowMap.values().toArray(new StaticWindow[0]);
         List<AbstractWindow> dialogs = this.getVisibleDialogs(windows, staticWindows);
         boolean dialogVisible = !dialogs.isEmpty();
+        this.topDialogThisFrame = dialogVisible ? dialogs.get(dialogs.size() - 1) : null;
+        this.modalYieldedForFocus = null;
         this.dialogDimAnimation.run(dialogVisible ? DIALOG_DIM_ALPHA : 0.F);
 
         for (ClosableWindow frame : windows) {
@@ -79,7 +83,8 @@ public class WindowManager {
 
         AbstractWindow requested = this.focusRequested;
         if (requested != null && dialogVisible
-                && requested != dialogs.get(dialogs.size() - 1)) {
+                && requested != this.topDialogThisFrame
+                && this.modalYieldedForFocus != this.topDialogThisFrame) {
             // A background focus request must never override the modal stack. Besides making
             // the dialog unresponsive, ImGui can then leave only its dimmed backdrop visible.
             this.focusRequested = null;
@@ -90,13 +95,33 @@ public class WindowManager {
                 this.focusRequested = null;
             } else if (requested.hasRendered()) {
                 ImGui.setWindowFocus(requested.getImGuiWindowName());
-                if (ImGui.isMouseDown(0)) {
+                if (this.modalYieldedForFocus != null) {
+                    // The modal popup was deliberately closed for this focus transaction and
+                    // will reopen itself next frame. Retrying would close it repeatedly.
+                    this.focusRequested = null;
+                } else if (ImGui.isMouseDown(0)) {
                     this.focusFramesRemaining = 2;
                 } else if (--this.focusFramesRemaining <= 0) {
                     this.focusRequested = null;
                 }
             }
         }
+        this.topDialogThisFrame = null;
+        this.modalYieldedForFocus = null;
+    }
+
+    /**
+     * Called while a modal's native popup is current. Temporarily closing that popup lets ImGui
+     * perform a real background focus/tab transaction; the same modal reopens on the next frame.
+     */
+    public boolean shouldYieldModalForPendingFocus(AbstractWindow dialog) {
+        AbstractWindow requested = this.focusRequested;
+        if (dialog != this.topDialogThisFrame || requested == null
+                || requested == dialog || !requested.isVisible()) {
+            return false;
+        }
+        this.modalYieldedForFocus = dialog;
+        return true;
     }
 
     private List<AbstractWindow> getVisibleDialogs(ClosableWindow[] windows, StaticWindow[] staticWindows) {
@@ -164,6 +189,9 @@ public class WindowManager {
             closableWindows.clear();
             staticWindowMap.clear();
             dialogOrder.clear();
+            this.focusRequested = null;
+            this.topDialogThisFrame = null;
+            this.modalYieldedForFocus = null;
             synchronized (this.popups) {
                 this.popups.forEach(PopupWindow::close);
             }
@@ -252,7 +280,9 @@ public class WindowManager {
         final ClosableWindow windowAlreadyOpened = getClosableWindows().stream().filter(openWindow -> openWindow.isAlreadyOpen(window)).findFirst().orElse(null);
 
         if (windowAlreadyOpened != null) {
-            window.dispose();
+            // Archive viewers may return the already-managed instance. It is not a rejected
+            // duplicate and must not be disposed before it is selected again.
+            if (windowAlreadyOpened != window) window.dispose();
             windowAlreadyOpened.setVisible(true);
             this.moveDialogToFront(windowAlreadyOpened);
             return;

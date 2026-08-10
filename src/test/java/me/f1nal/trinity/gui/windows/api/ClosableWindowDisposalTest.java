@@ -40,6 +40,21 @@ class ClosableWindowDisposalTest {
         assertEquals(1, duplicate.disposals);
     }
 
+    @Test
+    void readdingManagedWindowDoesNotDisposeIt() {
+        WindowManager manager = new WindowManager(null);
+        TestWindow window = new TestWindow();
+
+        manager.addClosableWindow(window);
+        manager.addClosableWindow(window);
+
+        assertEquals(1, manager.getClosableWindows().size());
+        assertSame(window, manager.getClosableWindows().get(0));
+        assertTrue(window.isVisible());
+        assertFalse(window.isDisposed());
+        assertEquals(0, window.disposals);
+    }
+
     private static final class TestWindow extends ClosableWindow {
         private int disposals;
 

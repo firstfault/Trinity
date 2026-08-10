@@ -69,6 +69,35 @@ class DecompilerDelimiterMatcherTest {
                 List.of(line), new DecompilerCoordinates(line, 15)));
     }
 
+    @Test
+    void matchesDelimiterOnEitherSideOfCaret() {
+        DecompilerLine line = line(1, "call(value)");
+        int opening = line.getText().indexOf('(');
+        int closing = line.getText().indexOf(')');
+
+        DecompilerDelimiterMatcher.Match beforeOpening =
+                DecompilerDelimiterMatcher.findMatchAtCaret(
+                        List.of(line), new DecompilerCoordinates(line, opening));
+        DecompilerDelimiterMatcher.Match afterOpening =
+                DecompilerDelimiterMatcher.findMatchAtCaret(
+                        List.of(line), new DecompilerCoordinates(line, opening + 1));
+        DecompilerDelimiterMatcher.Match beforeClosing =
+                DecompilerDelimiterMatcher.findMatchAtCaret(
+                        List.of(line), new DecompilerCoordinates(line, closing));
+        DecompilerDelimiterMatcher.Match afterClosing =
+                DecompilerDelimiterMatcher.findMatchAtCaret(
+                        List.of(line), new DecompilerCoordinates(line, closing + 1));
+
+        assertNotNull(beforeOpening);
+        assertNotNull(afterOpening);
+        assertNotNull(beforeClosing);
+        assertNotNull(afterClosing);
+        assertEquals(closing, beforeOpening.matching().getCharacter());
+        assertEquals(closing, afterOpening.matching().getCharacter());
+        assertEquals(opening, beforeClosing.matching().getCharacter());
+        assertEquals(opening, afterClosing.matching().getCharacter());
+    }
+
     private static DecompilerLine line(int number, String text) {
         DecompilerLine line = new DecompilerLine(number);
         line.addComponent(text(text, true));

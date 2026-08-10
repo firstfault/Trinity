@@ -22,6 +22,7 @@ public abstract class AbstractWindow {
     private float dialogPositionY;
     private Runnable childWindowRenderer;
     private boolean disposed;
+    private int currentDockId;
     /**
      * If this window is currently visible.
      */
@@ -161,6 +162,16 @@ public abstract class AbstractWindow {
         this.dialogPositionX = ImGui.getWindowPosX();
         this.dialogPositionY = ImGui.getWindowPosY();
         this.dialogPositionKnown = true;
+    }
+
+    /** Records the dock leaf established by the current Begin call. */
+    protected final void captureCurrentDockId() {
+        this.currentDockId = this.isDialog() ? 0 : ImGui.getWindowDockID();
+    }
+
+    /** Returns the dock leaf reported by this window's latest Begin call. */
+    public final int getCurrentDockId() {
+        return currentDockId;
     }
 
     public void setTitle(String title) {

@@ -92,7 +92,10 @@ public abstract class ClosableWindow extends AbstractWindow {
         }
         if (this.isDialog()) {
             if (begin) {
-                if (!this.openState.get() || !this.isVisible()) ImGui.closeCurrentPopup();
+                if (!this.openState.get() || !this.isVisible()
+                        || Main.getWindowManager().shouldYieldModalForPendingFocus(this)) {
+                    ImGui.closeCurrentPopup();
+                }
                 ImGui.endPopup();
             }
         } else {
@@ -159,11 +162,18 @@ public abstract class ClosableWindow extends AbstractWindow {
         this.applyOpeningPosition();
 
         int flags = this.applyDialogWindowFlags(this.windowFlags);
-        if (!this.isDialog()) return ImGui.begin(this.getImGuiWindowName(), this.openState, flags);
+        if (!this.isDialog()) {
+            boolean begin = ImGui.begin(this.getImGuiWindowName(), this.openState, flags);
+            // Begin() establishes docking even when it returns false for an inactive tab.
+            this.captureCurrentDockId();
+            return begin;
+        }
 
         String name = this.getImGuiWindowName();
         if (!ImGui.isPopupOpen(name)) ImGui.openPopup(name);
-        return ImGui.beginPopupModal(name, this.openState, flags);
+        boolean begin = ImGui.beginPopupModal(name, this.openState, flags);
+        this.captureCurrentDockId();
+        return begin;
     }
 
     @Override

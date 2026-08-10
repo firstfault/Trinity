@@ -90,7 +90,6 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     private boolean defaultDockApplied;
     private int defaultDockNodeId;
     private int defaultDockAttempts;
-    private int currentDockId;
 
     public AssemblerFrame(Trinity trinity, MethodInput methodInput, Instruction2SourceMapping sourceMapping) {
         super("Assembler: " + methodInput.getName(), 660, 500, trinity);
@@ -108,10 +107,6 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
 
     MethodInput getMethodInput() {
         return methodInput;
-    }
-
-    int getCurrentDockId() {
-        return currentDockId;
     }
 
     /**
@@ -161,7 +156,8 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             this.windowFlags &= ~ImGuiWindowFlags.NoFocusOnAppearing;
         }
 
-        if (!this.defaultDockApplied && this.defaultDockNodeId != 0 && this.currentDockId != 0) {
+        if (!this.defaultDockApplied && this.defaultDockNodeId != 0
+                && this.getCurrentDockId() != 0) {
             this.defaultDockApplied = true;
             this.selectDockTabWithoutFocus();
         } else if (!this.defaultDockApplied
@@ -174,22 +170,14 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
 
     /** Makes this assembler the visible tab without changing ImGui's focused window. */
     private void selectDockTabWithoutFocus() {
-        ImGuiDockNode dockNode = imgui.internal.ImGui.dockBuilderGetNode(this.currentDockId);
+        ImGuiDockNode dockNode = imgui.internal.ImGui.dockBuilderGetNode(
+                this.getCurrentDockId());
         ImGuiWindow assemblerWindow = imgui.internal.ImGui.findWindowByName(this.getImGuiWindowName());
         if (dockNode == null || !dockNode.isValidPtr()
                 || assemblerWindow == null || !assemblerWindow.isValidPtr()) {
             return;
         }
         dockNode.setVisibleWindow(assemblerWindow);
-    }
-
-    @Override
-    protected boolean beginWindow() {
-        boolean visible = super.beginWindow();
-        // Begin() still establishes the docked window when its tab is inactive, even though it
-        // returns false. Capture the node here so docking cannot retry forever for hidden tabs.
-        this.currentDockId = ImGui.getWindowDockID();
-        return visible;
     }
 
     @Override

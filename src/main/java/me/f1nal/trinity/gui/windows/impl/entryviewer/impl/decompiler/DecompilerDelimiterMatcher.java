@@ -9,6 +9,24 @@ final class DecompilerDelimiterMatcher {
     private DecompilerDelimiterMatcher() {
     }
 
+    /** Finds a delimiter immediately before or after a caret boundary. */
+    static Match findMatchAtCaret(List<DecompilerLine> lines, DecompilerCoordinates caret) {
+        if (caret == null || caret.getLine() == null) return null;
+        DecompilerLine line = caret.getLine();
+        String text = line.getText();
+        int boundary = Math.max(0, Math.min(caret.getCharacter(), text.length()));
+
+        // Prefer the character after the caret. This makes the ambiguous boundary between
+        // adjacent delimiters behave like editors that match the delimiter being entered.
+        if (isMatchableDelimiter(line, text, boundary)) {
+            return findMatch(lines, new DecompilerCoordinates(line, boundary));
+        }
+        if (isMatchableDelimiter(line, text, boundary - 1)) {
+            return findMatch(lines, new DecompilerCoordinates(line, boundary - 1));
+        }
+        return null;
+    }
+
     static Match findMatch(List<DecompilerLine> lines, DecompilerCoordinates selected) {
         if (selected == null || selected.getLine() == null) return null;
         String selectedLine = selected.getLine().getText();
@@ -101,6 +119,12 @@ final class DecompilerDelimiterMatcher {
 
     static boolean isDelimiter(char character) {
         return isOpening(character) || isClosing(character);
+    }
+
+    private static boolean isMatchableDelimiter(DecompilerLine line, String text, int index) {
+        return index >= 0 && index < text.length()
+                && line.isRawDecompilerTextAtCharacter(index)
+                && isDelimiter(text.charAt(index));
     }
 
     private static boolean isOpening(char character) {

@@ -104,6 +104,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private boolean searchDirty = true;
     private boolean searchBarFocused;
     private float stickyHeaderHeight;
+    private float stickyFooterHeight;
     private final Animation stickyClassHover = new Animation(Easing.EASE_OUT_QUAD, 110L);
     private final Animation stickyMethodHover = new Animation(Easing.EASE_OUT_QUAD, 110L);
     private final Animation stickyDelimiterHover = new Animation(Easing.EASE_OUT_QUAD, 110L);
@@ -123,7 +124,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private DecompiledClass delimiterMatchClass;
     private final Stopwatch focusTime = new Stopwatch();
     private static Stopwatch viewMember = new Stopwatch();
-    private int currentDockId;
 
     public DecompilerWindow(ClassTarget classTarget, Trinity trinity) {
         super(trinity, classTarget);
@@ -236,15 +236,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     @Override
-    protected boolean beginWindow() {
-        boolean visible = super.beginWindow();
-        // Begin() establishes the dock node even for an inactive tab. Recording it here makes
-        // the assembler anchor independent of which decompiler tab currently renders content.
-        this.currentDockId = ImGui.getWindowDockID();
-        return visible;
-    }
-
-    @Override
     protected void renderFrame() {
         if (selectedClass != null) {
             this.drawDecompileTab();
@@ -257,10 +248,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         getMenuBar().setProgress(decompiling || progressive
                 ? new MenuBarProgress("Decompiler", decompiling ? "Decompiling Methods" : "Rendering Methods", -1)
                 : null);
-    }
-
-    public int getCurrentDockId() {
-        return currentDockId;
     }
 
     @Subscribe
@@ -569,7 +556,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         ImVec2 textSize = ImGui.calcTextSize("0".repeat(lineNumberDigits));
         float lineNumberSpacing = 3.F + textSize.x;
         float cursorPosX = ImGui.getCursorPosX();
-        boolean decompilerInputBlocked = enumCardHovered || this.blockStickyHeaderInput();
+        boolean decompilerInputBlocked = enumCardHovered || this.blockStickyPreviewInput();
         DecompilerGhostTextRenderer.setInteractionBlocked(decompilerInputBlocked);
 
         if (!this.searchBarFocused && !decompilerInputBlocked) cursor.handleInputs(mousePosX, mousePosY);
@@ -762,19 +749,14 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.handleMemberKeyMappings();
     }
 
-    void updateDelimiterMatch(DecompilerCoordinates clickedCharacter, float mouseX) {
+    void updateDelimiterMatch(DecompilerCoordinates caret) {
         this.clearDelimiterMatch();
-        if (clickedCharacter == null || this.hasActiveRename()) return;
-
-        int character = clickedCharacter.getCharacter();
-        DecompilerLine.TextRangeBounds bounds = clickedCharacter.getLine()
-                .getRenderedRange(character, character + 1);
-        if (bounds == null || mouseX < bounds.minX() || mouseX > bounds.maxX()) return;
+        if (caret == null || this.hasActiveRename()) return;
 
         DecompiledClass decompiledClass = this.getDecompiledClass();
         if (decompiledClass == null) return;
-        DecompilerDelimiterMatcher.Match match = DecompilerDelimiterMatcher.findMatch(
-                decompiledClass.getLines(), clickedCharacter);
+        DecompilerDelimiterMatcher.Match match = DecompilerDelimiterMatcher.findMatchAtCaret(
+                decompiledClass.getLines(), caret);
         if (match == null) return;
 
         this.delimiterMatch = match;
@@ -1037,14 +1019,16 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
     }
 
-    private boolean blockStickyHeaderInput() {
-        if (this.stickyHeaderHeight <= 0.F) return false;
-
+    private boolean blockStickyPreviewInput() {
+        if (this.stickyHeaderHeight <= 0.F && this.stickyFooterHeight <= 0.F) return false;
         float left = ImGui.getWindowPosX();
         float top = ImGui.getWindowPosY();
         float right = left + ImGui.getWindowWidth();
+        float bottom = top + ImGui.getWindowHeight();
         return ImGui.isWindowHovered()
-                && ImGui.isMouseHoveringRect(left, top, right, top + this.stickyHeaderHeight);
+                && (ImGui.isMouseHoveringRect(left, top, right, top + this.stickyHeaderHeight)
+                || ImGui.isMouseHoveringRect(left, bottom - this.stickyFooterHeight,
+                right, bottom));
     }
 
     private boolean drawStickyHeaders(DecompiledClass decompiledClass, float lineNumberSpacing,
@@ -1070,16 +1054,14 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         DecompilerLine methodLine = currentMethod == null ? null : currentMethod.signatureLine();
 
         float sourceVisibleTop = visibleTop + visibleHeaders.size() * lineHeight;
-        DecompilerCoordinates delimiterPreview = this.getOffscreenDelimiterPreview(
+        OffscreenDelimiterPreview delimiterPreview = this.getOffscreenDelimiterPreview(
                 sourceVisibleTop, visibleBottom);
-        if (delimiterPreview != null
-                && !visibleHeaders.contains(delimiterPreview.getLine())) {
-            visibleHeaders.add(delimiterPreview.getLine());
-        }
-        if (visibleHeaders.isEmpty()) {
-            this.stickyHeaderHeight = 0.F;
-            this.stickyDelimiterHover.run(0.F);
-            return false;
+        DecompilerCoordinates topDelimiter = delimiterPreview != null && !delimiterPreview.below()
+                ? delimiterPreview.coordinates() : null;
+        DecompilerCoordinates bottomDelimiter = delimiterPreview != null && delimiterPreview.below()
+                ? delimiterPreview.coordinates() : null;
+        if (topDelimiter != null && !visibleHeaders.contains(topDelimiter.getLine())) {
+            visibleHeaders.add(topDelimiter.getLine());
         }
 
         float left = ImGui.getWindowPosX();
@@ -1087,7 +1069,10 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         float bottom = visibleTop + lineHeight * visibleHeaders.size();
         this.stickyHeaderHeight = bottom - visibleTop;
         ImDrawList drawList = ImGui.getWindowDrawList();
-        drawList.addRectFilled(left, visibleTop, right, bottom, ImGui.getColorU32(ImGuiCol.WindowBg));
+        if (!visibleHeaders.isEmpty()) {
+            drawList.addRectFilled(left, visibleTop, right, bottom,
+                    ImGui.getColorU32(ImGuiCol.WindowBg));
+        }
 
         float rowTop = visibleTop;
         boolean classHovered = false;
@@ -1096,8 +1081,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         boolean dedicatedDelimiterRow = false;
         boolean windowHovered = ImGui.isWindowHovered() && !enumCardHovered;
         for (DecompilerLine line : visibleHeaders) {
-            boolean delimiterTarget = delimiterPreview != null
-                    && line == delimiterPreview.getLine();
+            boolean delimiterTarget = topDelimiter != null
+                    && line == topDelimiter.getLine();
             boolean dedicatedDelimiter = delimiterTarget
                     && line != classLine && line != methodLine;
             dedicatedDelimiterRow |= dedicatedDelimiter;
@@ -1114,7 +1099,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             if (rowHovered) {
                 ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
                 if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
-                    this.cursor.navigateTo(delimiterTarget ? delimiterPreview
+                    this.cursor.navigateTo(delimiterTarget ? topDelimiter
                             : new DecompilerCoordinates(line, line.getText().length()));
                 }
             }
@@ -1125,34 +1110,86 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
         if (!showClass) this.stickyClassHover.run(0.F);
         if (currentMethod == null) this.stickyMethodHover.run(0.F);
-        if (!dedicatedDelimiterRow) this.stickyDelimiterHover.run(0.F);
+        if (!dedicatedDelimiterRow && bottomDelimiter == null) {
+            this.stickyDelimiterHover.run(0.F);
+        }
 
-        drawList.addLine(left, bottom, right, bottom, ImGui.getColorU32(ImGuiCol.Border));
+        if (!visibleHeaders.isEmpty()) {
+            drawList.addLine(left, bottom, right, bottom, ImGui.getColorU32(ImGuiCol.Border));
+        }
 
         float lineNumberX = left + ImGui.getStyle().getWindowPaddingX() - ImGui.getScrollX();
         float textX = lineNumberX + lineNumberSpacing;
         float textY = visibleTop + Math.max(0.F, (lineHeight - textSize.y) * 0.5F);
-        drawList.pushClipRect(left, visibleTop, right, bottom, true);
-        for (DecompilerLine line : visibleHeaders) {
-            drawList.addText(lineNumberX, textY, CodeColorScheme.LINE_NUMBER,
-                    String.valueOf(line.getLineNumber()));
-            int highlightedCharacter = delimiterPreview != null
-                    && line == delimiterPreview.getLine()
-                    ? delimiterPreview.getCharacter() : -1;
-            drawStickyLine(drawList, line, textX, textY, highlightedCharacter, textSize.y);
-            textY += lineHeight;
+        if (!visibleHeaders.isEmpty()) {
+            drawList.pushClipRect(left, visibleTop, right, bottom, true);
+            for (DecompilerLine line : visibleHeaders) {
+                drawList.addText(lineNumberX, textY, CodeColorScheme.LINE_NUMBER,
+                        String.valueOf(line.getLineNumber()));
+                int highlightedCharacter = topDelimiter != null
+                        && line == topDelimiter.getLine()
+                        ? topDelimiter.getCharacter() : -1;
+                drawStickyLine(drawList, line, textX, textY, highlightedCharacter, textSize.y);
+                textY += lineHeight;
+            }
+            drawList.popClipRect();
         }
-        drawList.popClipRect();
 
-        boolean hovered = classHovered || methodHovered || delimiterHovered;
+        boolean bottomHovered = this.drawBottomDelimiterPreview(bottomDelimiter, drawList,
+                left, right, visibleBottom, lineHeight, lineNumberSpacing, textSize,
+                windowHovered);
+        boolean hovered = classHovered || methodHovered || delimiterHovered || bottomHovered;
         if (hovered) {
             this.hoveredComponent = null;
         }
         return hovered;
     }
 
-    private DecompilerCoordinates getOffscreenDelimiterPreview(float visibleTop,
-                                                                float visibleBottom) {
+    private boolean drawBottomDelimiterPreview(DecompilerCoordinates preview,
+                                               ImDrawList drawList, float left, float right,
+                                               float visibleBottom, float lineHeight,
+                                               float lineNumberSpacing, ImVec2 textSize,
+                                               boolean windowHovered) {
+        if (preview == null) {
+            this.stickyFooterHeight = 0.F;
+            return false;
+        }
+
+        this.stickyFooterHeight = lineHeight;
+        float top = visibleBottom - lineHeight;
+        boolean hovered = windowHovered
+                && ImGui.isMouseHoveringRect(left, top, right, visibleBottom);
+        this.stickyDelimiterHover.run(hovered ? STICKY_HOVER_ALPHA : 0.F);
+        drawList.addRectFilled(left, top, right, visibleBottom,
+                ImGui.getColorU32(ImGuiCol.WindowBg));
+        if (this.stickyDelimiterHover.getValue() > 0.F) {
+            drawList.addRectFilled(left, top, right, visibleBottom,
+                    CodeColorScheme.setAlpha(CodeColorScheme.TEXT,
+                            Math.round(this.stickyDelimiterHover.getValue())));
+        }
+        drawList.addLine(left, top, right, top, ImGui.getColorU32(ImGuiCol.Border));
+
+        float lineNumberX = left + ImGui.getStyle().getWindowPaddingX() - ImGui.getScrollX();
+        float textX = lineNumberX + lineNumberSpacing;
+        float textY = top + Math.max(0.F, (lineHeight - textSize.y) * 0.5F);
+        drawList.pushClipRect(left, top, right, visibleBottom, true);
+        drawList.addText(lineNumberX, textY, CodeColorScheme.LINE_NUMBER,
+                String.valueOf(preview.getLine().getLineNumber()));
+        drawStickyLine(drawList, preview.getLine(), textX, textY,
+                preview.getCharacter(), textSize.y);
+        drawList.popClipRect();
+
+        if (hovered) {
+            ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
+                this.cursor.navigateTo(preview);
+            }
+        }
+        return hovered;
+    }
+
+    private OffscreenDelimiterPreview getOffscreenDelimiterPreview(float visibleTop,
+                                                                   float visibleBottom) {
         if (this.delimiterMatch == null) return null;
         DecompilerCoordinates matching = this.delimiterMatch.matching();
         int character = matching.getCharacter();
@@ -1161,7 +1198,12 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (bounds != null && bounds.maxY() > visibleTop && bounds.minY() < visibleBottom) {
             return null;
         }
-        return matching;
+        float targetY = bounds != null ? bounds.minY()
+                : matching.getLine().pos == null ? visibleTop : matching.getLine().pos.y;
+        return new OffscreenDelimiterPreview(matching, targetY >= visibleBottom);
+    }
+
+    private record OffscreenDelimiterPreview(DecompilerCoordinates coordinates, boolean below) {
     }
 
     private static boolean isLineAboveViewport(DecompilerLine line, float visibleTop, float textHeight) {

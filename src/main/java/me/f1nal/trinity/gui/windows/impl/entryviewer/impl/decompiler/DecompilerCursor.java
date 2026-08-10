@@ -83,14 +83,13 @@ public class DecompilerCursor {
             this.window.clearDelimiterMatch();
             this.selectWord(this.getCoordinates(line, mousePosX, false));
         } else if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
-            DecompilerCoordinates clickedCharacter = this.getCoordinates(line, mousePosX, false);
             this.setCoordinates(this.getCoordinates(line, mousePosX, true));
             this.draggingSelection = true;
             this.selectionEnd = null;
             this.selectionUsesBoundaries = false;
             this.highlightSelectionMatches = false;
             this.blink.reset();
-            this.window.updateDelimiterMatch(clickedCharacter, mousePosX);
+            this.window.updateDelimiterMatch(this.coordinates);
         }
     }
 
@@ -167,16 +166,7 @@ public class DecompilerCursor {
     }
 
     public void moveHorizontally(int delta) {
-        final int nextCharacter = this.coordinates.getCharacter() + delta;
-        if (nextCharacter < 0) {
-            this.moveVertically(-1);
-            this.setCharacter(Integer.MAX_VALUE);
-        } else if (nextCharacter >= this.coordinates.getLine().getText().length()) {
-            this.moveVertically(1);
-            this.setCharacter(0);
-        } else {
-            this.setCharacter(nextCharacter);
-        }
+        this.setCoordinates(this.moveHorizontally(this.coordinates, delta));
     }
 
     public void setCharacter(int character) {
@@ -184,14 +174,41 @@ public class DecompilerCursor {
     }
 
     public void moveVertically(int delta) {
+        this.setCoordinates(this.moveVertically(this.coordinates, delta));
+    }
+
+    private DecompilerCoordinates moveHorizontally(DecompilerCoordinates origin, int delta) {
+        if (origin == null || delta == 0) return origin;
+        String text = origin.getLine().getText();
+        int character = Math.max(0, Math.min(origin.getCharacter(), text.length()));
+        if (delta < 0) {
+            if (character > 0) {
+                return new DecompilerCoordinates(origin.getLine(), character - 1);
+            }
+            DecompilerCoordinates previous = this.moveVertically(origin, -1);
+            return previous.getLine() == origin.getLine() ? origin
+                    : new DecompilerCoordinates(previous.getLine(), previous.getLine().getText().length());
+        }
+        if (character < text.length()) {
+            return new DecompilerCoordinates(origin.getLine(), character + 1);
+        }
+        DecompilerCoordinates next = this.moveVertically(origin, 1);
+        return next.getLine() == origin.getLine() ? origin
+                : new DecompilerCoordinates(next.getLine(), 0);
+    }
+
+    private DecompilerCoordinates moveVertically(DecompilerCoordinates origin, int delta) {
+        if (origin == null || delta == 0) return origin;
         List<DecompilerLine> lines = window.getDecompiledClass().getLines();
-        int indexOf = lines.indexOf(this.coordinates.getLine()) + delta;
+        int indexOf = lines.indexOf(origin.getLine()) + delta;
 
         while (indexOf >= 0 && indexOf < lines.size()
                 && window.isDecompilerLineHidden(lines.get(indexOf))) indexOf += delta;
-        if (indexOf < 0 || indexOf >= lines.size()) return;
+        if (indexOf < 0 || indexOf >= lines.size()) return origin;
 
-        this.setCoordinates(new DecompilerCoordinates(lines.get(indexOf), this.coordinates.getCharacter()));
+        DecompilerLine target = lines.get(indexOf);
+        return new DecompilerCoordinates(target,
+                Math.min(origin.getCharacter(), target.getText().length()));
     }
 
     public void handleLineCursorDrawing(DecompilerCoordinates coordinates, float cursorScreenPosX, float lineNumberSpacing, float mousePosX, float cursorPosY, ImVec2 textSize) {
@@ -264,20 +281,78 @@ public class DecompilerCursor {
             return;
         }
 
-        if (ImGui.isKeyPressed(ImGuiKey.DownArrow)) this.moveVertically(1);
-        else if (ImGui.isKeyPressed(ImGuiKey.UpArrow)) this.moveVertically(-1);
-        else if (ImGui.isKeyPressed(ImGuiKey.LeftArrow)) this.moveHorizontally(-1);
-        else if (ImGui.isKeyPressed(ImGuiKey.RightArrow)) this.moveHorizontally(1);
+        int horizontal = 0;
+        int vertical = 0;
+        if (ImGui.isKeyPressed(ImGuiKey.DownArrow)) vertical = 1;
+        else if (ImGui.isKeyPressed(ImGuiKey.UpArrow)) vertical = -1;
+        else if (ImGui.isKeyPressed(ImGuiKey.LeftArrow)) horizontal = -1;
+        else if (ImGui.isKeyPressed(ImGuiKey.RightArrow)) horizontal = 1;
         else return;
 
-        this.window.clearDelimiterMatch();
+        boolean extendSelection = ImGui.getIO().getKeyShift();
+        if (extendSelection) {
+            DecompilerCoordinates active = this.selectionEnd == null
+                    ? this.coordinates : this.selectionEnd;
+            DecompilerCoordinates moved = horizontal == 0
+                    ? this.moveVertically(active, vertical)
+                    : this.moveHorizontally(active, horizontal);
+            this.selectionEnd = moved.equals(this.coordinates) ? null : moved;
+            this.selectionUsesBoundaries = true;
+            this.highlightSelectionMatches = this.selectionEnd != null;
+            this.blink.reset();
+        } else if (this.selectionEnd != null && horizontal != 0) {
+            DecompilerCoordinates collapsed = horizontal < 0
+                    ? this.earlier(this.coordinates, this.selectionEnd)
+                    : this.later(this.coordinates, this.selectionEnd);
+            this.clearSelection();
+            this.setCoordinates(collapsed);
+        } else {
+            if (this.selectionEnd != null) {
+                DecompilerCoordinates active = this.selectionEnd;
+                this.clearSelection();
+                this.setCoordinates(active);
+            }
+            if (horizontal == 0) this.moveVertically(vertical);
+            else this.moveHorizontally(horizontal);
+        }
+
+        DecompilerCoordinates caret = this.selectionEnd == null
+                ? this.coordinates : this.selectionEnd;
+        this.window.updateDelimiterMatch(caret);
         this.setScrollToCursor();
     }
 
+    private void clearSelection() {
+        this.selectionEnd = null;
+        this.draggingSelection = false;
+        this.highlightSelectionMatches = false;
+        this.selectionUsesBoundaries = false;
+    }
+
+    private DecompilerCoordinates earlier(DecompilerCoordinates first,
+                                          DecompilerCoordinates second) {
+        return this.compare(first, second) <= 0 ? first : second;
+    }
+
+    private DecompilerCoordinates later(DecompilerCoordinates first,
+                                        DecompilerCoordinates second) {
+        return this.compare(first, second) >= 0 ? first : second;
+    }
+
+    private int compare(DecompilerCoordinates first, DecompilerCoordinates second) {
+        List<DecompilerLine> lines = window.getDecompiledClass().getLines();
+        int lineComparison = Integer.compare(lines.indexOf(first.getLine()),
+                lines.indexOf(second.getLine()));
+        return lineComparison != 0 ? lineComparison
+                : Integer.compare(first.getCharacter(), second.getCharacter());
+    }
+
     public void handleLineDrawing(DecompilerLine line, float cursorScreenPosX, float lineNumberSpacing, float mousePosX, float cursorPosY, ImVec2 textSize) {
-        if (this.coordinates != null && this.coordinates.getLine() == line) {
+        DecompilerCoordinates caret = this.selectionEnd == null
+                ? this.coordinates : this.selectionEnd;
+        if (caret != null && caret.getLine() == line) {
             if (this.selectionEnd == null && !this.window.hasActiveRename()) {
-                this.handleLineCursorDrawing(this.coordinates, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
+                this.handleLineCursorDrawing(caret, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
             }
 
             if (this.scroll) {

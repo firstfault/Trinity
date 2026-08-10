@@ -53,6 +53,7 @@ public abstract class StaticWindow extends AbstractWindow {
         } else {
             begin = ImGui.begin(title, flags);
         }
+        this.captureCurrentDockId();
         if (begin) {
             this.rendered = true;
             if (!covered) {
@@ -68,7 +69,11 @@ public abstract class StaticWindow extends AbstractWindow {
 
             this.renderChildWindows();
             if (this.isDialog()) {
-                if (!this.open.get() || !this.isVisible()) ImGui.closeCurrentPopup();
+                if (!this.open.get() || !this.isVisible()
+                        || me.f1nal.trinity.Main.getWindowManager()
+                        .shouldYieldModalForPendingFocus(this)) {
+                    ImGui.closeCurrentPopup();
+                }
                 ImGui.endPopup();
             } else {
                 ImGui.end();
