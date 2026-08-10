@@ -145,6 +145,16 @@ public abstract class ClosableWindow extends AbstractWindow {
         return windowFocused;
     }
 
+    /** Whether closing the current project would discard edits owned by this window. */
+    public boolean hasUnsavedChanges() {
+        return false;
+    }
+
+    /** Human-readable name used by the global unsaved-changes dialog. */
+    public String getUnsavedChangesDescription() {
+        return this.getTitle();
+    }
+
     protected boolean beginWindow() {
         this.applyOpeningPosition();
 

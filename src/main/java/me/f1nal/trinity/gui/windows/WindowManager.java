@@ -78,6 +78,13 @@ public class WindowManager {
         if (!dialogVisible) this.drawDialogFadeOut();
 
         AbstractWindow requested = this.focusRequested;
+        if (requested != null && dialogVisible
+                && requested != dialogs.get(dialogs.size() - 1)) {
+            // A background focus request must never override the modal stack. Besides making
+            // the dialog unresponsive, ImGui can then leave only its dimmed backdrop visible.
+            this.focusRequested = null;
+            requested = null;
+        }
         if (requested != null) {
             if (!requested.isVisible()) {
                 this.focusRequested = null;
@@ -330,6 +337,22 @@ public class WindowManager {
 
     public List<ClosableWindow> getClosableWindows() {
         return closableWindows;
+    }
+
+    /** Returns every open window whose working state would be lost with the project. */
+    public List<ClosableWindow> getUnsavedChangesWindows() {
+        synchronized (this.closableWindows) {
+            return this.closableWindows.stream()
+                    .filter(ClosableWindow::isVisible)
+                    .filter(window -> !window.isCloseRequested())
+                    .filter(ClosableWindow::hasUnsavedChanges)
+                    .toList();
+        }
+    }
+
+    /** Global dirty flag for window-owned edits that are not yet part of the project model. */
+    public boolean hasUnsavedChanges() {
+        return !this.getUnsavedChangesWindows().isEmpty();
     }
 
     public boolean hasBlockingWindow() {

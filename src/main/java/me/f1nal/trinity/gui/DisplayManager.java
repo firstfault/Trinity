@@ -30,6 +30,7 @@ import me.f1nal.trinity.gui.navigation.NavigationHistory;
 import me.f1nal.trinity.gui.navigation.NavigationTarget;
 import me.f1nal.trinity.gui.search.GlobalSearchOverlay;
 import me.f1nal.trinity.gui.windows.WindowManager;
+import me.f1nal.trinity.gui.windows.api.ClosableWindow;
 import me.f1nal.trinity.gui.windows.impl.LoadingDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.SavingDatabasePopup;
 import me.f1nal.trinity.gui.windows.impl.cp.ProjectBrowserFrame;
@@ -65,10 +66,16 @@ public final class DisplayManager extends ImGuiApplication {
     private static final int MAIN_DOCKSPACE_ID = 123;
     private static final float PROJECT_BROWSER_WIDTH_RATIO = 410.F / 1920.F;
     private static final float CLASS_STRUCTURE_HEIGHT_RATIO = 287.F / 920.F;
+    private static final float NAVIGATION_HISTORY_HEIGHT_RATIO = 0.32F;
+    private static final float MCP_STATUS_WIDTH_RATIO = 0.36F;
     private static final String PROJECT_BROWSER_WINDOW =
             "Project Browser###BeginWndStaticWndProject Browser";
     private static final String CLASS_STRUCTURE_WINDOW =
             "Class Structure###BeginWndStaticWndClass Structure";
+    private static final String NAVIGATION_HISTORY_WINDOW =
+            "Navigation History###BeginWndStaticWndNavigation History";
+    private static final String MCP_STATUS_WINDOW =
+            "MCP Status###BeginWndStaticWndMCP Status";
     /**
      * Initial window title to be set when first creating the display.
      */
@@ -88,6 +95,7 @@ public final class DisplayManager extends ImGuiApplication {
     private NavigationTarget currentDecompilerTarget;
     private boolean initialized;
     private boolean defaultDockLayoutPending;
+    private boolean unsavedChangesDialogOpen;
 
     public DisplayManager(String windowTitle) {
         this.windowTitle = windowTitle;
@@ -240,6 +248,10 @@ public final class DisplayManager extends ImGuiApplication {
         ImGui.popStyleVar(2);
     }
 
+    public static int getMainDockspaceId() {
+        return MAIN_DOCKSPACE_ID;
+    }
+
     private void createDefaultDockLayout(ImGuiViewport viewport) {
         imgui.internal.ImGui.dockBuilderRemoveNode(MAIN_DOCKSPACE_ID);
         imgui.internal.ImGui.dockBuilderAddNode(MAIN_DOCKSPACE_ID,
@@ -249,20 +261,34 @@ public final class DisplayManager extends ImGuiApplication {
         imgui.internal.ImGui.dockBuilderSetNodeSize(MAIN_DOCKSPACE_ID,
                 viewport.getWorkSizeX(), viewport.getWorkSizeY());
 
-        ImInt projectBrowserNode = new ImInt();
+        ImInt projectBrowserColumn = new ImInt();
         ImInt rightSideNode = new ImInt();
         imgui.internal.ImGui.dockBuilderSplitNode(MAIN_DOCKSPACE_ID, ImGuiDir.Left,
-                PROJECT_BROWSER_WIDTH_RATIO, projectBrowserNode, rightSideNode);
+                PROJECT_BROWSER_WIDTH_RATIO, projectBrowserColumn, rightSideNode);
 
-        ImInt classStructureNode = new ImInt();
+        ImInt bottomRightNode = new ImInt();
         ImInt centerNode = new ImInt();
         imgui.internal.ImGui.dockBuilderSplitNode(rightSideNode.get(), ImGuiDir.Down,
-                CLASS_STRUCTURE_HEIGHT_RATIO, classStructureNode, centerNode);
+                CLASS_STRUCTURE_HEIGHT_RATIO, bottomRightNode, centerNode);
+
+        ImInt navigationHistoryNode = new ImInt();
+        ImInt projectBrowserNode = new ImInt();
+        imgui.internal.ImGui.dockBuilderSplitNode(projectBrowserColumn.get(), ImGuiDir.Down,
+                NAVIGATION_HISTORY_HEIGHT_RATIO, navigationHistoryNode, projectBrowserNode);
+
+        ImInt mcpStatusNode = new ImInt();
+        ImInt classStructureNode = new ImInt();
+        imgui.internal.ImGui.dockBuilderSplitNode(bottomRightNode.get(), ImGuiDir.Right,
+                MCP_STATUS_WIDTH_RATIO, mcpStatusNode, classStructureNode);
 
         imgui.internal.ImGui.dockBuilderDockWindow(PROJECT_BROWSER_WINDOW,
                 projectBrowserNode.get());
+        imgui.internal.ImGui.dockBuilderDockWindow(NAVIGATION_HISTORY_WINDOW,
+                navigationHistoryNode.get());
         imgui.internal.ImGui.dockBuilderDockWindow(CLASS_STRUCTURE_WINDOW,
                 classStructureNode.get());
+        imgui.internal.ImGui.dockBuilderDockWindow(MCP_STATUS_WINDOW,
+                mcpStatusNode.get());
         imgui.internal.ImGui.dockBuilderFinish(MAIN_DOCKSPACE_ID);
     }
 
@@ -402,6 +428,35 @@ public final class DisplayManager extends ImGuiApplication {
     }
 
     public void closeDatabase(Runnable after) {
+        Objects.requireNonNull(after, "after");
+        List<ClosableWindow> unsavedWindows = this.windowManager.getUnsavedChangesWindows();
+        if (!unsavedWindows.isEmpty()) {
+            this.showUnsavedChangesDialog(unsavedWindows, after);
+            return;
+        }
+        this.closeDatabaseAfterUnsavedCheck(after);
+    }
+
+    private void showUnsavedChangesDialog(List<ClosableWindow> unsavedWindows,
+                                          Runnable after) {
+        if (this.unsavedChangesDialogOpen) return;
+        this.unsavedChangesDialogOpen = true;
+
+        String windowList = unsavedWindows.stream()
+                .map(window -> "- " + window.getUnsavedChangesDescription())
+                .collect(java.util.stream.Collectors.joining("\n"));
+        this.windowManager.dialog("Unsaved Changes")
+                .warning("You have unsaved changes in:")
+                .message(windowList)
+                .action("Close Anyway", () -> {
+                    this.unsavedChangesDialogOpen = false;
+                    this.closeDatabaseAfterUnsavedCheck(after);
+                })
+                .cancel("Cancel", () -> this.unsavedChangesDialogOpen = false)
+                .show();
+    }
+
+    private void closeDatabaseAfterUnsavedCheck(Runnable after) {
         if (trinity == null) {
             after.run();
             return;
@@ -427,7 +482,9 @@ public final class DisplayManager extends ImGuiApplication {
                 .error("Trinity could not save the project.")
                 .message("The project remains open and its in-memory data has not been discarded.")
                 .defaultAction("Retry Save", () -> {
-                    if (this.trinity == databaseToClose) closeDatabase(after);
+                    if (this.trinity == databaseToClose) {
+                        closeDatabaseAfterUnsavedCheck(after);
+                    }
                 })
                 .action("Discard Changes and Close",
                         () -> completeDatabaseClose(databaseToClose, after))

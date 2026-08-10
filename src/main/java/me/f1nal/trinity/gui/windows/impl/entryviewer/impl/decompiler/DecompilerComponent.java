@@ -51,6 +51,8 @@ public class DecompilerComponent {
     private boolean importDeclaration;
     private boolean constantValueSet;
     private Object constantValue;
+    /** Text emitted between semantic decompiler tags rather than supplied by a member token. */
+    private boolean rawDecompilerText;
     // Temporary
     public Input<?> input;
     public String memberKey;
@@ -261,6 +263,14 @@ public class DecompilerComponent {
 
     public String getText() {
         return text;
+    }
+
+    public boolean isRawDecompilerText() {
+        return rawDecompilerText;
+    }
+
+    public void setRawDecompilerText(boolean rawDecompilerText) {
+        this.rawDecompilerText = rawDecompilerText;
     }
 
     public PopupItemBuilder createPopup() {

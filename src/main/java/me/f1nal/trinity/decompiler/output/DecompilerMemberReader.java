@@ -184,7 +184,7 @@ public class DecompilerMemberReader {
             }
 
             if (index != start) {
-                this.addComponent(new DecompilerComponent(rawOutput.substring(index, start)));
+                this.addComponent(createRawTextComponent(rawOutput.substring(index, start)));
             }
 
             final int end = rawOutput.indexOf(TAG_END, start);
@@ -249,7 +249,7 @@ public class DecompilerMemberReader {
         }
 
         if (index != rawOutput.length()) {
-            this.addComponent(new DecompilerComponent(rawOutput.substring(index)));
+            this.addComponent(createRawTextComponent(rawOutput.substring(index)));
         }
 
         this.setBytecodeMarkers();
@@ -277,6 +277,12 @@ public class DecompilerMemberReader {
 //        }
 
         this.componentList.add(component);
+    }
+
+    private static DecompilerComponent createRawTextComponent(String text) {
+        DecompilerComponent component = new DecompilerComponent(text);
+        component.setRawDecompilerText(true);
+        return component;
     }
 
     public List<DecompilerComponent> getComponentList() {

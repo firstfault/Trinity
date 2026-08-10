@@ -33,6 +33,12 @@ abstract class AbstractBytecodeEditorWindow extends ClosableWindow {
     }
 
     @Override
+    public final boolean hasUnsavedChanges() {
+        return this.savedState != null
+                && !this.savedState.equals(this.stateFingerprint());
+    }
+
+    @Override
     protected final void renderFrame() {
         if (error != null) {
             ImGui.textColored(CodeColorScheme.NOTIFY_ERROR, error);

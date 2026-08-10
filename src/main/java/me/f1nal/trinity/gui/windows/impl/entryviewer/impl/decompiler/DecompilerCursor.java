@@ -77,16 +77,20 @@ public class DecompilerCursor {
 
         int clickCount = ImGui.getMouseClickedCount(ImGuiMouseButton.Left);
         if (clickCount >= 3) {
+            this.window.clearDelimiterMatch();
             this.selectLine(line);
         } else if (clickCount == 2) {
+            this.window.clearDelimiterMatch();
             this.selectWord(this.getCoordinates(line, mousePosX, false));
         } else if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
+            DecompilerCoordinates clickedCharacter = this.getCoordinates(line, mousePosX, false);
             this.setCoordinates(this.getCoordinates(line, mousePosX, true));
             this.draggingSelection = true;
             this.selectionEnd = null;
             this.selectionUsesBoundaries = false;
             this.highlightSelectionMatches = false;
             this.blink.reset();
+            this.window.updateDelimiterMatch(clickedCharacter, mousePosX);
         }
     }
 
@@ -266,6 +270,7 @@ public class DecompilerCursor {
         else if (ImGui.isKeyPressed(ImGuiKey.RightArrow)) this.moveHorizontally(1);
         else return;
 
+        this.window.clearDelimiterMatch();
         this.setScrollToCursor();
     }
 

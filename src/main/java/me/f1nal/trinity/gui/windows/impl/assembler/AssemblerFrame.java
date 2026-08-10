@@ -3,10 +3,13 @@ package me.f1nal.trinity.gui.windows.impl.assembler;
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiFocusedFlags;
+import imgui.flag.ImGuiCond;
 import imgui.flag.ImGuiHoveredFlags;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiWindowFlags;
+import imgui.internal.ImGuiDockNode;
+import imgui.internal.ImGuiWindow;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
@@ -48,6 +51,7 @@ import org.objectweb.asm.tree.*;
 import java.util.*;
 
 public final class AssemblerFrame extends ClosableWindow implements ICaption {
+    private static final int DEFAULT_DOCK_ATTEMPT_LIMIT = 3;
     /**
      * Method that we are inspecting.
      */
@@ -83,19 +87,31 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     private final Deque<DocumentSnapshot> redoSnapshots = new ArrayDeque<>();
     private boolean externalChanges;
     private long nextExternalCheck;
+    private boolean defaultDockApplied;
+    private int defaultDockNodeId;
+    private int defaultDockAttempts;
+    private int currentDockId;
 
     public AssemblerFrame(Trinity trinity, MethodInput methodInput, Instruction2SourceMapping sourceMapping) {
-        super("Assembler: " + methodInput.getName() + methodInput.getDescriptor(), 660, 500, trinity);
+        super("Assembler: " + methodInput.getName(), 660, 500, trinity);
         this.methodInput = methodInput;
         this.document = new AssemblerDocument(methodInput);
         this.sourceMapping = sourceMapping;
         this.setInstructions();
         this.popupMenuBar = new PopupMenuBar(this.createMenuBar());
-        this.windowFlags |= ImGuiWindowFlags.MenuBar;
+        this.windowFlags |= ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings;
     }
 
     public PopupMenu getPopupMenu() {
         return popupMenu;
+    }
+
+    MethodInput getMethodInput() {
+        return methodInput;
+    }
+
+    int getCurrentDockId() {
+        return currentDockId;
     }
 
     /**
@@ -120,12 +136,60 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
 
     @Override
     public void render() {
+        boolean applyingDefaultDock = !this.defaultDockApplied
+                && this.defaultDockAttempts < DEFAULT_DOCK_ATTEMPT_LIMIT;
+        if (applyingDefaultDock) {
+            if (this.defaultDockNodeId == 0) {
+                this.defaultDockNodeId = AssemblerDocking.resolveDefaultDock(this);
+            }
+            if (this.defaultDockNodeId != 0) {
+                ImGui.setNextWindowDockID(this.defaultDockNodeId, ImGuiCond.Always);
+                // Showing the new assembler tab must not transfer keyboard/mouse focus away
+                // from the decompiler or from a popup opened during the same frame.
+                this.windowFlags |= ImGuiWindowFlags.NoFocusOnAppearing;
+            }
+            this.defaultDockAttempts++;
+        }
         this.windowFlags &= ~ImGuiWindowFlags.UnsavedDocument;
         if (this.methodNotFresh) this.windowFlags |= ImGuiWindowFlags.UnsavedDocument;
 
         ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 0.F, 0.F);
-        super.render();
-        ImGui.popStyleVar();
+        try {
+            super.render();
+        } finally {
+            ImGui.popStyleVar();
+            this.windowFlags &= ~ImGuiWindowFlags.NoFocusOnAppearing;
+        }
+
+        if (!this.defaultDockApplied && this.defaultDockNodeId != 0 && this.currentDockId != 0) {
+            this.defaultDockApplied = true;
+            this.selectDockTabWithoutFocus();
+        } else if (!this.defaultDockApplied
+                && this.defaultDockAttempts >= DEFAULT_DOCK_ATTEMPT_LIMIT) {
+            // Never keep submitting forced docking state indefinitely if ImGui rejects the
+            // target node. The window remains usable as a normal floating window.
+            this.defaultDockApplied = true;
+        }
+    }
+
+    /** Makes this assembler the visible tab without changing ImGui's focused window. */
+    private void selectDockTabWithoutFocus() {
+        ImGuiDockNode dockNode = imgui.internal.ImGui.dockBuilderGetNode(this.currentDockId);
+        ImGuiWindow assemblerWindow = imgui.internal.ImGui.findWindowByName(this.getImGuiWindowName());
+        if (dockNode == null || !dockNode.isValidPtr()
+                || assemblerWindow == null || !assemblerWindow.isValidPtr()) {
+            return;
+        }
+        dockNode.setVisibleWindow(assemblerWindow);
+    }
+
+    @Override
+    protected boolean beginWindow() {
+        boolean visible = super.beginWindow();
+        // Begin() still establishes the docked window when its tab is inactive, even though it
+        // returns false. Capture the node here so docking cannot retry forever for hidden tabs.
+        this.currentDockId = ImGui.getWindowDockID();
+        return visible;
     }
 
     @Override
@@ -417,7 +481,17 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
 
     @Override
     public String getTitle() {
-        return super.getTitle() + ": " + instructions.getExecutableCount() + " instructions";
+        String baseTitle = super.getTitle();
+        List<AssemblerFrame> sameName = Main.getWindowManager()
+                .getWindowsOfType(AssemblerFrame.class).stream()
+                .filter(AssemblerFrame::isVisible)
+                .filter(window -> !window.isCloseRequested())
+                .filter(window -> window.methodInput.getName().equals(this.methodInput.getName()))
+                .toList();
+        if (sameName.size() <= 1) return baseTitle;
+
+        int index = sameName.indexOf(this);
+        return index < 0 ? baseTitle : baseTitle + " #" + (index + 1);
     }
 
     public void moveInstruction(InstructionComponent instruction, int delta) {
@@ -835,13 +909,19 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         return false;
     }
 
+    @Override
+    public boolean hasUnsavedChanges() {
+        return this.methodNotFresh || this.document.isDirty();
+    }
+
     public void beginDragMutation() {
         beginMutation();
     }
 
     @Override
     public void close() {
-        if (forceClose || !methodNotFresh) {
+        if (Main.getWindowManager().isResettingWindows()
+                || forceClose || !this.hasUnsavedChanges()) {
             super.close();
             return;
         }

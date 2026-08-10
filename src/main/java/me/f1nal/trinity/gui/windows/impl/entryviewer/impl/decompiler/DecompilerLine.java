@@ -52,6 +52,19 @@ public class DecompilerLine {
         return null;
     }
 
+    /** Whether this character came from ordinary source syntax rather than a semantic token. */
+    public boolean isRawDecompilerTextAtCharacter(int character) {
+        int offset = 0;
+        for (DecompilerLineText component : components) {
+            int end = offset + component.getText().length();
+            if (character >= offset && character < end) {
+                return component.getComponent().isRawDecompilerText();
+            }
+            offset = end;
+        }
+        return false;
+    }
+
     public DecompilerComponent getRecursiveInvocation() {
         for (DecompilerLineText component : components) {
             if (component.getComponent().isRecursiveInvocation()) return component.getComponent();
