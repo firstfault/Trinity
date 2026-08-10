@@ -5,6 +5,7 @@ public enum NavigationAction {
     FOLLOW_MEMBER("Followed member to", "go to"),
     FOLLOW_XREF("Followed xref to", "xref"),
     FOLLOW_SINGLE_XREF("Followed single xref to", "xref"),
+    FOLLOW_GRAPH("Followed graph to", "graph"),
     FOLLOW_CONSTANT("Followed constant to", "constant"),
     FOLLOW_PATTERN("Followed pattern to", "pattern");
 

@@ -10,6 +10,7 @@ import me.f1nal.trinity.execution.xref.XrefMap;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.assembler.AssemblerFrame;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.Instruction2SourceMapping;
+import me.f1nal.trinity.gui.windows.impl.methodgraph.MethodGraphWindow;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
 import me.f1nal.trinity.remap.Remapper;
 import org.objectweb.asm.tree.*;
@@ -75,7 +76,9 @@ public final class MethodInput extends MemberInput<MethodNode> implements IDatab
     public void populatePopup(PopupItemBuilder builder) {
         super.populatePopup(builder);
 
-        builder.menuItem("Assemble", Main.getKeyBindManager().DECOMPILER_ASSEMBLE.getKeyName(), this::openAssembler);
+        builder.separator()
+                .menuItem("Graph View", () -> MethodGraphWindow.open(this))
+                .menuItem("Assemble", Main.getKeyBindManager().DECOMPILER_ASSEMBLE.getKeyName(), this::openAssembler);
     }
 
     public void openAssembler() {
