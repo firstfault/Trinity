@@ -6,7 +6,7 @@ import java.util.List;
 public interface DexService {
     Page<DexFileInfo> files(int offset, int limit);
 
-    Page<DexClassSummary> classes(String query, int offset, int limit);
+    Page<DexClassSummary> classes(DexClassQuery query);
 
     DexClassStructure getClass(String internalName);
 
@@ -37,6 +37,10 @@ public interface DexService {
 
     record DexClassSummary(String internalName, String descriptor, String dexFile,
                            int methodCount, int fieldCount) {
+    }
+
+    record DexClassQuery(String query, boolean exact, boolean caseSensitive,
+                         int offset, int limit) {
     }
 
     record DexClassStructure(DexClassSummary classInfo, int access, String superName,

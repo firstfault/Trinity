@@ -31,12 +31,16 @@ public final class DexTools {
                 new JsonToolAdapter("dex_classes", "List DEX Classes",
                         "Lists native DEX class descriptors and their containing multidex entries.",
                         object(properties(
-                                "query", string("Optional internal-name substring"),
+                                "query", string("Optional internal-name text"),
+                                "exact", bool("Require an exact internal-name match; defaults to false"),
+                                "case_sensitive", bool("Use case-sensitive matching; defaults to false"),
                                 "offset", integer("Zero-based result offset"),
                                 "limit", integer("Maximum results, capped at 500"))),
                         true, false, true, false, mapper,
-                        args -> dex.classes(optionalString(args, "query", ""),
-                                integer(args, "offset", 0), integer(args, "limit", 100))),
+                        args -> dex.classes(new DexService.DexClassQuery(
+                                optionalString(args, "query", ""), bool(args, "exact", false),
+                                bool(args, "case_sensitive", false), integer(args, "offset", 0),
+                                integer(args, "limit", 100)))),
                 new JsonToolAdapter("dex_class_get", "Get DEX Class",
                         "Returns native DEX class, method, field, annotation, and source metadata.",
                         classSchema(), true, false, true, false, mapper,
@@ -75,7 +79,7 @@ public final class DexTools {
                         args -> dex.searchConstants(new DexService.ConstantQuery(
                                 optionalString(args, "type", "all"),
                                 optionalString(args, "value", ""), bool(args, "exact", true),
-                                bool(args, "caseSensitive", false), integer(args, "offset", 0),
+                                bool(args, "case_sensitive", false), integer(args, "offset", 0),
                                 integer(args, "limit", 100)))),
                 new JsonToolAdapter("dex_class_validate_smali", "Validate DEX Class Smali",
                         "Assembles a complete native smali class and verifies a whole-DEX rebuild without mutation.",
@@ -156,8 +160,8 @@ public final class DexTools {
         return object(properties(
                 "type", string("all, string, or number"),
                 "value", string("Optional textual value filter"),
-                "exact", bool("Require an exact textual match"),
-                "caseSensitive", bool("Use case-sensitive string matching"),
+                "exact", bool("Require an exact textual match; defaults to true"),
+                "case_sensitive", bool("Use case-sensitive string matching; defaults to false"),
                 "offset", integer("Zero-based result offset"),
                 "limit", integer("Maximum results, capped at 500")));
     }

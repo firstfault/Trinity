@@ -39,7 +39,8 @@ public interface ProjectService {
     record TreeQuery(String prefix, String kind, int offset, int limit) {
     }
 
-    record SearchQuery(String query, String kind, int offset, int limit) {
+    record SearchQuery(String query, String kind, boolean exact,
+                       boolean caseSensitive, int offset, int limit) {
     }
 
     record ProjectSnapshot(String name, String databasePath, String compression,

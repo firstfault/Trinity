@@ -228,24 +228,26 @@ final class LiveProjectService implements ProjectService {
     public Page<SearchResult> search(SearchQuery query) {
         int limit = pageLimit(query.limit());
         int offset = pageOffset(query.offset());
-        String term = normalize(query.query()).toLowerCase(Locale.ROOT);
+        String term = normalize(query.query());
         String kind = normalizeKind(query.kind());
         return state.read(true, project -> {
             List<SearchResult> results = new ArrayList<>();
             if (includes(kind, "class")) {
                 for (ClassInput input : project.getExecution().getClassList()) {
                     addSearch(results, "class", input.getRealName(), input.getDisplayName().getName(),
-                            null, null, term);
+                            null, null, term, query.exact(), query.caseSensitive());
                     if (includes(kind, "method")) {
                         for (MethodInput method : input.getMethodMap().values()) {
                             addSearch(results, "method", identity(method), method.getDisplayName().getName(),
-                                    input.getRealName(), method.getDescriptor(), term);
+                                    input.getRealName(), method.getDescriptor(), term,
+                                    query.exact(), query.caseSensitive());
                         }
                     }
                     if (includes(kind, "field")) {
                         for (FieldInput field : input.getFieldMap().values()) {
                             addSearch(results, "field", identity(field), field.getDisplayName().getName(),
-                                    input.getRealName(), field.getDescriptor(), term);
+                                    input.getRealName(), field.getDescriptor(), term,
+                                    query.exact(), query.caseSensitive());
                         }
                     }
                 }
@@ -253,42 +255,49 @@ final class LiveProjectService implements ProjectService {
                 for (ClassInput input : project.getExecution().getClassList()) {
                     if (includes(kind, "method")) for (MethodInput method : input.getMethodMap().values()) {
                         addSearch(results, "method", identity(method), method.getDisplayName().getName(),
-                                input.getRealName(), method.getDescriptor(), term);
+                                input.getRealName(), method.getDescriptor(), term,
+                                query.exact(), query.caseSensitive());
                     }
                     if (includes(kind, "field")) for (FieldInput field : input.getFieldMap().values()) {
                         addSearch(results, "field", identity(field), field.getDisplayName().getName(),
-                                input.getRealName(), field.getDescriptor(), term);
+                                input.getRealName(), field.getDescriptor(), term,
+                                query.exact(), query.caseSensitive());
                     }
                 }
             }
             for (DexClassEntry input : project.getExecution().getDexIndex().getClasses()) {
                 if (includes(kind, "dex_class")) {
                     addSearch(results, "dex_class", input.getInternalName(), input.getInternalName(),
-                            null, input.getClassDef().getType(), term);
+                            null, input.getClassDef().getType(), term,
+                            query.exact(), query.caseSensitive());
                 }
                 if (includes(kind, "dex_method")) {
                     for (Method method : input.getClassDef().getMethods()) {
                         String descriptor = DexDescriptors.methodDescriptor(method);
                         addSearch(results, "dex_method",
                                 String.format("%s.%s%s", input.getInternalName(), method.getName(), descriptor),
-                                method.getName(), input.getInternalName(), descriptor, term);
+                                method.getName(), input.getInternalName(), descriptor, term,
+                                query.exact(), query.caseSensitive());
                     }
                 }
                 if (includes(kind, "dex_field")) {
                     for (Field field : input.getClassDef().getFields()) {
                         addSearch(results, "dex_field",
                                 String.format("%s.%s:%s", input.getInternalName(), field.getName(), field.getType()),
-                                field.getName(), input.getInternalName(), field.getType(), term);
+                                field.getName(), input.getInternalName(), field.getType(), term,
+                                query.exact(), query.caseSensitive());
                     }
                 }
             }
             if (includes(kind, "resource")) {
                 project.getExecution().getResourceMap().keySet().forEach(path ->
-                        addSearch(results, "resource", path, path, null, null, term));
+                        addSearch(results, "resource", path, path, null, null, term,
+                                query.exact(), query.caseSensitive()));
             }
             if (includes(kind, "package")) {
                 packageNames(project).forEach(path ->
-                        addSearch(results, "package", path, path, null, null, term));
+                        addSearch(results, "package", path, path, null, null, term,
+                                query.exact(), query.caseSensitive()));
             }
             results.sort(Comparator.comparingInt(SearchResult::score).reversed()
                     .thenComparing(SearchResult::identity));
@@ -414,16 +423,24 @@ final class LiveProjectService implements ProjectService {
     }
 
     private static void addSearch(List<SearchResult> output, String kind, String identity,
-                                  String displayName, String owner, String descriptor, String term) {
-        int score = score(identity, displayName, term);
+                                  String displayName, String owner, String descriptor, String term,
+                                  boolean exact, boolean caseSensitive) {
+        int score = score(identity, displayName, term, exact, caseSensitive);
         if (score >= 0) output.add(new SearchResult(kind, identity, displayName, owner, descriptor, score));
     }
 
-    private static int score(String identity, String displayName, String term) {
+    static int score(String identity, String displayName, String term, boolean exact,
+                     boolean caseSensitive) {
         if (term.isEmpty()) return 0;
-        String id = identity.toLowerCase(Locale.ROOT);
-        String display = displayName.toLowerCase(Locale.ROOT);
+        String id = identity;
+        String display = displayName;
+        if (!caseSensitive) {
+            term = term.toLowerCase(Locale.ROOT);
+            id = id.toLowerCase(Locale.ROOT);
+            display = display.toLowerCase(Locale.ROOT);
+        }
         if (id.equals(term) || display.equals(term)) return 1000;
+        if (exact) return -1;
         if (id.startsWith(term) || display.startsWith(term)) return 750;
         if (id.contains(term) || display.contains(term)) return 500 - Math.min(400, id.length() - term.length());
         return -1;

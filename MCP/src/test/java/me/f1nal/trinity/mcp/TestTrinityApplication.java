@@ -15,6 +15,10 @@ import java.util.Map;
 final class TestTrinityApplication implements TrinityApplication {
     private long revision = 7;
     private final TrinityStatus status;
+    private ProjectService.SearchQuery lastProjectSearchQuery;
+    private AnalysisService.ConstantQuery lastConstantQuery;
+    private DexService.DexClassQuery lastDexClassQuery;
+    private DexService.ConstantQuery lastDexConstantQuery;
 
     TestTrinityApplication(TrinityStatus status) {
         this.status = status;
@@ -71,6 +75,7 @@ final class TestTrinityApplication implements TrinityApplication {
 
             @Override
             public Page<SearchResult> search(SearchQuery query) {
+                lastProjectSearchQuery = query;
                 return Page.slice(List.of(new SearchResult("class", "sample/Main",
                         "sample/Main", null, null, 1000)), query.offset(), query.limit());
             }
@@ -146,6 +151,7 @@ final class TestTrinityApplication implements TrinityApplication {
 
             @Override
             public Page<ConstantResult> searchConstants(ConstantQuery query) {
+                lastConstantQuery = query;
                 return Page.slice(List.of(), query.offset(), query.limit());
             }
 
@@ -177,8 +183,9 @@ final class TestTrinityApplication implements TrinityApplication {
             }
 
             @Override
-            public Page<DexClassSummary> classes(String query, int offset, int limit) {
-                return Page.slice(List.of(dexClassSummary()), offset, limit);
+            public Page<DexClassSummary> classes(DexClassQuery query) {
+                lastDexClassQuery = query;
+                return Page.slice(List.of(dexClassSummary()), query.offset(), query.limit());
             }
 
             @Override
@@ -249,9 +256,26 @@ final class TestTrinityApplication implements TrinityApplication {
 
             @Override
             public Page<DexConstant> searchConstants(ConstantQuery query) {
+                lastDexConstantQuery = query;
                 return Page.slice(List.of(), query.offset(), query.limit());
             }
         };
+    }
+
+    ProjectService.SearchQuery lastProjectSearchQuery() {
+        return lastProjectSearchQuery;
+    }
+
+    AnalysisService.ConstantQuery lastConstantQuery() {
+        return lastConstantQuery;
+    }
+
+    DexService.DexClassQuery lastDexClassQuery() {
+        return lastDexClassQuery;
+    }
+
+    DexService.ConstantQuery lastDexConstantQuery() {
+        return lastDexConstantQuery;
     }
 
     @Override

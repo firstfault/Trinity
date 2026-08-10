@@ -8,6 +8,7 @@ import me.f1nal.trinity.application.TrinityStatus;
 import me.f1nal.trinity.mcp.tools.StatusTool;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -21,7 +22,7 @@ class TrinityMcpServerTest {
         TrinityStatus expected = new TrinityStatus("test-version",
                 new TrinityStatus.ProjectStatus(
                         "sample", "C:/sample.tdb", true, null, 100, 12, 3, 4));
-        TrinityApplication application = new TestTrinityApplication(expected);
+        TestTrinityApplication application = new TestTrinityApplication(expected);
 
         try (TrinityMcpServer server = new TrinityMcpServer(application, "127.0.0.1", 0)) {
             server.start();
@@ -33,7 +34,8 @@ class TrinityMcpServerTest {
             try {
                 client.initialize();
 
-                Set<String> tools = client.listTools().tools().stream()
+                List<McpSchema.Tool> listedTools = client.listTools().tools();
+                Set<String> tools = listedTools.stream()
                         .map(McpSchema.Tool::name).collect(java.util.stream.Collectors.toSet());
                 assertEquals(Set.of(
                         "trinity_status",
@@ -52,6 +54,34 @@ class TrinityMcpServerTest {
                         "name_set", "name_revert", "resource_create", "resource_delete",
                         "method_validate_bytecode", "method_replace_bytecode",
                         "refactor_preview", "refactor_apply"), tools);
+                assertSearchFields(listedTools, "constant_search");
+                assertSearchFields(listedTools, "dex_constant_search");
+                assertSearchFields(listedTools, "project_search");
+                assertSearchFields(listedTools, "dex_classes");
+
+                assertSuccessful(client.callTool(McpSchema.CallToolRequest.builder("constant_search")
+                        .arguments(Map.of("value", "Trinity", "exact", false,
+                                "case_sensitive", true)).build()));
+                assertFalse(application.lastConstantQuery().exact());
+                assertTrue(application.lastConstantQuery().caseSensitive());
+
+                assertSuccessful(client.callTool(McpSchema.CallToolRequest.builder("dex_constant_search")
+                        .arguments(Map.of("value", "Trinity", "exact", false,
+                                "case_sensitive", true)).build()));
+                assertFalse(application.lastDexConstantQuery().exact());
+                assertTrue(application.lastDexConstantQuery().caseSensitive());
+
+                assertSuccessful(client.callTool(McpSchema.CallToolRequest.builder("project_search")
+                        .arguments(Map.of("query", "sample/Main", "exact", true,
+                                "case_sensitive", true)).build()));
+                assertTrue(application.lastProjectSearchQuery().exact());
+                assertTrue(application.lastProjectSearchQuery().caseSensitive());
+
+                assertSuccessful(client.callTool(McpSchema.CallToolRequest.builder("dex_classes")
+                        .arguments(Map.of("query", "sample/DexMain", "exact", true,
+                                "case_sensitive", true)).build()));
+                assertTrue(application.lastDexClassQuery().exact());
+                assertTrue(application.lastDexClassQuery().caseSensitive());
 
                 McpSchema.CallToolResult result = client.callTool(
                         McpSchema.CallToolRequest.builder(StatusTool.NAME).build());
@@ -128,5 +158,22 @@ class TrinityMcpServerTest {
 
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
                 () -> new TrinityMcpServer(application, "0.0.0.0", 7331));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void assertSearchFields(List<McpSchema.Tool> tools, String name) {
+        McpSchema.Tool tool = tools.stream().filter(candidate -> candidate.name().equals(name))
+                .findFirst().orElseThrow();
+        Map<String, Object> properties =
+                (Map<String, Object>) tool.inputSchema().get("properties");
+        assertTrue(properties.containsKey("exact"), name + " should expose exact");
+        assertTrue(properties.containsKey("case_sensitive"),
+                name + " should expose case_sensitive");
+        assertFalse(properties.containsKey("caseSensitive"),
+                name + " should not expose the Java-style field name");
+    }
+
+    private static void assertSuccessful(McpSchema.CallToolResult result) {
+        assertFalse(Boolean.TRUE.equals(result.isError()));
     }
 }

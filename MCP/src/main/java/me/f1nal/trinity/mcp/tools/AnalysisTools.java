@@ -38,14 +38,14 @@ public final class AnalysisTools {
                         object(properties(
                                 "type", string("all, string, number, integer, long, float, double, type, or handle"),
                                 "value", string("Optional textual value filter"),
-                                "exact", bool("Require an exact textual match"),
-                                "caseSensitive", bool("Use case-sensitive text matching"),
+                                "exact", bool("Require an exact textual match; defaults to true"),
+                                "case_sensitive", bool("Use case-sensitive text matching; defaults to false"),
                                 "offset", integer("Zero-based result offset"),
                                 "limit", integer("Maximum results, capped at 500"))),
                         true, false, true, false, mapper, args -> analysis.searchConstants(
                         new AnalysisService.ConstantQuery(optionalString(args, "type", "all"),
                                 optionalString(args, "value", ""), bool(args, "exact", true),
-                                bool(args, "caseSensitive", false), integer(args, "offset", 0),
+                                bool(args, "case_sensitive", false), integer(args, "offset", 0),
                                 integer(args, "limit", 100)))),
                 new JsonToolAdapter("pattern_validate", "Validate Bytecode Pattern",
                         "Compiles Trinity's typed assembler-pattern language and returns precise diagnostics.",

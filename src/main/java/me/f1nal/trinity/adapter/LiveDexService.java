@@ -57,16 +57,16 @@ final class LiveDexService implements DexService {
     }
 
     @Override
-    public Page<DexClassSummary> classes(String query, int offset, int limit) {
+    public Page<DexClassSummary> classes(DexClassQuery query) {
         return state.read(true, project -> {
-            String term = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+            String term = query.query() == null ? "" : query.query().trim();
             List<DexClassSummary> output = project.getExecution().getDexIndex().getClasses().stream()
-                    .filter(entry -> term.isEmpty()
-                            || entry.getInternalName().toLowerCase(Locale.ROOT).contains(term))
+                    .filter(entry -> matchesText(entry.getInternalName(), term,
+                            query.exact(), query.caseSensitive()))
                     .map(this::classSummary)
                     .sorted(Comparator.comparing(DexClassSummary::internalName))
                     .toList();
-            return Page.slice(output, offset, pageLimit(limit));
+            return Page.slice(output, query.offset(), pageLimit(query.limit()));
         });
     }
 
@@ -395,13 +395,18 @@ final class LiveDexService implements DexService {
     private static boolean matchesConstant(String type, ConstantQuery query, Object value) {
         if (type.equals("string") && !(value instanceof String)) return false;
         if (type.equals("number") && !(value instanceof Number)) return false;
-        String candidate = String.valueOf(value);
-        String expected = query.value() == null ? "" : query.value();
-        if (!query.caseSensitive()) {
+        return matchesText(String.valueOf(value), query.value(), query.exact(), query.caseSensitive());
+    }
+
+    static boolean matchesText(String candidate, String expected, boolean exact,
+                               boolean caseSensitive) {
+        expected = expected == null ? "" : expected;
+        if (expected.isEmpty()) return true;
+        if (!caseSensitive) {
             candidate = candidate.toLowerCase(Locale.ROOT);
             expected = expected.toLowerCase(Locale.ROOT);
         }
-        return query.exact() ? candidate.equals(expected) : candidate.contains(expected);
+        return exact ? candidate.equals(expected) : candidate.contains(expected);
     }
 
     private static String normalizeReferenceKind(String value) {

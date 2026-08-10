@@ -72,13 +72,16 @@ public final class ProjectTools {
                 new JsonToolAdapter("project_search", "Search Project",
                         "Searches real and display names across packages, classes, methods, fields, and resources.",
                         object(properties(
-                                "query", string("Case-insensitive search text; empty returns every target"),
-                                "kind", string("all, package, class, method, field, or resource"),
+                                "query", string("Search text; empty returns every target"),
+                                "kind", string("all, package, class, method, field, resource, dex_class, dex_method, or dex_field"),
+                                "exact", bool("Require an exact identity or display-name match; defaults to false"),
+                                "case_sensitive", bool("Use case-sensitive matching; defaults to false"),
                                 "offset", integer("Zero-based result offset"),
                                 "limit", integer("Maximum results, capped at 500"))),
                         true, false, true, false, mapper, args -> projects.search(
                         new ProjectService.SearchQuery(optionalString(args, "query", ""),
-                                optionalString(args, "kind", "all"), integer(args, "offset", 0),
+                                optionalString(args, "kind", "all"), bool(args, "exact", false),
+                                bool(args, "case_sensitive", false), integer(args, "offset", 0),
                                 integer(args, "limit", 100)))));
     }
 }
