@@ -184,8 +184,14 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     protected void renderFrame() {
         if (historyFrame != null) historyFrame.render();
 
-        boolean keyboardShortcuts = ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows)
-                && !ImGui.isAnyItemActive();
+        boolean windowFocused = ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
+        boolean keyboardShortcuts = windowFocused && !ImGui.isAnyItemActive();
+        if (windowFocused && ImGui.getIO().getKeyCtrl()
+                && ImGui.isKeyPressed(ImGuiKey.S, false)) {
+            // Always run the save path. Some operand and metadata edits dirty the detached
+            // document without changing the instruction-list freshness flag.
+            this.saveMethod = true;
+        }
         if (keyboardShortcuts && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.Z)) {
             this.undoHistory();
         }
@@ -223,11 +229,10 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             }
         }
         for (String warning : validationWarnings) ImGui.textColored(CodeColorScheme.NOTIFY_WARN, warning);
+        this.drawSaveError();
 
-        ImVec2 vMin = ImGui.getWindowContentRegionMin();
+        ImVec2 vMin = ImGui.getCursorScreenPos();
         ImVec2 vMax = ImGui.getWindowContentRegionMax();
-        vMin.x += ImGui.getWindowPos().x;
-        vMin.y += ImGui.getWindowPos().y;
         vMax.x += ImGui.getWindowPos().x;
         vMax.y += ImGui.getWindowPos().y;
 
@@ -246,14 +251,6 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         ImGui.beginDisabled();
         ImGui.invisibleButton(getId("InvisBtn"), ImGui.getContentRegionAvailX(), height);
         ImGui.endDisabled();
-
-        this.drawSaveError();
-
-        if (this.methodNotFresh) {
-            if (ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.S)) {
-                this.saveMethod = true;
-            }
-        }
 
         if (this.draggingInstruction != null && !ImGui.isMouseDown(0)) {
             if (this.draggingInstruction.getIndex() != this.instructions.indexOf(this.draggingInstruction.getComponent())) {
@@ -287,6 +284,9 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
                 }
             } catch (Throwable throwable) {
                 this.saveError = throwable.getMessage() == null ? throwable.getClass().getSimpleName() : throwable.getMessage();
+                Logging.error("Unable to save assembler method {}.{}{}: {}",
+                        methodInput.getOwningClass().getRealName(), methodInput.getName(),
+                        methodInput.getDescriptor(), this.saveError);
             }
         }
 
@@ -326,7 +326,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     private PopupItemBuilder createMenuBar() {
         return PopupItemBuilder.create().
                 menu("File", file -> {
-                    file.menuItem("Save", "Ctrl+S", this.methodNotFresh, () -> this.saveMethod = true)
+                    file.menuItem("Save", "Ctrl+S", () -> this.saveMethod = true)
                             .separator()
                             .menuItem("Go to Method", () -> Main.getDisplayManager().openDecompilerView(this.methodInput));
                 }).

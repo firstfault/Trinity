@@ -47,6 +47,7 @@ public final class MethodGraphWindow extends ClosableWindow implements IEventLis
     private int depth = 2;
     private MethodGraph.Direction direction = MethodGraph.Direction.CALLS;
     private final ImBoolean includeExternal = new ImBoolean(true);
+    private final ImBoolean collapseMethodContent = new ImBoolean(false);
     private final ImString search = new ImString(192);
     private final MethodGraphCanvas canvas;
     private final AtomicInteger analysisGeneration = new AtomicInteger();
@@ -133,6 +134,10 @@ public final class MethodGraphWindow extends ClosableWindow implements IEventLis
         GuiUtil.tooltip("Show unresolved and dependency methods as leaf nodes");
 
         ImGui.sameLine(0.F, 12.F);
+        if (GuiUtil.smallCheckbox("Collapse content", collapseMethodContent)) requestAnalysis();
+        GuiUtil.tooltip("Show only method headers and call relationships");
+
+        ImGui.sameLine(0.F, 12.F);
         if (ImGui.button("Fit")) canvas.requestFit();
         GuiUtil.tooltip("Fit the entire graph (F)");
         ImGui.sameLine();
@@ -167,9 +172,16 @@ public final class MethodGraphWindow extends ClosableWindow implements IEventLis
         if (graph != null) {
             ImGui.sameLine(0.F, 12.F);
             ImGui.alignTextToFramePadding();
-            String status = graph.nodes().size() + " methods  "
-                    + graph.basicBlockCount() + " blocks  "
-                    + graph.flowEdgeCount() + " paths";
+            String status;
+            if (graph.methodContentCollapsed()) {
+                int callCount = graph.calls().stream()
+                        .mapToInt(MethodGraph.CallEdge::callSites).sum();
+                status = graph.nodes().size() + " methods  " + callCount + " calls";
+            } else {
+                status = graph.nodes().size() + " methods  "
+                        + graph.basicBlockCount() + " blocks  "
+                        + graph.flowEdgeCount() + " paths";
+            }
             ImGui.textColored(CodeColorScheme.DISABLED, status);
         }
         if (analysisFuture != null && !analysisFuture.isDone()) {
@@ -220,7 +232,8 @@ public final class MethodGraphWindow extends ClosableWindow implements IEventLis
         float lineHeight = Math.max(12.F, ImGui.getTextLineHeight());
         float characterWidth = Math.max(5.F, ImGui.calcTextSize("M").x);
         MethodGraphAnalyzer.Request request = new MethodGraphAnalyzer.Request(
-                depth, direction, includeExternal.get(), lineHeight, characterWidth);
+                depth, direction, includeExternal.get(), collapseMethodContent.get(),
+                lineHeight, characterWidth);
         MethodInput rootSnapshot = rootMethod;
         analysisError = null;
         analysisFuture = CompletableFuture.supplyAsync(() ->
@@ -245,8 +258,11 @@ public final class MethodGraphWindow extends ClosableWindow implements IEventLis
             }
             return;
         }
+        boolean layoutModeChanged = graph != null && graph.methodContentCollapsed()
+                != completion.graph().methodContentCollapsed();
         graph = completion.graph();
         canvas.setGraph(graph);
+        if (layoutModeChanged) canvas.requestFit();
         stale = false;
         searchIndex = -1;
     }

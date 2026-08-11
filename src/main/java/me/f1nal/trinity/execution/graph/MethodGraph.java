@@ -6,13 +6,14 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 import java.util.List;
 import java.util.Map;
 
-/** Immutable call graph with a control-flow graph embedded in every resolved method. */
+/** Immutable method graph with optional control-flow content inside resolved methods. */
 public record MethodGraph(MethodKey root,
                           Map<MethodKey, MethodNode> nodes,
                           List<CallEdge> calls,
                           Bounds bounds,
                           int basicBlockCount,
-                          int flowEdgeCount) {
+                          int flowEdgeCount,
+                          boolean methodContentCollapsed) {
     public MethodGraph {
         nodes = Map.copyOf(nodes);
         calls = List.copyOf(calls);

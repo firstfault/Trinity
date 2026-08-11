@@ -104,7 +104,7 @@ public final class MethodGraphAnalyzer {
         for (Map.Entry<MethodKey, Discovered> entry : discovered.entrySet()) {
             checkCancelled(cancelled);
             Discovered value = entry.getValue();
-            ControlFlow flow = value.method() == null ? null
+            ControlFlow flow = value.method() == null || request.collapseMethodContent() ? null
                     : MethodControlFlowAnalyzer.analyze(value.method().getNode());
             NodeDraft draft = layoutMethod(entry.getKey(), value, flow, request);
             drafts.put(entry.getKey(), draft);
@@ -122,7 +122,8 @@ public final class MethodGraphAnalyzer {
                 .sorted(Comparator.comparing((CallEdge edge) -> edge.caller().symbol())
                         .thenComparing(edge -> edge.callee().symbol()))
                 .toList();
-        return new MethodGraph(rootKey, nodes, calls, bounds(nodes), blockCount, flowEdgeCount);
+        return new MethodGraph(rootKey, nodes, calls, bounds(nodes), blockCount, flowEdgeCount,
+                request.collapseMethodContent());
     }
 
     private void discover(Map<MethodKey, Discovered> discovered, ArrayDeque<MethodKey> queue,
@@ -207,6 +208,15 @@ public final class MethodGraphAnalyzer {
 
     private NodeDraft layoutMethod(MethodKey key, Discovered discovered,
                                    ControlFlow flow, Request request) {
+        if (request.collapseMethodContent()) {
+            int descriptorCharacters = Math.min(42, key.descriptor().length());
+            int longestLine = Math.max(key.displayOwner().length() + 12,
+                    key.name().length() + descriptorCharacters);
+            float width = Math.max(210.F, Math.min(520.F,
+                    longestLine * request.characterWidth() + 24.F));
+            return new NodeDraft(key, discovered, null, width,
+                    METHOD_HEADER_HEIGHT, List.of());
+        }
         if (flow == null) {
             float width = Math.max(230.F, Math.min(440.F,
                     (key.displayOwner().length() + key.name().length() + 6) * request.characterWidth()));
@@ -382,6 +392,7 @@ public final class MethodGraphAnalyzer {
     }
 
     public record Request(int depth, Direction direction, boolean includeExternal,
+                          boolean collapseMethodContent,
                           float lineHeight, float characterWidth) {
         public Request {
             if (depth < INFINITE_DEPTH || depth == 0) {

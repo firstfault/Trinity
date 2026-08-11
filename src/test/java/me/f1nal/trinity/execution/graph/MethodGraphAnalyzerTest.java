@@ -75,10 +75,33 @@ class MethodGraphAnalyzerTest {
         assertTrue(graph.nodes().get(MethodGraphAnalyzer.key(first)).rank() < 0);
     }
 
+    @Test
+    void collapsedContentProducesACompactCallGraphWithoutControlFlow() {
+        MethodGraph expanded = analyze(first, 2, MethodGraph.Direction.CALLS, true);
+        MethodGraph collapsed = analyze(first, 2, MethodGraph.Direction.CALLS, true, true);
+
+        assertTrue(collapsed.methodContentCollapsed());
+        assertEquals(expanded.nodes().keySet(), collapsed.nodes().keySet());
+        assertEquals(expanded.calls(), collapsed.calls());
+        assertEquals(0, collapsed.basicBlockCount());
+        assertEquals(0, collapsed.flowEdgeCount());
+        assertTrue(collapsed.nodes().values().stream().allMatch(node ->
+                node.flow() == null && node.blocks().isEmpty()));
+        assertTrue(collapsed.nodes().get(MethodGraphAnalyzer.key(first)).height()
+                < expanded.nodes().get(MethodGraphAnalyzer.key(first)).height());
+    }
+
     private MethodGraph analyze(MethodInput root, int depth,
                                 MethodGraph.Direction direction, boolean external) {
+        return analyze(root, depth, direction, external, false);
+    }
+
+    private MethodGraph analyze(MethodInput root, int depth,
+                                MethodGraph.Direction direction, boolean external,
+                                boolean collapseMethodContent) {
         return new MethodGraphAnalyzer(execution).analyze(root,
-                new MethodGraphAnalyzer.Request(depth, direction, external, 16.F, 7.F),
+                new MethodGraphAnalyzer.Request(depth, direction, external,
+                        collapseMethodContent, 16.F, 7.F),
                 () -> false);
     }
 

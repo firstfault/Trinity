@@ -50,6 +50,7 @@ final class MethodGraphCanvas {
     private MethodGraph graph;
     private MethodKey selected;
     private MethodKey dragging;
+    private LeftDragMode leftDragMode = LeftDragMode.NONE;
     private MethodKey hoveredLastFrame;
     private Set<MethodKey> searchMatches = Set.of();
     private String previousSearch = "";
@@ -162,43 +163,48 @@ final class MethodGraphCanvas {
     }
 
     private void handleInput(Hit hit, MiniMap miniMap, boolean miniMapHovered) {
-        if (!hovered) {
-            if (!ImGui.isMouseDown(ImGuiMouseButton.Left)) dragging = null;
-            return;
-        }
-
-        if (miniMapHovered) {
-            ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.isMouseDown(ImGuiMouseButton.Left)) {
-                float worldX = miniMap.worldX(ImGui.getMousePosX());
-                float worldY = miniMap.worldY(ImGui.getMousePosY());
-                panX = canvasWidth * 0.5F - worldX * zoom;
-                panY = canvasHeight * 0.5F - worldY * zoom;
-            }
+        if (!ImGui.isMouseDown(ImGuiMouseButton.Left)) {
             dragging = null;
+            leftDragMode = LeftDragMode.NONE;
+        }
+        if (!hovered) {
             return;
         }
 
-        if (ImGui.isMouseClicked(ImGuiMouseButton.Right) && hit != null) {
+        if (!miniMapHovered && ImGui.isMouseClicked(ImGuiMouseButton.Right) && hit != null) {
             selected = hit.node().key();
             actions.showContextMenu(hit.node());
         }
         if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
-            if (hit == null) {
+            if (miniMapHovered) {
+                leftDragMode = LeftDragMode.MINI_MAP;
+                dragging = null;
+            } else if (hit == null) {
                 selected = null;
                 dragging = null;
+                leftDragMode = LeftDragMode.CANVAS;
             } else {
                 selected = hit.node().key();
                 dragging = hit.node().key();
+                leftDragMode = LeftDragMode.NODE;
                 if (ImGui.isMouseDoubleClicked(ImGuiMouseButton.Left)) {
                     actions.navigate(hit.node(), hit.instruction());
                     dragging = null;
+                    leftDragMode = LeftDragMode.NONE;
                 }
             }
         }
 
-        if (!ImGui.isMouseDown(ImGuiMouseButton.Left)) dragging = null;
-        if (dragging != null && ImGui.isMouseDragging(ImGuiMouseButton.Left)) {
+        if (leftDragMode == LeftDragMode.MINI_MAP) {
+            float worldX = miniMap.worldX(ImGui.getMousePosX());
+            float worldY = miniMap.worldY(ImGui.getMousePosY());
+            panX = canvasWidth * 0.5F - worldX * zoom;
+            panY = canvasHeight * 0.5F - worldY * zoom;
+            ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
+            return;
+        }
+        if (leftDragMode == LeftDragMode.NODE && dragging != null
+                && ImGui.isMouseDragging(ImGuiMouseButton.Left)) {
             Offset offset = manualOffsets.computeIfAbsent(dragging, ignored -> new Offset());
             offset.x += ImGui.getIO().getMouseDeltaX() / zoom;
             offset.y += ImGui.getIO().getMouseDeltaY() / zoom;
@@ -206,13 +212,14 @@ final class MethodGraphCanvas {
             return;
         }
 
-        boolean panWithLeft = hit == null && ImGui.isMouseDragging(ImGuiMouseButton.Left);
+        boolean panWithLeft = leftDragMode == LeftDragMode.CANVAS
+                && ImGui.isMouseDragging(ImGuiMouseButton.Left);
         boolean panWithMiddle = ImGui.isMouseDragging(ImGuiMouseButton.Middle);
         if (panWithLeft || panWithMiddle) {
             panX += ImGui.getIO().getMouseDeltaX();
             panY += ImGui.getIO().getMouseDeltaY();
             ImGui.setMouseCursor(ImGuiMouseCursor.ResizeAll);
-        } else if (hit != null) {
+        } else if (miniMapHovered || hit != null) {
             ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
         }
     }
@@ -350,7 +357,7 @@ final class MethodGraphCanvas {
         drawList.addRect(rect.left(), rect.top(), rect.right(), rect.bottom(), border,
                 0.F, 0, isSelected ? 2.F : 1.F);
         drawMethodHeader(drawList, node, rect, active);
-        if (!node.external()) drawMethodFlow(drawList, node, active);
+        if (node.flow() != null) drawMethodFlow(drawList, node, active);
     }
 
     private void drawMethodHeader(ImDrawList drawList, MethodNode node, Rect rect, boolean active) {
@@ -516,7 +523,7 @@ final class MethodGraphCanvas {
             hoverStarted = ImGui.getTime();
             return;
         }
-        if (dragging != null || hit.node().method() == null
+        if (leftDragMode != LeftDragMode.NONE || hit.node().method() == null
                 || ImGui.getTime() - hoverStarted < PREVIEW_DELAY) return;
         ImGui.beginTooltip();
         DecompilerPreviewRenderer preview = new DecompilerPreviewRenderer(
@@ -749,6 +756,13 @@ final class MethodGraphCanvas {
     }
 
     private record Hit(MethodNode node, AbstractInsnNode instruction) {
+    }
+
+    private enum LeftDragMode {
+        NONE,
+        CANVAS,
+        NODE,
+        MINI_MAP
     }
 
     private record Rect(float left, float top, float right, float bottom) {
