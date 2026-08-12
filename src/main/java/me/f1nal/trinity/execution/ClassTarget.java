@@ -16,6 +16,7 @@ import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.windows.impl.cp.FileKind;
 import me.f1nal.trinity.gui.windows.impl.bytecode.BytecodeEditorLauncher;
 import me.f1nal.trinity.gui.windows.impl.membersearch.MemberSearchPresets;
+import me.f1nal.trinity.gui.windows.impl.refactor.identity.IdentityRefactorController;
 import me.f1nal.trinity.gui.windows.impl.cp.RenameHandler;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.IXrefBuilderProvider;
 import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilder;
@@ -59,6 +60,13 @@ public class ClassTarget extends ArchiveEntry implements IDatabaseSavable<Databa
     protected void addEntryActions(PopupItemBuilder builder) {
         if (this.input != null) {
             builder.menuItem("Edit Class...", () -> BytecodeEditorLauncher.edit(this.input));
+            builder.menu("Bytecode Name", names -> {
+                names.disabled(() -> this.displayName.getType() == RenameType.NONE,
+                        enabled -> enabled.menuItem("Apply Display Name...",
+                                () -> IdentityRefactorController.applyDisplayName(this.input)));
+                names.menuItem("Rename Identity...",
+                        () -> IdentityRefactorController.promptForIdentityName(this.input));
+            });
         }
         this.addXrefViewerMenuItem(Main.getTrinity(), builder);
         if (this.input != null) {

@@ -12,7 +12,7 @@ import java.util.function.Function;
 
 public abstract class MemberInput<N> extends Input<N> {
     private final ClassInput owner;
-    private final MemberDetails details;
+    private MemberDetails details;
     private final DisplayName displayName;
 
     protected MemberInput(N node, ClassInput owner, MemberDetails details) {
@@ -34,6 +34,15 @@ public abstract class MemberInput<N> extends Input<N> {
 
     public final MemberDetails getDetails() {
         return details;
+    }
+
+    /**
+     * Rebinds this stable input wrapper after its JVM declaration identity changes.
+     * Package indexes must be updated by the owning {@link ClassInput} around this call.
+     */
+    final void replaceDetails(MemberDetails details) {
+        this.details = java.util.Objects.requireNonNull(details, "details");
+        this.displayName.replaceOriginalName(details.getName());
     }
 
     @Override

@@ -19,9 +19,9 @@ public final class MemberSearchPresets {
         if (input instanceof ClassInput classInput) {
             builder.menuItem("Find Subtypes...", () -> findSubtypes(classInput));
         } else if (input instanceof FieldInput fieldInput) {
-            builder.menuItem("Find Fields of This Type...", () -> findFieldsOfType(fieldInput));
+            builder.menuItem("Find Fields...", () -> findFieldsOfType(fieldInput));
         } else if (input instanceof MethodInput methodInput) {
-            builder.menuItem("Find Methods with This Signature...",
+            builder.menuItem("Find Methods...",
                     () -> findMethodsWithSignature(methodInput));
         }
     }

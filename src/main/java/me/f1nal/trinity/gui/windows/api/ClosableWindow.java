@@ -8,7 +8,10 @@ import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
+import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
+
+import java.util.Set;
 
 /**
  * A window that can be opened or closed, possibly with multiple instances.
@@ -156,6 +159,18 @@ public abstract class ClosableWindow extends AbstractWindow {
     /** Human-readable name used by the global unsaved-changes dialog. */
     public String getUnsavedChangesDescription() {
         return this.getTitle();
+    }
+
+    /**
+     * Returns whether this window owns a detached view of bytecode changed by an
+     * identity refactor. Refactors use this to block only relevant dirty editors.
+     */
+    public boolean isAffectedByIdentityRefactor(Set<ClassInput> affectedClasses) {
+        return false;
+    }
+
+    /** Called after a committed identity refactor so detached editors can refresh safely. */
+    public void identityRefactorApplied() {
     }
 
     protected boolean beginWindow() {

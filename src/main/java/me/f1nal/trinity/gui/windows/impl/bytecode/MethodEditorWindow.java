@@ -11,6 +11,7 @@ import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.MethodInput;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.windows.impl.refactor.identity.IdentityRefactorController;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.TypePath;
@@ -25,6 +26,7 @@ import org.objectweb.asm.tree.TryCatchBlockNode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public final class MethodEditorWindow extends AbstractBytecodeEditorWindow {
     private final ClassInput owner;
@@ -112,7 +114,7 @@ public final class MethodEditorWindow extends AbstractBytecodeEditorWindow {
     protected void drawEditor() {
         if (ImGui.beginTabBar(getId("MethodTabs"))) {
             if (ImGui.beginTabItem("General")) {
-                ImGui.inputText("Name", name);
+                drawIdentityName();
                 ImGui.inputText("Descriptor", descriptor);
                 signature.draw("Generic signature");
                 ImGui.separator();
@@ -131,6 +133,30 @@ public final class MethodEditorWindow extends AbstractBytecodeEditorWindow {
             }
             ImGui.endTabBar();
         }
+    }
+
+    private void drawIdentityName() {
+        if (input == null) {
+            ImGui.inputText("Name", name);
+            return;
+        }
+        ImGui.beginDisabled();
+        ImGui.inputText("Name", name);
+        ImGui.endDisabled();
+        ImGui.sameLine();
+        if (ImGui.smallButton("Refactor...###MethodIdentity")) {
+            IdentityRefactorController.promptForIdentityName(input);
+        }
+    }
+
+    @Override
+    public boolean isAffectedByIdentityRefactor(Set<ClassInput> affectedClasses) {
+        return input != null && affectedClasses.contains(owner);
+    }
+
+    @Override
+    public void identityRefactorApplied() {
+        close();
     }
 
     @Override

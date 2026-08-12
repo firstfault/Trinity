@@ -20,8 +20,9 @@ public class DisplayName {
     public void replaceOriginalName(String originalName) {
         boolean followsOriginalName = this.type == RenameType.NONE;
         this.originalName = Objects.requireNonNull(originalName);
-        if (followsOriginalName) {
+        if (followsOriginalName || this.name.equals(originalName)) {
             this.name = originalName;
+            this.type = RenameType.NONE;
         }
     }
 

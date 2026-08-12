@@ -902,6 +902,23 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         return this.methodNotFresh || this.document.isDirty();
     }
 
+    @Override
+    public boolean isAffectedByIdentityRefactor(Set<ClassInput> affectedClasses) {
+        return affectedClasses.contains(methodInput.getOwningClass());
+    }
+
+    @Override
+    public void identityRefactorApplied() {
+        document.reload();
+        undoSnapshots.clear();
+        redoSnapshots.clear();
+        setInstructions();
+        externalChanges = false;
+        saveError = null;
+        validationWarnings = List.of();
+        nextExternalCheck = 0L;
+    }
+
     public void beginDragMutation() {
         beginMutation();
     }

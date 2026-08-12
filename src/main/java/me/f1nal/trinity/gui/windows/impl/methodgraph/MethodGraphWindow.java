@@ -335,6 +335,8 @@ public final class MethodGraphWindow extends ClosableWindow implements IEventLis
     }
 
     private void markProjectChanged() {
+        MethodInput current = rootMethod;
+        if (current != null) rootKey = MethodGraphAnalyzer.key(current);
         stale = true;
         analysisRequested = true;
     }

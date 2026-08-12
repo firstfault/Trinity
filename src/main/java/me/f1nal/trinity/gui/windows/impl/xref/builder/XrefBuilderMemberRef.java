@@ -3,6 +3,7 @@ package me.f1nal.trinity.gui.windows.impl.xref.builder;
 import me.f1nal.trinity.execution.MemberDetails;
 import me.f1nal.trinity.execution.xref.AbstractXref;
 import me.f1nal.trinity.execution.xref.XrefMap;
+import me.f1nal.trinity.events.EventIdentityRefactored;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -12,7 +13,7 @@ import java.util.Objects;
  * Xref builder for class member references (e.g. fields and methods).
  */
 public class XrefBuilderMemberRef extends XrefBuilder {
-    private final MemberDetails details;
+    private MemberDetails details;
 
     public XrefBuilderMemberRef(XrefMap xrefMap, MemberDetails details) {
         super(xrefMap);
@@ -27,6 +28,11 @@ public class XrefBuilderMemberRef extends XrefBuilder {
     @Override
     public Collection<AbstractXref> createXrefs() {
         return new ArrayList<>(getXrefMap().queryMemberReferences(details));
+    }
+
+    @Override
+    public void onIdentityRefactored(EventIdentityRefactored event) {
+        details = event.memberMappings().getOrDefault(details, details);
     }
 
     @Override

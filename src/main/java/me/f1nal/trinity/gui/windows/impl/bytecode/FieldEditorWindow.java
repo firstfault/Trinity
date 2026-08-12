@@ -10,7 +10,10 @@ import me.f1nal.trinity.execution.AccessFlags;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.FieldInput;
 import me.f1nal.trinity.execution.MemberDetails;
+import me.f1nal.trinity.gui.windows.impl.refactor.identity.IdentityRefactorController;
 import org.objectweb.asm.tree.FieldNode;
+
+import java.util.Set;
 
 public final class FieldEditorWindow extends AbstractBytecodeEditorWindow {
     private static final String[] CONSTANT_TYPES = {"None", "Integer", "Long", "Float", "Double", "String"};
@@ -64,7 +67,7 @@ public final class FieldEditorWindow extends AbstractBytecodeEditorWindow {
     protected void drawEditor() {
         if (ImGui.beginTabBar(getId("FieldTabs"))) {
             if (ImGui.beginTabItem("General")) {
-                ImGui.inputText("Name", name);
+                drawIdentityName();
                 ImGui.inputText("Descriptor", descriptor);
                 signature.draw("Generic signature");
                 ImGui.separator();
@@ -94,6 +97,30 @@ public final class FieldEditorWindow extends AbstractBytecodeEditorWindow {
             }
             ImGui.endTabBar();
         }
+    }
+
+    private void drawIdentityName() {
+        if (input == null) {
+            ImGui.inputText("Name", name);
+            return;
+        }
+        ImGui.beginDisabled();
+        ImGui.inputText("Name", name);
+        ImGui.endDisabled();
+        ImGui.sameLine();
+        if (ImGui.smallButton("Refactor...###FieldIdentity")) {
+            IdentityRefactorController.promptForIdentityName(input);
+        }
+    }
+
+    @Override
+    public boolean isAffectedByIdentityRefactor(Set<ClassInput> affectedClasses) {
+        return input != null && affectedClasses.contains(owner);
+    }
+
+    @Override
+    public void identityRefactorApplied() {
+        close();
     }
 
     @Override

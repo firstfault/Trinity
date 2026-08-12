@@ -9,6 +9,7 @@ import me.f1nal.trinity.execution.AccessFlags;
 import me.f1nal.trinity.execution.ClassInput;
 import me.f1nal.trinity.execution.packages.Package;
 import me.f1nal.trinity.gui.components.FontAwesomeIcons;
+import me.f1nal.trinity.gui.windows.impl.refactor.identity.IdentityRefactorController;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.InnerClassNode;
@@ -25,6 +26,7 @@ import org.objectweb.asm.tree.VarInsnNode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public final class ClassEditorWindow extends AbstractBytecodeEditorWindow {
     private final ClassInput input;
@@ -98,7 +100,7 @@ public final class ClassEditorWindow extends AbstractBytecodeEditorWindow {
     protected void drawEditor() {
         if (ImGui.beginTabBar(getId("ClassTabs"))) {
             if (ImGui.beginTabItem("General")) {
-                ImGui.inputText("Internal name", name);
+                drawIdentityName();
                 ImGui.inputInt("Classfile version", version);
                 signature.draw("Generic signature");
                 superName.draw("Superclass");
@@ -168,6 +170,32 @@ public final class ClassEditorWindow extends AbstractBytecodeEditorWindow {
             }
             ImGui.endTabBar();
         }
+    }
+
+    private void drawIdentityName() {
+        if (input == null) {
+            ImGui.inputText("Internal name", name);
+            return;
+        }
+        ImGui.beginDisabled();
+        ImGui.inputText("Internal name", name);
+        ImGui.endDisabled();
+        ImGui.sameLine();
+        if (ImGui.smallButton("Refactor...###ClassIdentity")) {
+            IdentityRefactorController.promptForIdentityName(input);
+        }
+    }
+
+    @Override
+    public boolean isAffectedByIdentityRefactor(Set<ClassInput> affectedClasses) {
+        return input != null && affectedClasses.contains(input);
+    }
+
+    @Override
+    public void identityRefactorApplied() {
+        // This editor snapshots every class attribute on construction. A clean editor is
+        // safer to close than to let a later save overwrite freshly remapped attributes.
+        close();
     }
 
     @Override

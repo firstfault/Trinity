@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.windows.impl.xref.builder;
 
 import me.f1nal.trinity.execution.xref.AbstractXref;
 import me.f1nal.trinity.execution.xref.XrefMap;
+import me.f1nal.trinity.events.EventIdentityRefactored;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,7 +12,7 @@ import java.util.Objects;
  * Xref builder for class references.
  */
 public class XrefBuilderClassRef extends XrefBuilder {
-    private final String className;
+    private String className;
 
     public XrefBuilderClassRef(XrefMap xrefMap, String className) {
         super(xrefMap);
@@ -26,6 +27,11 @@ public class XrefBuilderClassRef extends XrefBuilder {
     @Override
     public Collection<AbstractXref> createXrefs() {
         return new ArrayList<>(getXrefMap().queryClassReferences(getXrefMap().getTrinity().getExecution().getClassTargetByDisplayName(this.className)));
+    }
+
+    @Override
+    public void onIdentityRefactored(EventIdentityRefactored event) {
+        className = event.classMappings().getOrDefault(className, className);
     }
 
     @Override

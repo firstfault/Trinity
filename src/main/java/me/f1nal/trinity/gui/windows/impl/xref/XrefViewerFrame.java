@@ -1,11 +1,14 @@
 package me.f1nal.trinity.gui.windows.impl.xref;
 
+import com.google.common.eventbus.Subscribe;
 import imgui.ImGui;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.execution.xref.AbstractXref;
 import me.f1nal.trinity.execution.xref.XrefKind;
 import me.f1nal.trinity.execution.xref.XrefViewerSettings;
+import me.f1nal.trinity.events.EventIdentityRefactored;
+import me.f1nal.trinity.events.api.IEventListener;
 import me.f1nal.trinity.gui.components.filter.ListFilterComponent;
 import me.f1nal.trinity.gui.components.filter.SearchBarFilter;
 import me.f1nal.trinity.gui.components.filter.kind.KindFilter;
@@ -21,8 +24,8 @@ import me.f1nal.trinity.gui.windows.impl.xref.builder.XrefBuilderClassRef;
 import java.util.Collection;
 import java.util.List;
 
-public class XrefViewerFrame extends ClosableWindow {
-    private final Collection<AbstractXref> xrefViewList;
+public class XrefViewerFrame extends ClosableWindow implements IEventListener {
+    private final List<AbstractXref> xrefViewList;
     private final XrefBuilder builder;
     private final ListFilterComponent<AbstractXref> listFilterComponent;
     private final SearchBarFilter<AbstractXref> searchFilter;
@@ -34,7 +37,7 @@ public class XrefViewerFrame extends ClosableWindow {
     public XrefViewerFrame(XrefBuilder builder, Trinity trinity, boolean autofollowXref) {
         super("", 680, 300, trinity);
 
-        this.xrefViewList = builder.createXrefs();
+        this.xrefViewList = new java.util.ArrayList<>(builder.createXrefs());
         this.searchFilter = new SearchBarFilter<>();
         XrefViewerSettings settings = trinity.getXrefViewerSettings();
         this.kindFilter = new KindFilter<>(XrefKind.values(),
@@ -49,6 +52,7 @@ public class XrefViewerFrame extends ClosableWindow {
         });
         this.builder = builder;
         this.setDialog(true);
+        trinity.getEventManager().registerListener(this);
 
         this.xrefTable.getColumns().add(new TableColumn<AbstractXref>("Invocation", this.invocationRenderer)
                 .setSortKey(AbstractXref::getInvocation)
@@ -94,6 +98,19 @@ public class XrefViewerFrame extends ClosableWindow {
     @Override
     protected void onOpen() {
         this.searchFilter.getSearchBar().requestFocus();
+    }
+
+    @Subscribe
+    public void onIdentityRefactored(EventIdentityRefactored event) {
+        builder.onIdentityRefactored(event);
+        xrefViewList.clear();
+        xrefViewList.addAll(builder.createXrefs());
+    }
+
+    @Override
+    protected void onDispose() {
+        trinity.getEventManager().unregisterListener(this);
+        super.onDispose();
     }
 
     @Override

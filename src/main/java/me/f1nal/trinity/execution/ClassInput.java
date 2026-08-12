@@ -159,6 +159,40 @@ public final class ClassInput extends Input<ClassNode> implements IDisplayNamePr
         return replacement;
     }
 
+    /** Re-keys a renamed declaration without replacing the live member wrapper. */
+    public void rebindMemberIdentity(MemberInput<?> input) {
+        if (input == null || input.getOwningClass() != this) {
+            throw new IllegalArgumentException("Member does not belong to this class");
+        }
+        removeInput(input);
+        input.replaceDetails(new MemberDetails(
+                getRealName(), memberName(input), memberDescriptor(input)));
+        addInput(input);
+    }
+
+    /** Re-keys every declaration after this class's owner identity changes. */
+    public void rebindDeclaredMemberOwners() {
+        List<MemberInput<?>> members = new ArrayList<>(getMemberList());
+        methodList.clear();
+        fieldList.clear();
+        memberList.clear();
+        for (MemberInput<?> member : members) {
+            member.replaceDetails(new MemberDetails(
+                    getRealName(), memberName(member), memberDescriptor(member)));
+            addInput(member);
+        }
+    }
+
+    private static String memberName(MemberInput<?> input) {
+        if (input instanceof MethodInput method) return method.getNode().name;
+        return ((FieldInput) input).getNode().name;
+    }
+
+    private static String memberDescriptor(MemberInput<?> input) {
+        if (input instanceof MethodInput method) return method.getNode().desc;
+        return ((FieldInput) input).getNode().desc;
+    }
+
     private static void preserveMethodState(MethodInput input, MethodInput replacement) {
         input.getVariableTable().getVariableMap().forEach(variable -> {
             Integer index = variable.findIndex();

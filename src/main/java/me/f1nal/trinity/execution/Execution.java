@@ -239,7 +239,7 @@ public final class Execution {
         classInput.getNode().name = newName;
         classInput.markRebuildRequired();
         target.replaceRealName(newName);
-        classInput.reindexDeclaredMembers();
+        classInput.rebindDeclaredMemberOwners();
         classTargetMap.put(newName, target);
         ProjectContainer container = target.getContainer();
         target.setPackage(container == null ? getRootPackage() : container.getRootPackage());

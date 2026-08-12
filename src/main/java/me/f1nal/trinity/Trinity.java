@@ -9,6 +9,7 @@ import me.f1nal.trinity.execution.constant.ConstantStatisticsCache;
 import me.f1nal.trinity.execution.exception.MissingEntryPointException;
 import me.f1nal.trinity.execution.xref.XrefViewerSettings;
 import me.f1nal.trinity.refactor.RefactorManager;
+import me.f1nal.trinity.refactor.identity.IdentityRefactorService;
 import me.f1nal.trinity.remap.Remapper;
 
 import java.io.File;
@@ -48,6 +49,7 @@ public final class Trinity {
      * Automatic refactoring.
      */
     private final RefactorManager refactorManager;
+    private final IdentityRefactorService identityRefactorService;
 
     public Trinity(Database database, ProjectInputSet projectInput) throws IOException, MissingEntryPointException {
         this.database = database;
@@ -57,6 +59,7 @@ public final class Trinity {
         this.constantStatisticsCache = this.eventManager.registerListener(new ConstantStatisticsCache(this.execution));
         this.xrefViewerSettings = new XrefViewerSettings();
         this.refactorManager = new RefactorManager(this);
+        this.identityRefactorService = new IdentityRefactorService(this);
         this.decompiler = this.eventManager.registerListener(new Decompiler(this));
         this.execution.getAsynchronousLoad().execute();
     }
@@ -91,5 +94,9 @@ public final class Trinity {
 
     public RefactorManager getRefactorManager() {
         return refactorManager;
+    }
+
+    public IdentityRefactorService getIdentityRefactorService() {
+        return identityRefactorService;
     }
 }
