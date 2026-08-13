@@ -151,7 +151,7 @@ public final class IdentityRefactorService {
     private void synchronizeIdentityIndexes(Map<MemberDetails, MemberDetails> memberMappings) {
         for (ClassInput input : List.copyOf(trinity.getExecution().getClassList())) {
             String nodeName = input.getNode().name;
-            if (!input.getRealName().equals(nodeName)) {
+            if (requiresClassReindex(input)) {
                 List<MemberDetails> previous = input.getMemberList().stream()
                         .map(MemberInput::getDetails).toList();
                 trinity.getExecution().reindexClass(input, nodeName);
@@ -177,6 +177,13 @@ public final class IdentityRefactorService {
                 memberMappings.put(before, member.getDetails());
             }
         }
+    }
+
+    static boolean requiresClassReindex(ClassInput input) {
+        // ClassInput#getRealName() reads ClassNode.name, which has already been changed by
+        // the transformer. The ClassTarget retains the key currently used by Execution's
+        // lookup map until reindexClass() commits the new identity.
+        return !input.getClassTarget().getRealName().equals(input.getNode().name);
     }
 
     private Map<IdentityMemberKey, MemberInput<?>> liveMembers() {

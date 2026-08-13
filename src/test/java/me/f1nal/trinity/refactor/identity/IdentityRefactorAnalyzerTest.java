@@ -62,6 +62,21 @@ class IdentityRefactorAnalyzerTest {
     }
 
     @Test
+    void transformedClassNameIsReindexedAgainstTheExecutionLookupKey() {
+        ClassNode node = type("net/md_5/bungee/connection/InitialHandler",
+                "java/lang/Object");
+        ClassTarget target = new ClassTarget(node.name, 0);
+        ClassInput input = new ClassInput(null, node, target);
+        target.setInput(input);
+
+        node.name = "net/md_5/bungee/connection/InitialHandlee";
+
+        assertTrue(IdentityRefactorService.requiresClassReindex(input));
+        assertEquals("net/md_5/bungee/connection/InitialHandler", target.getRealName());
+        assertEquals("net/md_5/bungee/connection/InitialHandlee", input.getNode().name);
+    }
+
+    @Test
     void analysisResolutionDoesNotDependOnDeclarationIterationOrder() {
         ClassNode base = type("sample/Base", "java/lang/Object");
         base.fields.add(new FieldNode(0, "value", "I", null, null));
