@@ -76,17 +76,16 @@ public class NewProjectFrame extends StaticWindow implements ICaption {
             this.tabs.getSelection().drawTabContent();
         }
         ImGui.endChild();
-        if (ImGui.beginChild("ProjectCreationControlsChild", 0.F, 0.F)) {
-            ImGui.separator();
-            if (GuiUtil.disabledWidget(!this.isInputsValid(), () -> ImGui.button(FontAwesomeIcons.Plus + " Create Project"))) {
-                this.createProject();
-            }
-            Arrays.stream(NextButtonEnum.values()).forEach(nextButton -> {
-                ImGui.sameLine();
-                this.tabs.setSelection(nextButton.draw(this.tabs.getSelection(), this.tabs.getElementList()));
-            });
+        ImGui.separator();
+        if (GuiUtil.disabledWidget(!this.isInputsValid(),
+                () -> ImGui.button(FontAwesomeIcons.Plus + " Create Project"))) {
+            this.createProject();
         }
-        ImGui.endChild();
+        Arrays.stream(NextButtonEnum.values()).forEach(nextButton -> {
+            ImGui.sameLine();
+            this.tabs.setSelection(nextButton.draw(
+                    this.tabs.getSelection(), this.tabs.getElementList()));
+        });
         ImGui.endGroup();
     }
 
