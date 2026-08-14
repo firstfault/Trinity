@@ -127,15 +127,14 @@ public class ProjectBrowserFrame extends StaticWindow implements IEventListener 
     }
 
     private void drawDependencies() {
-        boolean open = ImGui.treeNodeEx("Dependencies###ProjectDependencies",
-                ImGuiTreeNodeFlags.DefaultOpen);
+        boolean open = ImGui.treeNodeEx("Dependencies###ProjectDependencies");
         boolean rootContextMenu = ImGui.isItemClicked(1);
         ImGui.sameLine();
         if (ImGui.smallButton("+ Add###AddProjectDependency")) {
             DependencyImporter.chooseAndImport(trinity);
         }
         if (ImGui.isItemHovered()) {
-            ImGui.setTooltip("Store a JAR, ZIP, or JMOD on this project's dependency classpath.");
+            ImGui.setTooltip("Store a dependency - not actually processed, only used for resolving frames in exporting JARs.");
         }
         if (rootContextMenu) {
             Main.getDisplayManager().getPopupMenu().show(this.createDependenciesPopup());

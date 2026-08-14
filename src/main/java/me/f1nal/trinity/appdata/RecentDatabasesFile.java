@@ -39,4 +39,8 @@ public class RecentDatabasesFile extends AppDataFile {
         getDatabases().remove(entry);
         getDatabases().add(entry);
     }
+
+    public boolean removeDatabase(RecentDatabaseEntry entry) {
+        return getDatabases().remove(entry);
+    }
 }

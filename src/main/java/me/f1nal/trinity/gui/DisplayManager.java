@@ -58,6 +58,7 @@ import org.lwjgl.glfw.GLFWDropCallback;
 import org.lwjgl.glfw.GLFWWindowCloseCallback;
 import org.objectweb.asm.tree.AbstractInsnNode;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.util.*;
 import java.util.zip.ZipFile;
@@ -331,7 +332,25 @@ public final class DisplayManager extends ImGuiApplication {
                 if (ImGui.selectable(database.getName() + "###TrinityHomepageDatabase" + i)) {
                     this.openDatabase(database.getPath());
                 }
-                if (ImGui.isItemHovered()) database.setHoveringText();
+                boolean hovered = ImGui.isItemHovered();
+                boolean contextMenuOpen = ImGui.beginPopupContextItem(
+                        "###TrinityHomepageDatabaseContext" + i);
+                if (contextMenuOpen) {
+                    if (ImGui.menuItem("Open")) {
+                        this.openDatabase(database.getPath());
+                    }
+                    ImGui.separator();
+                    if (ImGui.menuItem("Delete", "Backspace / Delete")) {
+                        Main.runLater(() -> this.confirmDeleteRecentProject(database));
+                    }
+                    ImGui.endPopup();
+                }
+                if (hovered && !contextMenuOpen) {
+                    database.setHoveringText();
+                    if (isRecentProjectDeletePressed()) {
+                        this.confirmDeleteRecentProject(database);
+                    }
+                }
             }
             ImGui.endListBox();
         }
@@ -402,6 +421,41 @@ public final class DisplayManager extends ImGuiApplication {
 
     public void openDatabase(String path) {
         this.closeDatabase(() -> this.windowManager.addPopup(new LoadingDatabasePopup(null, new File(path))));
+    }
+
+    public void confirmDeleteRecentProject(RecentDatabaseEntry database) {
+        Objects.requireNonNull(database, "database");
+        File projectFile = new File(database.getPath()).getAbsoluteFile();
+        this.windowManager.dialog("Delete Recent Project")
+                .warning("Delete this project database?")
+                .message(database.getName())
+                .message(projectFile.getAbsolutePath())
+                .message("Imported JARs and other files will not be deleted.")
+                .action("Forget Database", () -> this.deleteRecentProject(database, projectFile, false))
+                .confirm("Erase File", () -> this.deleteRecentProject(database, projectFile, true))
+                .cancel(() -> {
+                })
+                .show();
+    }
+
+    private void deleteRecentProject(RecentDatabaseEntry database, File projectFile, boolean erase) {
+        Main.getAppDataManager().getRecentDatabases().removeDatabase(database);
+
+        Notification notification;
+        if (erase && projectFile.exists() && !projectFile.delete()) {
+            notification = new Notification(NotificationType.ERROR, new SimpleCaption("Failed to delete"),
+                    ColoredStringBuilder.create().fmt("Failed to erase database {} from your files.", database.getName()).get());
+        } else {
+            notification = new Notification(NotificationType.SUCCESS, new SimpleCaption("Project Deleted"),
+                    ColoredStringBuilder.create().fmt(erase ? "{} was deleted from your files." : "{} was forgotten from recent databases.", database.getName()).get());
+        }
+        notification.setExpireTime(4_000L);
+        this.addNotification(notification);
+    }
+
+    public static boolean isRecentProjectDeletePressed() {
+        return ImGui.isKeyPressed(ImGuiKey.Backspace, false)
+                || ImGui.isKeyPressed(ImGuiKey.Delete, false);
     }
 
     public void openLocalProject() {

@@ -258,6 +258,11 @@ public class MainMenuBar {
             }
             if (ImGui.isItemHovered()) {
                 database.setHoveringText();
+                if (DisplayManager.isRecentProjectDeletePressed()) {
+                    ImGui.closeCurrentPopup();
+                    Main.runLater(() -> displayManager.confirmDeleteRecentProject(database));
+                    break;
+                }
             }
             if (i > 10) break;
         }
