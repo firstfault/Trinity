@@ -4,6 +4,7 @@ import com.google.common.eventbus.Subscribe;
 import imgui.ImColor;
 import imgui.ImDrawList;
 import imgui.ImGui;
+import imgui.ImGuiListClipper;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiFocusedFlags;
@@ -60,7 +61,10 @@ import org.objectweb.asm.tree.AbstractInsnNode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -95,6 +99,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private final ImBoolean searchWords = new ImBoolean();
     private final ImBoolean searchRegex = new ImBoolean();
     private final List<DecompilerSearchResult> searchResults = new ArrayList<>();
+    private final Map<DecompilerLine, List<DecompilerSearchResult>> searchResultsByLine =
+            new IdentityHashMap<>();
     private DecompiledClass searchedClass;
     private String searchError;
     private int searchResultIndex = -1;
@@ -111,9 +117,22 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private final Animation importAlpha = new Animation(
             Easing.EASE_OUT_QUAD, IMPORT_ALPHA_ANIMATION_TIME, COLLAPSED_IMPORT_ALPHA);
     private final List<DecompilerSearchResult> selectionMatches = new ArrayList<>();
+    private final Map<DecompilerLine, List<DecompilerSearchResult>> selectionMatchesByLine =
+            new IdentityHashMap<>();
     private DecompiledClass selectionMatchesClass;
     private String selectionMatchText = "";
     private boolean selectionMatchesDirty = true;
+    /** Visible-row indexes submitted during the current frame. */
+    private final BitSet renderedVisibleRows = new BitSet();
+    private List<DecompilerLine> renderedSourceLines = List.of();
+    private DecompilerImportSection renderedImportSection;
+    private boolean renderedImportsExpanded;
+    private int viewportFirstVisibleRow;
+    private int viewportEndVisibleRow;
+    private DecompiledClass measuredWidthClass;
+    private long measuredWidthLayoutVersion = -1L;
+    private float measuredWidthFontSize = -1.F;
+    private float measuredSourceWidth;
     /**
      * Selection cursor.
      */
@@ -152,7 +171,9 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.selectionMatchesClass = null;
         this.clearDelimiterMatch();
         this.searchResults.clear();
+        this.searchResultsByLine.clear();
         this.selectionMatches.clear();
+        this.selectionMatchesByLine.clear();
         super.onDispose();
     }
 
@@ -468,6 +489,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.searchDirty = false;
         this.searchedClass = decompiledClass;
         this.searchResults.clear();
+        this.searchResultsByLine.clear();
         this.searchResultIndex = -1;
         this.searchError = null;
 
@@ -496,7 +518,10 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 if (start == end || this.searchWords.get() && !this.isWholeWord(text, start, end)) {
                     continue;
                 }
-                this.searchResults.add(new DecompilerSearchResult(line, start, end));
+                DecompilerSearchResult result = new DecompilerSearchResult(line, start, end);
+                this.searchResults.add(result);
+                this.searchResultsByLine.computeIfAbsent(line, ignored -> new ArrayList<>())
+                        .add(result);
             }
         }
 
@@ -531,18 +556,6 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         return trinity.getDecompiler().getFromCache(selectedClass);
     }
 
-    boolean hasActiveRename() {
-        DecompiledClass decompiledClass = this.getDecompiledClass();
-        if (decompiledClass == null) return false;
-
-        for (DecompilerLine line : decompiledClass.getLines()) {
-            for (DecompilerLineText text : line.getComponents()) {
-                if (text.getComponent().getRenameState() != null) return true;
-            }
-        }
-        return false;
-    }
-
     private void drawDecompiledOutput(DecompiledClass decompiledClass, boolean enumCardHovered) {
         this.validateDelimiterMatch(decompiledClass);
         this.hoveredComponent = null;
@@ -567,98 +580,128 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                 ? null : pendingAutoScroll.findComponent(decompiledClass);
 
         List<DecompilerLine> lines = decompiledClass.getLines();
-        DecompilerImportSection importSection = DecompilerImportSection.find(lines);
+        DecompilerImportSection importSection = decompiledClass.getImportSection();
         boolean importsFoldable = importSection != null && importSection.isFoldable();
-        if (importsFoldable && !this.importsExpanded) {
-            importSection.clearCollapsedRenderedBounds(lines);
+        boolean importsExpandedForFrame = this.importsExpanded;
+        int visibleLineCount = importSection == null ? lines.size()
+                : importSection.visibleLineCount(lines.size(), importsExpandedForFrame);
+        float lineHeight = ImGui.getTextLineHeightWithSpacing();
+        float contentStartY = ImGui.getCursorPosY();
+
+        if (pendingAutoScroll != null && pendingAutoScroll.isNavigationPending()
+                && autoScrollComponent != null) {
+            DecompiledClass.ComponentLocation location = decompiledClass
+                    .getComponentLocation(autoScrollComponent);
+            if (location != null) {
+                this.completeAutoScroll(pendingAutoScroll, decompiledClass,
+                        location.line(), location.characterOffset());
+            }
+        }
+        DecompilerCoordinates caret = this.cursor.getActiveCoordinates();
+        if (caret != null) {
+            int sourceIndex = caret.getLine().getLineNumber() - 1;
+            int visibleRow = this.visibleRowForSourceIndex(
+                    sourceIndex, importSection, importsExpandedForFrame);
+            this.cursor.prepareScrollToVisibleRow(visibleRow, contentStartY, lineHeight,
+                    visibleLineCount);
         }
 
-        for (int lineIndex = 0; lineIndex < lines.size(); lineIndex++) {
-            DecompilerLine line = lines.get(lineIndex);
-            if (importsFoldable && !this.importsExpanded
-                    && importSection.isHiddenWhenCollapsed(lineIndex)) {
-                lineIndex = importSection.lastLineIndex();
-                continue;
-            }
-            boolean firstImportLine = importsFoldable
-                    && lineIndex == importSection.firstLineIndex();
-            final float cursorScreenPosX = ImGui.getCursorScreenPosX();
-            float currentLineNumberSpacing = this.getLineNumberSpacing(
-                    line, lineNumberSpacing, firstImportLine);
-            boolean collapsedImportHovered = firstImportLine && !this.importsExpanded
-                    && !decompilerInputBlocked && this.isCollapsedImportHovered(
-                    line, cursorScreenPosX, currentLineNumberSpacing, textSize);
-            boolean collapsedImportTextHovered = firstImportLine && !this.importsExpanded
-                    && !decompilerInputBlocked && this.isCollapsedImportTextHovered(
-                    line, cursorScreenPosX, currentLineNumberSpacing, textSize);
-            if (collapsedImportHovered) ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
-            if (firstImportLine) {
-                this.importAlpha.run(this.importsExpanded || collapsedImportHovered
-                        ? 1.F : COLLAPSED_IMPORT_ALPHA);
-                ImGui.pushStyleVar(ImGuiStyleVar.Alpha, this.importAlpha.getValue());
-            }
+        this.renderedVisibleRows.clear();
+        this.renderedSourceLines = lines;
+        this.renderedImportSection = importSection;
+        this.renderedImportsExpanded = importsExpandedForFrame;
+        this.viewportFirstVisibleRow = Math.max(0, Math.min(visibleLineCount,
+                (int) Math.floor(Math.max(0.F, ImGui.getScrollY() - contentStartY) / lineHeight)));
+        this.viewportEndVisibleRow = Math.max(this.viewportFirstVisibleRow,
+                Math.min(visibleLineCount, (int) Math.ceil(
+                        (ImGui.getScrollY() + ImGui.getWindowHeight() - contentStartY) / lineHeight) + 1));
 
-            this.drawNavigationHighlight(line, cursorScreenPosX, textSize);
-
-            int textOffset = 0, sameLines = 0;
-            ImGui.setCursorPosX(cursorPosX + currentLineNumberSpacing);
-            line.pos = ImGui.getCursorScreenPos().minus(2.5F, 0.F);
-            boolean textPositioned = false;
-            for (DecompilerLineText text : line.getComponents()) {
-                boolean customRendered = text.getComponent().render();
-                if (!customRendered) {
-                    if (!textPositioned) {
-                        line.pos = new ImVec2(line.pos.x, ImGui.getCursorScreenPosY());
-                        textPositioned = true;
+        ImGuiListClipper clipper = new ImGuiListClipper();
+        try {
+            clipper.begin(visibleLineCount, lineHeight);
+            while (clipper.step()) {
+                int displayStart = Math.max(0, clipper.getDisplayStart());
+                int displayEnd = Math.min(visibleLineCount, clipper.getDisplayEnd());
+                this.renderedVisibleRows.set(displayStart, displayEnd);
+                for (int visibleRow = displayStart; visibleRow < displayEnd; visibleRow++) {
+                    int lineIndex = this.sourceIndexForVisibleRow(
+                            visibleRow, importSection, importsExpandedForFrame);
+                    DecompilerLine line = lines.get(lineIndex);
+                    boolean firstImportLine = importsFoldable
+                            && lineIndex == importSection.firstLineIndex();
+                    final float cursorScreenPosX = ImGui.getCursorScreenPosX();
+                    float currentLineNumberSpacing = this.getLineNumberSpacing(
+                            line, lineNumberSpacing, firstImportLine);
+                    boolean collapsedImportHovered = firstImportLine && !importsExpandedForFrame
+                            && !decompilerInputBlocked && this.isCollapsedImportHovered(
+                            line, cursorScreenPosX, currentLineNumberSpacing, textSize);
+                    boolean collapsedImportTextHovered = firstImportLine && !importsExpandedForFrame
+                            && !decompilerInputBlocked && this.isCollapsedImportTextHovered(
+                            line, cursorScreenPosX, currentLineNumberSpacing, textSize);
+                    if (collapsedImportHovered) ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
+                    if (firstImportLine) {
+                        this.importAlpha.run(importsExpandedForFrame || collapsedImportHovered
+                                ? 1.F : COLLAPSED_IMPORT_ALPHA);
+                        ImGui.pushStyleVar(ImGuiStyleVar.Alpha, this.importAlpha.getValue());
                     }
-                    text.render(decompiledClass.isComponentHighlighted(text.getComponent()));
-                    ImGui.sameLine(0.F, 0.F);
-                } else {
-                    text.captureRenderedBounds();
-                    textPositioned = false;
+
+                    ImGui.setCursorPosX(cursorPosX + currentLineNumberSpacing);
+                    line.posY = ImGui.getCursorScreenPosY();
+                    line.positioned = true;
+                    this.drawNavigationHighlight(line, cursorScreenPosX, textSize);
+
+                    boolean textPositioned = false;
+                    for (DecompilerLineText text : line.getComponents()) {
+                        boolean customRendered = text.getComponent().render();
+                        if (!customRendered) {
+                            if (!textPositioned) {
+                                line.posY = ImGui.getCursorScreenPosY();
+                                textPositioned = true;
+                            }
+                            text.render(decompiledClass.isComponentHighlighted(text.getComponent()));
+                            ImGui.sameLine(0.F, 0.F);
+                        } else {
+                            text.captureRenderedBounds();
+                            textPositioned = false;
+                        }
+
+                        if (!decompilerInputBlocked && !collapsedImportTextHovered
+                                && this.hoveredComponent == null && ImGui.isItemHovered()) {
+                            this.hoveredComponent = text.getComponent();
+                        }
+                    }
+
+                    if (firstImportLine && !importsExpandedForFrame) {
+                        this.drawCollapsedImportEllipsis(collapsedImportTextHovered);
+                    }
+                    if (firstImportLine) ImGui.popStyleVar();
+                    if (collapsedImportTextHovered && ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
+                        this.toggleImportSection(importSection, lines);
+                    }
+
+                    float cursorPosY = ImGui.getCursorPosY();
+                    boolean disclosureHovered = this.drawLineGutter(line, cursorPosX,
+                            currentLineNumberSpacing, firstImportLine, importSection, lines);
+                    final boolean hovered = !decompilerInputBlocked && ImGui.isWindowHovered()
+                            && !disclosureHovered && !collapsedImportHovered
+                            && mousePosY >= cursorPosY && mousePosY < cursorPosY + lineHeight;
+
+                    if (hovered) {
+                        this.cursor.handleHoveredLineInputs(
+                                cursorScreenPosX, currentLineNumberSpacing, mousePosX, line);
+                    }
+
+                    ImGui.sameLine(cursorPosX + currentLineNumberSpacing, 0.F);
+                    this.cursor.handleLineDrawing(line, cursorScreenPosX,
+                            currentLineNumberSpacing, mousePosX, cursorPosY, textSize);
+                    ImGui.newLine();
                 }
-
-                if (pendingAutoScroll != null && pendingAutoScroll.isNavigationPending()
-                        && text.getComponent() == autoScrollComponent) {
-                    this.completeAutoScroll(pendingAutoScroll, decompiledClass, line, textOffset);
-                }
-
-                if (!decompilerInputBlocked && !collapsedImportTextHovered
-                        && this.hoveredComponent == null && ImGui.isItemHovered()) {
-                    this.hoveredComponent = text.getComponent();
-                }
-
-                textOffset += text.getText().length();
-
             }
-
-            if (firstImportLine && !this.importsExpanded) {
-                this.drawCollapsedImportEllipsis(collapsedImportTextHovered);
-            }
-            if (firstImportLine) ImGui.popStyleVar();
-            if (collapsedImportTextHovered && ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
-                this.toggleImportSection(importSection, lines);
-            }
-
-            float cursorPosY = ImGui.getCursorPosY();
-            boolean disclosureHovered = this.drawLineGutter(line, cursorPosX,
-                    currentLineNumberSpacing, firstImportLine, importSection, lines);
-            final boolean hovered = !decompilerInputBlocked && ImGui.isWindowHovered()
-                    && !disclosureHovered && !collapsedImportHovered
-                    && mousePosY >= cursorPosY
-                    && mousePosY < cursorPosY + textSize.y + ImGui.getStyle().getItemSpacingY();
-
-            if (hovered)
-                this.cursor.handleHoveredLineInputs(
-                        cursorScreenPosX, currentLineNumberSpacing, mousePosX, line);
-
-            ImGui.sameLine(cursorPosX + currentLineNumberSpacing, 0.F);
-
-            this.cursor.handleLineDrawing(line, cursorScreenPosX, currentLineNumberSpacing,
-                    mousePosX, cursorPosY, textSize);
-
-            ImGui.newLine();
+        } finally {
+            clipper.destroy();
         }
+        ImGui.setCursorPosX(cursorPosX);
+        ImGui.dummy(lineNumberSpacing + this.measureSourceWidth(decompiledClass) + 12.F, 0.F);
 
         if (pendingAutoScroll != null && pendingAutoScroll.isNavigationPending()
                 && pendingAutoScroll.isFallbackToClass() && autoScrollComponent == null
@@ -751,7 +794,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
 
     void updateDelimiterMatch(DecompilerCoordinates caret) {
         this.clearDelimiterMatch();
-        if (caret == null || this.hasActiveRename()) return;
+        if (caret == null || caret.getComponent() != null
+                && caret.getComponent().getRenameState() != null) return;
 
         DecompiledClass decompiledClass = this.getDecompiledClass();
         if (decompiledClass == null) return;
@@ -771,9 +815,15 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private void validateDelimiterMatch(DecompiledClass decompiledClass) {
         if (this.delimiterMatch == null) return;
         List<DecompilerLine> lines = decompiledClass.getLines();
+        DecompilerLine selectedLine = this.delimiterMatch.selected().getLine();
+        DecompilerLine matchingLine = this.delimiterMatch.matching().getLine();
+        int selectedIndex = selectedLine.getLineNumber() - 1;
+        int matchingIndex = matchingLine.getLineNumber() - 1;
         if (this.delimiterMatchClass != decompiledClass
-                || !lines.contains(this.delimiterMatch.selected().getLine())
-                || !lines.contains(this.delimiterMatch.matching().getLine())) {
+                || selectedIndex < 0 || selectedIndex >= lines.size()
+                || matchingIndex < 0 || matchingIndex >= lines.size()
+                || lines.get(selectedIndex) != selectedLine
+                || lines.get(matchingIndex) != matchingLine) {
             this.clearDelimiterMatch();
         }
     }
@@ -785,6 +835,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     private void drawDelimiterHighlight(DecompilerCoordinates coordinates) {
+        if (!this.isDecompilerLineRendered(coordinates.getLine())) return;
         int character = coordinates.getCharacter();
         DecompilerLine.TextRangeBounds bounds = coordinates.getLine()
                 .getRenderedRange(character, character + 1);
@@ -867,9 +918,10 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private void moveCursorOutOfCollapsedImports(DecompilerImportSection section,
                                                   List<DecompilerLine> lines) {
         DecompilerCoordinates coordinates = this.cursor.coordinates;
-        int cursorLine = coordinates == null ? -1 : lines.indexOf(coordinates.getLine());
+        int cursorLine = coordinates == null ? -1
+                : coordinates.getLine().getLineNumber() - 1;
         int selectionLine = this.cursor.selectionEnd == null ? -1
-                : lines.indexOf(this.cursor.selectionEnd.getLine());
+                : this.cursor.selectionEnd.getLine().getLineNumber() - 1;
         boolean cursorHidden = section.isHiddenWhenCollapsed(cursorLine);
         boolean selectionHidden = section.isHiddenWhenCollapsed(selectionLine);
         if (!cursorHidden && !selectionHidden) return;
@@ -886,10 +938,63 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (this.importsExpanded) return false;
         DecompiledClass decompiledClass = this.getDecompiledClass();
         if (decompiledClass == null) return false;
-        List<DecompilerLine> lines = decompiledClass.getLines();
-        DecompilerImportSection section = DecompilerImportSection.find(lines);
+        DecompilerImportSection section = decompiledClass.getImportSection();
         return section != null && section.isFoldable()
-                && section.isHiddenWhenCollapsed(lines.indexOf(line));
+                && section.isHiddenWhenCollapsed(line.getLineNumber() - 1);
+    }
+
+    private int sourceIndexForVisibleRow(int visibleRow, DecompilerImportSection section,
+                                         boolean importsExpanded) {
+        return section == null ? visibleRow
+                : section.sourceIndexForVisibleRow(visibleRow, importsExpanded);
+    }
+
+    private int visibleRowForSourceIndex(int sourceIndex, DecompilerImportSection section,
+                                         boolean importsExpanded) {
+        return section == null ? sourceIndex
+                : section.visibleRowForSourceIndex(sourceIndex, importsExpanded);
+    }
+
+    boolean isDecompilerLineRendered(DecompilerLine line) {
+        if (line == null || this.renderedSourceLines.isEmpty()) return false;
+        int sourceIndex = line.getLineNumber() - 1;
+        if (sourceIndex < 0 || sourceIndex >= this.renderedSourceLines.size()
+                || this.renderedSourceLines.get(sourceIndex) != line
+                || this.renderedImportSection != null && !this.renderedImportsExpanded
+                && this.renderedImportSection.isHiddenWhenCollapsed(sourceIndex)) {
+            return false;
+        }
+        int visibleRow = this.visibleRowForSourceIndex(sourceIndex,
+                this.renderedImportSection, this.renderedImportsExpanded);
+        return this.renderedVisibleRows.get(visibleRow);
+    }
+
+    int getFirstRenderedVisibleRow() {
+        return this.renderedVisibleRows.nextSetBit(0);
+    }
+
+    int getNextRenderedVisibleRow(int fromIndex) {
+        return this.renderedVisibleRows.nextSetBit(fromIndex);
+    }
+
+    int getSourceIndexForRenderedVisibleRow(int visibleRow) {
+        return this.sourceIndexForVisibleRow(visibleRow,
+                this.renderedImportSection, this.renderedImportsExpanded);
+    }
+
+    private float measureSourceWidth(DecompiledClass decompiledClass) {
+        float fontSize = ImGui.getFontSize();
+        long layoutVersion = decompiledClass.getLayoutVersion();
+        if (this.measuredWidthClass != decompiledClass
+                || this.measuredWidthLayoutVersion != layoutVersion
+                || this.measuredWidthFontSize != fontSize) {
+            this.measuredWidthClass = decompiledClass;
+            this.measuredWidthLayoutVersion = layoutVersion;
+            this.measuredWidthFontSize = fontSize;
+            this.measuredSourceWidth = ImGui.calcTextSize(
+                    decompiledClass.getLongestLineText()).x;
+        }
+        return this.measuredSourceWidth;
     }
 
     private void completeAutoScroll(DecompilerAutoScroll autoScroll, DecompiledClass decompiledClass,
@@ -1036,19 +1141,20 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         DecompiledClass.StickyHeaders stickyHeaders = decompiledClass.getStickyHeaders();
         float visibleTop = ImGui.getWindowPosY();
         float visibleBottom = visibleTop + ImGui.getWindowHeight();
-        float lineHeight = textSize.y + ImGui.getStyle().getItemSpacingY();
+        float lineHeight = ImGui.getTextLineHeightWithSpacing();
         List<DecompilerLine> visibleHeaders = new ArrayList<>(3);
 
         DecompilerLine classLine = stickyHeaders.classLine();
-        boolean showClass = isLineAboveViewport(classLine, visibleTop, textSize.y);
-        float methodVisibleTop = visibleTop + (showClass ? lineHeight : 0.F);
-        DecompiledClass.StickyMethod currentMethod = null;
-        for (DecompiledClass.StickyMethod method : stickyHeaders.methods()) {
-            if (isLineAboveViewport(method.signatureLine(), methodVisibleTop, textSize.y)
-                    && isLineAtOrBelowViewport(method.endLine(), methodVisibleTop, lineHeight)) {
-                currentMethod = method;
-            }
-        }
+        int classVisibleRow = stickyHeaders.classLineIndex() < 0 ? -1
+                : this.visibleRowForSourceIndex(stickyHeaders.classLineIndex(),
+                this.renderedImportSection, this.renderedImportsExpanded);
+        boolean showClass = classLine != null && classVisibleRow < this.viewportFirstVisibleRow;
+        int methodAnchorRow = Math.min(this.viewportEndVisibleRow,
+                this.viewportFirstVisibleRow + (showClass ? 1 : 0));
+        int methodAnchorSource = this.sourceIndexForVisibleRow(methodAnchorRow,
+                this.renderedImportSection, this.renderedImportsExpanded);
+        DecompiledClass.StickyMethod currentMethod = this.findStickyMethod(
+                stickyHeaders.methods(), methodAnchorSource);
         if (showClass) visibleHeaders.add(classLine);
         if (currentMethod != null) visibleHeaders.add(currentMethod.signatureLine());
         DecompilerLine methodLine = currentMethod == null ? null : currentMethod.signatureLine();
@@ -1192,26 +1298,35 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                                                                    float visibleBottom) {
         if (this.delimiterMatch == null) return null;
         DecompilerCoordinates matching = this.delimiterMatch.matching();
-        int character = matching.getCharacter();
-        DecompilerLine.TextRangeBounds bounds = matching.getLine()
-                .getRenderedRange(character, character + 1);
-        if (bounds != null && bounds.maxY() > visibleTop && bounds.minY() < visibleBottom) {
-            return null;
-        }
-        float targetY = bounds != null ? bounds.minY()
-                : matching.getLine().pos == null ? visibleTop : matching.getLine().pos.y;
-        return new OffscreenDelimiterPreview(matching, targetY >= visibleBottom);
+        int sourceIndex = matching.getLine().getLineNumber() - 1;
+        int visibleRow = this.visibleRowForSourceIndex(sourceIndex,
+                this.renderedImportSection, this.renderedImportsExpanded);
+        if (visibleRow >= this.viewportFirstVisibleRow
+                && visibleRow < this.viewportEndVisibleRow) return null;
+        return new OffscreenDelimiterPreview(matching,
+                visibleRow >= this.viewportEndVisibleRow);
     }
 
     private record OffscreenDelimiterPreview(DecompilerCoordinates coordinates, boolean below) {
     }
 
-    private static boolean isLineAboveViewport(DecompilerLine line, float visibleTop, float textHeight) {
-        return line != null && line.pos != null && line.pos.y + textHeight < visibleTop;
-    }
-
-    private static boolean isLineAtOrBelowViewport(DecompilerLine line, float visibleTop, float lineHeight) {
-        return line != null && line.pos != null && line.pos.y + lineHeight >= visibleTop;
+    private DecompiledClass.StickyMethod findStickyMethod(
+            List<DecompiledClass.StickyMethod> methods, int sourceLineIndex) {
+        int low = 0;
+        int high = methods.size() - 1;
+        DecompiledClass.StickyMethod candidate = null;
+        while (low <= high) {
+            int middle = (low + high) >>> 1;
+            DecompiledClass.StickyMethod method = methods.get(middle);
+            if (method.signatureLineIndex() < sourceLineIndex) {
+                candidate = method;
+                low = middle + 1;
+            } else {
+                high = middle - 1;
+            }
+        }
+        return candidate != null && candidate.endLineIndex() >= sourceLineIndex
+                ? candidate : null;
     }
 
     private static void drawStickyLine(ImDrawList drawList, DecompilerLine line, float startX,
@@ -1250,11 +1365,11 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             this.navigationHighlight = null;
             return;
         }
-        if (line.pos == null) {
+        if (!line.positioned) {
             return;
         }
 
-        float startY = line.pos.y - 2.F;
+        float startY = line.posY - 2.F;
         float endX = ImGui.getWindowPosX() + ImGui.getWindowContentRegionMax().x;
         float endY = startY + textSize.y + 4.F;
         ImGui.getWindowDrawList().addRectFilled(startX, startY, endX, endY, highlight.getFillColor());
@@ -1266,39 +1381,44 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             return;
         }
 
-        for (DecompilerSearchResult result : this.searchResults) {
-            DecompilerLine line = result.line();
-            if (line.pos == null) {
-                continue;
-            }
-
-            DecompilerLine.TextRangeBounds bounds = line.getRenderedRange(result.start(), result.end());
-            if (bounds != null) {
-                ImGui.getWindowDrawList().addRectFilled(bounds.minX() - 1.F, bounds.minY() - 1.F,
-                        bounds.maxX() + 1.F, bounds.maxY() + 1.F, CodeColorScheme.SEARCH_RESULT);
+        for (int row = this.getFirstRenderedVisibleRow(); row >= 0;
+             row = this.getNextRenderedVisibleRow(row + 1)) {
+            DecompilerLine line = this.renderedSourceLines.get(
+                    this.getSourceIndexForRenderedVisibleRow(row));
+            for (DecompilerSearchResult result : this.searchResultsByLine
+                    .getOrDefault(line, List.of())) {
+                DecompilerLine.TextRangeBounds bounds = line.getRenderedRange(
+                        result.start(), result.end());
+                if (bounds != null) {
+                    ImGui.getWindowDrawList().addRectFilled(bounds.minX() - 1.F,
+                            bounds.minY() - 1.F, bounds.maxX() + 1.F, bounds.maxY() + 1.F,
+                            CodeColorScheme.SEARCH_RESULT);
+                }
             }
         }
     }
 
     private void drawSelectionMatches(DecompiledClass decompiledClass) {
         this.refreshSelectionMatches(decompiledClass);
-        for (DecompilerSearchResult result : this.selectionMatches) {
-            DecompilerLine line = result.line();
-            if (line.pos == null) {
-                continue;
-            }
-
-            DecompilerLine.TextRangeBounds bounds = line.getRenderedRange(result.start(), result.end());
-            if (bounds != null) {
-                ImGui.getWindowDrawList().addRect(bounds.minX() - 1.F, bounds.minY() - 1.F,
-                        bounds.maxX() + 1.F, bounds.maxY() + 1.F,
-                        SELECTION_MATCH_BORDER, 0.F, 0, 1.F);
+        for (int row = this.getFirstRenderedVisibleRow(); row >= 0;
+             row = this.getNextRenderedVisibleRow(row + 1)) {
+            DecompilerLine line = this.renderedSourceLines.get(
+                    this.getSourceIndexForRenderedVisibleRow(row));
+            for (DecompilerSearchResult result : this.selectionMatchesByLine
+                    .getOrDefault(line, List.of())) {
+                DecompilerLine.TextRangeBounds bounds = line.getRenderedRange(
+                        result.start(), result.end());
+                if (bounds != null) {
+                    ImGui.getWindowDrawList().addRect(bounds.minX() - 1.F,
+                            bounds.minY() - 1.F, bounds.maxX() + 1.F, bounds.maxY() + 1.F,
+                            SELECTION_MATCH_BORDER, 0.F, 0, 1.F);
+                }
             }
         }
     }
 
     private void refreshSelectionMatches(DecompiledClass decompiledClass) {
-        String selectedText = this.cursor.shouldHighlightSelectionMatches() ? this.cursor.getSelectionText() : "";
+        String selectedText = this.cursor.getSingleLineSelectionTextForHighlight();
         if (!this.selectionMatchesDirty && this.selectionMatchesClass == decompiledClass
                 && this.selectionMatchText.equals(selectedText)) {
             return;
@@ -1308,6 +1428,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.selectionMatchesClass = decompiledClass;
         this.selectionMatchText = selectedText;
         this.selectionMatches.clear();
+        this.selectionMatchesByLine.clear();
         if (selectedText.isBlank() || selectedText.indexOf('\n') >= 0 || selectedText.indexOf('\r') >= 0) {
             return;
         }
@@ -1317,7 +1438,10 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
             int start = 0;
             while ((start = text.indexOf(selectedText, start)) != -1) {
                 int end = start + selectedText.length();
-                this.selectionMatches.add(new DecompilerSearchResult(line, start, end));
+                DecompilerSearchResult result = new DecompilerSearchResult(line, start, end);
+                this.selectionMatches.add(result);
+                this.selectionMatchesByLine.computeIfAbsent(line, ignored -> new ArrayList<>())
+                        .add(result);
                 start = end;
             }
         }

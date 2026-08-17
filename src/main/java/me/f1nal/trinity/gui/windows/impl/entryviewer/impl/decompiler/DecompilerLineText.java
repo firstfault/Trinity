@@ -1,8 +1,6 @@
 package me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler;
 
-import imgui.ImColor;
 import imgui.ImGui;
-import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiStyleVar;
 import me.f1nal.trinity.theme.CodeColorScheme;
@@ -10,8 +8,11 @@ import me.f1nal.trinity.theme.CodeColorScheme;
 public class DecompilerLineText {
     private final String text;
     private final DecompilerComponent component;
-    private ImVec2 renderedMin;
-    private ImVec2 renderedMax;
+    private float renderedMinX;
+    private float renderedMinY;
+    private float renderedMaxX;
+    private float renderedMaxY;
+    private boolean rendered;
 
     public DecompilerLineText(String text, DecompilerComponent component) {
         this.text = text;
@@ -44,11 +45,14 @@ public class DecompilerLineText {
 
             if (highlighted) {
                 float spacing = 1.F;
-                final ImVec2 min = ImGui.getItemRectMin().minus(spacing, spacing);
-                spacing *= 2.F;
-                final ImVec2 size = ImGui.getItemRectSize().plus(spacing, spacing);
-                ImGui.getWindowDrawList().addRect(min.x, min.y, min.x + size.x, min.y + size.y, CodeColorScheme.setAlpha(color, 80));
-                ImGui.getWindowDrawList().addRectFilled(min.x, min.y, min.x + size.x, min.y + size.y, CodeColorScheme.setAlpha(color, 20));
+                float minX = ImGui.getItemRectMinX() - spacing;
+                float minY = ImGui.getItemRectMinY() - spacing;
+                float maxX = ImGui.getItemRectMaxX() + spacing;
+                float maxY = ImGui.getItemRectMaxY() + spacing;
+                ImGui.getWindowDrawList().addRect(minX, minY, maxX, maxY,
+                        CodeColorScheme.setAlpha(color, 80));
+                ImGui.getWindowDrawList().addRectFilled(minX, minY, maxX, maxY,
+                        CodeColorScheme.setAlpha(color, 20));
             }
         }
 
@@ -57,26 +61,34 @@ public class DecompilerLineText {
     }
 
     public void captureRenderedBounds() {
-        ImVec2 min = ImGui.getItemRectMin();
-        ImVec2 max = ImGui.getItemRectMax();
-        this.renderedMin = new ImVec2(min.x, min.y);
-        this.renderedMax = new ImVec2(max.x, max.y);
+        this.renderedMinX = ImGui.getItemRectMinX();
+        this.renderedMinY = ImGui.getItemRectMinY();
+        this.renderedMaxX = ImGui.getItemRectMaxX();
+        this.renderedMaxY = ImGui.getItemRectMaxY();
+        this.rendered = true;
     }
 
     public boolean hasRenderedBounds() {
-        return this.renderedMin != null && this.renderedMax != null;
+        return this.rendered;
     }
 
     public void clearRenderedBounds() {
-        this.renderedMin = null;
-        this.renderedMax = null;
+        this.rendered = false;
     }
 
-    public ImVec2 getRenderedMin() {
-        return renderedMin;
+    public float getRenderedMinX() {
+        return renderedMinX;
     }
 
-    public ImVec2 getRenderedMax() {
-        return renderedMax;
+    public float getRenderedMinY() {
+        return renderedMinY;
+    }
+
+    public float getRenderedMaxX() {
+        return renderedMaxX;
+    }
+
+    public float getRenderedMaxY() {
+        return renderedMaxY;
     }
 }

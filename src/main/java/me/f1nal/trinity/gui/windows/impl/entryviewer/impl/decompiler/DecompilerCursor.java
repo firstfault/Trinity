@@ -140,6 +140,10 @@ public class DecompilerCursor {
         return this.coordinates == null ? null : this.coordinates.getComponent();
     }
 
+    DecompilerCoordinates getActiveCoordinates() {
+        return this.selectionEnd == null ? this.coordinates : this.selectionEnd;
+    }
+
     public void navigateTo(DecompilerCoordinates coordinates) {
         this.selectionEnd = null;
         this.draggingSelection = false;
@@ -200,7 +204,7 @@ public class DecompilerCursor {
     private DecompilerCoordinates moveVertically(DecompilerCoordinates origin, int delta) {
         if (origin == null || delta == 0) return origin;
         List<DecompilerLine> lines = window.getDecompiledClass().getLines();
-        int indexOf = lines.indexOf(origin.getLine()) + delta;
+        int indexOf = origin.getLine().getLineNumber() - 1 + delta;
 
         while (indexOf >= 0 && indexOf < lines.size()
                 && window.isDecompilerLineHidden(lines.get(indexOf))) indexOf += delta;
@@ -259,6 +263,23 @@ public class DecompilerCursor {
             ImGui.setScrollY(this.scrollDestination);
             this.scrollAnimation = null;
         }
+    }
+
+    void prepareScrollToVisibleRow(int visibleRow, float contentStartY, float lineHeight,
+                                   int visibleLineCount) {
+        if (!this.scroll || visibleRow < 0 || visibleRow >= visibleLineCount) return;
+
+        float viewportHeight = ImGui.getWindowHeight();
+        float target = contentStartY + (visibleRow + 0.5F) * lineHeight
+                - viewportHeight * 0.5F;
+        float maximum = Math.max(0.F,
+                contentStartY + visibleLineCount * lineHeight - viewportHeight);
+        this.scrollDestination = Math.max(0.F, Math.min(target, maximum));
+        this.scrollAnimation = new Animation(Easing.EASE_OUT_CUBIC,
+                SCROLL_ANIMATION_TIME, ImGui.getScrollY());
+        this.scrollAnimation.run(this.scrollDestination);
+        ImGui.setScrollY(this.scrollAnimation.getValue());
+        this.scroll = false;
     }
 
     private void animateScrollToCurrentItem() {
@@ -340,9 +361,8 @@ public class DecompilerCursor {
     }
 
     private int compare(DecompilerCoordinates first, DecompilerCoordinates second) {
-        List<DecompilerLine> lines = window.getDecompiledClass().getLines();
-        int lineComparison = Integer.compare(lines.indexOf(first.getLine()),
-                lines.indexOf(second.getLine()));
+        int lineComparison = Integer.compare(first.getLine().getLineNumber(),
+                second.getLine().getLineNumber());
         return lineComparison != 0 ? lineComparison
                 : Integer.compare(first.getCharacter(), second.getCharacter());
     }
@@ -351,7 +371,8 @@ public class DecompilerCursor {
         DecompilerCoordinates caret = this.selectionEnd == null
                 ? this.coordinates : this.selectionEnd;
         if (caret != null && caret.getLine() == line) {
-            if (this.selectionEnd == null && !this.window.hasActiveRename()) {
+            if (this.selectionEnd == null && (caret.getComponent() == null
+                    || caret.getComponent().getRenameState() == null)) {
                 this.handleLineCursorDrawing(caret, cursorScreenPosX, lineNumberSpacing, mousePosX, cursorPosY, textSize);
             }
 
@@ -383,14 +404,17 @@ public class DecompilerCursor {
         }
 
         List<DecompilerLine> lines = window.getDecompiledClass().getLines();
-        int startLine = lines.indexOf(from.getLine());
-        int endLine = lines.indexOf(to.getLine());
+        int startLine = from.getLine().getLineNumber() - 1;
+        int endLine = to.getLine().getLineNumber() - 1;
 
-        if (startLine == -1 || endLine == -1) {
+        if (startLine < 0 || endLine < 0 || startLine >= lines.size() || endLine >= lines.size()) {
             return;
         }
 
-        for (int i = startLine; i <= endLine; i++) {
+        for (int row = window.getFirstRenderedVisibleRow(); row >= 0;
+             row = window.getNextRenderedVisibleRow(row + 1)) {
+            int i = window.getSourceIndexForRenderedVisibleRow(row);
+            if (i < startLine || i > endLine) continue;
             DecompilerLine line = lines.get(i);
             String text = line.getText();
             int rangeStart = i == startLine ? from.getCharacter() : 0;
@@ -413,6 +437,14 @@ public class DecompilerCursor {
         return this.highlightSelectionMatches && this.hasTextSelection();
     }
 
+    String getSingleLineSelectionTextForHighlight() {
+        if (!this.shouldHighlightSelectionMatches()
+                || this.coordinates.getLine() != this.selectionEnd.getLine()) {
+            return "";
+        }
+        return this.getSelectionText();
+    }
+
     public String getSelectionText() {
         if (!hasTextSelection()) {
             return "";
@@ -429,9 +461,9 @@ public class DecompilerCursor {
 
         StringBuilder result = new StringBuilder();
         List<DecompilerLine> lines = window.getDecompiledClass().getLines();
-        int startLine = lines.indexOf(from.getLine());
-        int endLine = lines.indexOf(to.getLine());
-        if (startLine == -1 || endLine == -1) {
+        int startLine = from.getLine().getLineNumber() - 1;
+        int endLine = to.getLine().getLineNumber() - 1;
+        if (startLine < 0 || endLine < 0 || startLine >= lines.size() || endLine >= lines.size()) {
             return "";
         }
 

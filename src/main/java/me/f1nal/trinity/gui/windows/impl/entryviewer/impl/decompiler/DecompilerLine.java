@@ -1,11 +1,9 @@
 package me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler;
 
 import imgui.ImGui;
-import imgui.ImVec2;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class DecompilerLine {
     /**
@@ -16,7 +14,10 @@ public class DecompilerLine {
      * Index of this line.
      */
     private final int lineNumber;
-    public ImVec2 pos;
+    public float posY;
+    public boolean positioned;
+    private String cachedText;
+    private DecompilerComponent recursiveInvocation;
 
     public DecompilerLine(int lineNumber) {
         this.lineNumber = lineNumber;
@@ -28,6 +29,10 @@ public class DecompilerLine {
 
     public void addComponent(DecompilerLineText component) {
         this.components.add(component);
+        this.cachedText = null;
+        if (this.recursiveInvocation == null && component.getComponent().isRecursiveInvocation()) {
+            this.recursiveInvocation = component.getComponent();
+        }
     }
 
     public List<DecompilerLineText> getComponents() {
@@ -35,7 +40,12 @@ public class DecompilerLine {
     }
 
     public String getText() {
-        return components.stream().map(DecompilerLineText::getText).collect(Collectors.joining());
+        if (this.cachedText == null) {
+            StringBuilder text = new StringBuilder();
+            for (DecompilerLineText component : this.components) text.append(component.getText());
+            this.cachedText = text.toString();
+        }
+        return this.cachedText;
     }
 
     public DecompilerComponent getComponentAtCharacter(int character) {
@@ -66,10 +76,7 @@ public class DecompilerLine {
     }
 
     public DecompilerComponent getRecursiveInvocation() {
-        for (DecompilerLineText component : components) {
-            if (component.getComponent().isRecursiveInvocation()) return component.getComponent();
-        }
-        return null;
+        return this.recursiveInvocation;
     }
 
     public void clearRenderedBounds() {
@@ -106,8 +113,8 @@ public class DecompilerLine {
                 }
                 endComponent = component;
                 endComponentOffset = offset;
-                minY = Math.min(minY, component.getRenderedMin().y);
-                maxY = Math.max(maxY, component.getRenderedMax().y);
+                minY = Math.min(minY, component.getRenderedMinY());
+                maxY = Math.max(maxY, component.getRenderedMaxY());
             }
             offset = componentEnd;
         }
@@ -118,9 +125,9 @@ public class DecompilerLine {
 
         int localStart = rangeStart - startComponentOffset;
         int localEnd = rangeEnd - endComponentOffset;
-        float minX = startComponent.getRenderedMin().x
+        float minX = startComponent.getRenderedMinX()
                 + ImGui.calcTextSize(startComponent.getText().substring(0, localStart)).x;
-        float maxX = endComponent.getRenderedMin().x
+        float maxX = endComponent.getRenderedMinX()
                 + ImGui.calcTextSize(endComponent.getText().substring(0, localEnd)).x;
         return new TextRangeBounds(minX, minY, maxX, maxY);
     }
@@ -145,11 +152,11 @@ public class DecompilerLine {
             }
 
             if (component.hasRenderedBounds()) {
-                float componentX = component.getRenderedMin().x;
+                float componentX = component.getRenderedMinX();
                 if (mouseX <= componentX) {
                     return offset;
                 }
-                if (mouseX <= component.getRenderedMax().x) {
+                if (mouseX <= component.getRenderedMaxX()) {
                     float left = componentX;
                     for (int index = 0; index < length; index++) {
                         float right = componentX
@@ -179,7 +186,7 @@ public class DecompilerLine {
             int componentEnd = offset + text.length();
             if (!text.isEmpty() && component.hasRenderedBounds() && target <= componentEnd) {
                 int localCharacter = Math.max(0, target - offset);
-                return component.getRenderedMin().x
+                return component.getRenderedMinX()
                         + ImGui.calcTextSize(text.substring(0, localCharacter)).x;
             }
             offset = componentEnd;

@@ -3,8 +3,8 @@ package me.f1nal.trinity.gui.windows.impl.entryviewer.impl.decompiler;
 import java.util.List;
 
 /** The source range occupied by decompiler-generated import declarations. */
-record DecompilerImportSection(int firstLineIndex, int lastLineIndex, int importLineCount) {
-    static DecompilerImportSection find(List<DecompilerLine> lines) {
+public record DecompilerImportSection(int firstLineIndex, int lastLineIndex, int importLineCount) {
+    public static DecompilerImportSection find(List<DecompilerLine> lines) {
         int first = -1;
         int last = -1;
         int count = 0;
@@ -29,6 +29,25 @@ record DecompilerImportSection(int firstLineIndex, int lastLineIndex, int import
 
     boolean isHiddenWhenCollapsed(int lineIndex) {
         return isFoldable() && lineIndex > firstLineIndex && lineIndex <= lastLineIndex;
+    }
+
+    int hiddenLineCount() {
+        return isFoldable() ? lastLineIndex - firstLineIndex : 0;
+    }
+
+    int visibleLineCount(int sourceLineCount, boolean expanded) {
+        return expanded ? sourceLineCount : sourceLineCount - this.hiddenLineCount();
+    }
+
+    int sourceIndexForVisibleRow(int visibleRow, boolean expanded) {
+        if (expanded || visibleRow <= firstLineIndex) return visibleRow;
+        return visibleRow + this.hiddenLineCount();
+    }
+
+    int visibleRowForSourceIndex(int sourceIndex, boolean expanded) {
+        if (expanded || sourceIndex <= firstLineIndex) return sourceIndex;
+        if (sourceIndex <= lastLineIndex) return firstLineIndex;
+        return sourceIndex - this.hiddenLineCount();
     }
 
     void clearCollapsedRenderedBounds(List<DecompilerLine> lines) {

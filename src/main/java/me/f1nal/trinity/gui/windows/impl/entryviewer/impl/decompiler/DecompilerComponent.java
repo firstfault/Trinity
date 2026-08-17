@@ -53,12 +53,49 @@ public class DecompilerComponent {
     private Object constantValue;
     /** Text emitted between semantic decompiler tags rather than supplied by a member token. */
     private boolean rawDecompilerText;
+    /* Layout metadata is stored on the component to avoid a large identity-map sidecar for
+       enormous decompiler outputs. It is rebuilt whenever DecompiledClass rebuilds its lines. */
+    private int layoutIndex = -1;
+    private DecompilerLine layoutFirstLine;
+    private DecompilerLine layoutLastLine;
+    private int layoutCharacterOffset;
     // Temporary
     public Input<?> input;
     public String memberKey;
 
     public DecompilerComponent(String text) {
         this.text = text;
+    }
+
+    public void resetLayoutMetadata(int index) {
+        this.layoutIndex = index;
+        this.layoutFirstLine = null;
+        this.layoutLastLine = null;
+        this.layoutCharacterOffset = 0;
+    }
+
+    public void includeLayoutOccurrence(DecompilerLine line, int characterOffset) {
+        if (this.layoutFirstLine == null) {
+            this.layoutFirstLine = line;
+            this.layoutCharacterOffset = characterOffset;
+        }
+        this.layoutLastLine = line;
+    }
+
+    public int getLayoutIndex() {
+        return layoutIndex;
+    }
+
+    public DecompilerLine getLayoutFirstLine() {
+        return layoutFirstLine;
+    }
+
+    public DecompilerLine getLayoutLastLine() {
+        return layoutLastLine;
+    }
+
+    public int getLayoutCharacterOffset() {
+        return layoutCharacterOffset;
     }
 
     /**
