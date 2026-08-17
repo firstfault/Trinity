@@ -51,7 +51,14 @@ public class EditingInstruction {
         if (insnNode instanceof TypeInsnNode) {
             editFieldList.add(new EditFieldDescriptor(() -> ((TypeInsnNode) insnNode).desc, (desc) -> ((TypeInsnNode) insnNode).desc = desc));
         } else if (insnNode instanceof IntInsnNode) {
-            editFieldList.add(new EditFieldInteger("Operand", () -> ((IntInsnNode) insnNode).operand, (operand) -> ((IntInsnNode) insnNode).operand = operand, ImGuiDataType.S32));
+            IntInsnNode integer = (IntInsnNode) insnNode;
+            if (integer.getOpcode() == org.objectweb.asm.Opcodes.NEWARRAY) {
+                editFieldList.add(new EditFieldNewArrayType(() -> integer.operand,
+                        operand -> integer.operand = operand));
+            } else {
+                editFieldList.add(new EditFieldInteger("Operand", () -> integer.operand,
+                        operand -> integer.operand = operand, ImGuiDataType.S32));
+            }
         } else if (insnNode instanceof VarInsnNode) {
             editFieldList.add(new EditFieldVariable(methodInput.getVariableTable(), () -> methodInput.getVariableTable().getVariable(((VarInsnNode) insnNode).var), (variable) -> ((VarInsnNode) insnNode).var = variable.findIndex()));
         } else if (insnNode instanceof IincInsnNode) {

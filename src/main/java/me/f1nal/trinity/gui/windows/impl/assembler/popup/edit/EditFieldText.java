@@ -29,23 +29,45 @@ public abstract class EditFieldText<T> extends EditField<T> {
     @Override
     public void draw() {
         if (ImGui.inputTextWithHint(this.label, this.hint, this.text, inputTextFlags)) {
-            T parse = null;
-            boolean parsed = false;
-            try {
-                parse = this.parse(this.text.get());
-                this.valid = true;
-                this.error = null;
-                parsed = true;
-            } catch (InvalidEditInputException e) {
-                this.valid = false;
-                this.error = e.getMessage();
-                this.update();
-            }
-            if (parsed) {
-                this.set(parse);
-            }
+            this.applyText(this.text.get());
         }
         if (error != null && !error.isBlank()) ImGui.textColored(CodeColorScheme.NOTIFY_ERROR, error);
+    }
+
+    private boolean applyText(String input) {
+        try {
+            T parsed = this.parse(input);
+            this.valid = true;
+            this.error = null;
+            this.set(parsed);
+            return true;
+        } catch (InvalidEditInputException exception) {
+            this.valid = false;
+            this.error = exception.getMessage();
+            this.update();
+            return false;
+        }
+    }
+
+    @Override
+    public String getInlineLabel() {
+        return label;
+    }
+
+    @Override
+    protected String formatInlineValue() {
+        return text.get();
+    }
+
+    @Override
+    public boolean applyInlineValue(String value) {
+        this.text.set(value);
+        return this.applyText(value);
+    }
+
+    @Override
+    public String getInlineError() {
+        return error;
     }
 
     protected abstract T parse(String input) throws InvalidEditInputException;

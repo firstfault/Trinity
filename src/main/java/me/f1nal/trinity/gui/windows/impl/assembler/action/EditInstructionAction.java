@@ -8,7 +8,7 @@ import me.f1nal.trinity.keybindings.Bindable;
 public final class EditInstructionAction implements InstructionAction {
     @Override
     public void execute(AssemblerFrame assemblerFrame, InstructionComponent instructionComponent) {
-        assemblerFrame.openEditDialog(assemblerFrame.getInstructions().indexOf(instructionComponent));
+        assemblerFrame.beginInlineEdit(instructionComponent, -1);
     }
 
     @Override

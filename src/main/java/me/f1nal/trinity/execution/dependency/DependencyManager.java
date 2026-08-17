@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** Ordered dependency classpath for one Trinity project. */
@@ -77,6 +78,10 @@ public final class DependencyManager {
 
     public synchronized boolean containsClass(String internalName) {
         return classBytes.containsKey(internalName);
+    }
+
+    public synchronized Set<String> getClassNames() {
+        return Set.copyOf(classBytes.keySet());
     }
 
     public synchronized @Nullable ClassNode getClass(String internalName) {

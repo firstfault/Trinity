@@ -60,4 +60,9 @@ public class EditFieldVariable extends EditFieldText<Variable> {
     public VariableTable getTable() {
         return table;
     }
+
+    @Override
+    public List<String> getInlineSuggestions() {
+        return table.getVariableMap().stream().map(Variable::getName).sorted().toList();
+    }
 }

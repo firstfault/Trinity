@@ -32,9 +32,9 @@ import me.f1nal.trinity.gui.windows.impl.assembler.line.Instruction2SourceMappin
 import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionDrag;
 import me.f1nal.trinity.gui.windows.impl.assembler.line.InstructionReferenceArrow;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.AssemblerBytecodeGoToIndexPopup;
-import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.AssemblerEditInstructionPopup;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.EditField;
 import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.EditingInstruction;
+import me.f1nal.trinity.gui.windows.impl.assembler.popup.edit.OpcodeClasses;
 import me.f1nal.trinity.gui.viewport.notifications.ICaption;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
@@ -69,6 +69,8 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     private InstructionComponent scrollTo;
     private AssemblerInstructionDecoder decoder;
     private AssemblerInstructionTable instructionTable;
+    private AssemblerInlineEditor inlineEditor;
+    private boolean inlineCommitInProgress;
     private InstructionComponent lastHoveredInstruction;
     /**
      * Dragging reference arrow.
@@ -98,7 +100,8 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         this.sourceMapping = sourceMapping;
         this.setInstructions();
         this.popupMenuBar = new PopupMenuBar(this.createMenuBar());
-        this.windowFlags |= ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings;
+        this.windowFlags |= ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings
+                | ImGuiWindowFlags.HorizontalScrollbar;
     }
 
     public PopupMenu getPopupMenu() {
@@ -117,10 +120,12 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     private void setInstructions(boolean resetHistory) {
+        if (this.inlineEditor != null) this.inlineEditor.cancel();
         this.saveMethod = this.methodNotFresh = false;
         this.selected = null;
         this.selectedInstructions.clear();
         this.lastHoveredInstruction = null;
+        this.inlineEditor = null;
         if (resetHistory || this.history == null) this.history = new ChangeManager<>();
         this.decoder = new AssemblerInstructionDecoder(this, methodInput);
         this.instructions = this.decoder.buildInstructions(document.getInstructions());
@@ -146,7 +151,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             this.defaultDockAttempts++;
         }
         this.windowFlags &= ~ImGuiWindowFlags.UnsavedDocument;
-        if (this.methodNotFresh) this.windowFlags |= ImGuiWindowFlags.UnsavedDocument;
+        if (this.methodNotFresh || this.inlineEditor != null) this.windowFlags |= ImGuiWindowFlags.UnsavedDocument;
 
         ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 0.F, 0.F);
         try {
@@ -185,8 +190,9 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         if (historyFrame != null) historyFrame.render();
 
         boolean windowFocused = ImGui.isWindowFocused(ImGuiFocusedFlags.RootAndChildWindows);
-        boolean keyboardShortcuts = windowFocused && !ImGui.isAnyItemActive();
-        if (windowFocused && ImGui.getIO().getKeyCtrl()
+        boolean inlineEditing = this.inlineEditor != null;
+        boolean keyboardShortcuts = windowFocused && !inlineEditing && !ImGui.isAnyItemActive();
+        if (!inlineEditing && windowFocused && ImGui.getIO().getKeyCtrl()
                 && ImGui.isKeyPressed(ImGuiKey.S, false)) {
             // Always run the save path. Some operand and metadata edits dirty the detached
             // document without changing the instruction-list freshness flag.
@@ -202,9 +208,12 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             this.copySelectedInstructions();
         }
         if (keyboardShortcuts && ImGui.isKeyPressed(ImGuiKey.Escape)) {
-            this.clearInstructionSelection();
+            if (this.inlineEditor != null) this.cancelInlineEdit(this.inlineEditor);
+            else this.clearInstructionSelection();
         }
+        ImGui.beginDisabled(inlineEditing);
         this.popupMenuBar.draw();
+        ImGui.endDisabled();
 
         long now = System.nanoTime();
         if (now >= nextExternalCheck) {
@@ -243,27 +252,29 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         final float height = table.draw(vMin, vMax);
         InstructionComponent hoveredInstruction = table.getHoveredInstruction();
         if (hoveredInstruction != null) this.lastHoveredInstruction = hoveredInstruction;
-        if (keyboardShortcuts && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.V)) {
+        if (this.inlineEditor == null && keyboardShortcuts
+                && ImGui.getIO().getKeyCtrl() && ImGui.isKeyPressed(ImGuiKey.V)) {
             this.pasteInstructions(hoveredInstruction);
         }
 
         // Block ImGui input to the window content
         ImGui.beginDisabled();
-        ImGui.invisibleButton(getId("InvisBtn"), ImGui.getContentRegionAvailX(), height);
+        float contentWidth = this.inlineEditor == null ? ImGui.getContentRegionAvailX()
+                : Math.max(ImGui.getContentRegionAvailX(), this.inlineEditor.getContentWidth());
+        ImGui.invisibleButton(getId("InvisBtn"), contentWidth, height);
         ImGui.endDisabled();
 
-        if (this.draggingInstruction != null && !ImGui.isMouseDown(0)) {
-            if (this.draggingInstruction.getIndex() != this.instructions.indexOf(this.draggingInstruction.getComponent())) {
-                this.addHistory(new InstructionDragHistory(new InstructionPosition(this.instructions, this.draggingInstruction.getComponent(), this.draggingInstruction.getIndex())));
-            } else if (!undoSnapshots.isEmpty()) {
-                undoSnapshots.pop();
-            }
-            this.instructions.queueIdReset();
-            this.draggingInstruction = null;
-        }
+        if (this.draggingInstruction != null && !ImGui.isMouseDown(0)) this.finishInstructionDrag();
 
         if (this.instructions.setIdsIfReset()) {
             this.methodNotFresh = true;
+        }
+
+        if (this.saveMethod) {
+            if (this.inlineEditor != null && !this.inlineEditor.commitIfValid()) {
+                this.saveMethod = false;
+                this.saveError = "Finish the inline instruction or cancel it before saving";
+            }
         }
 
         if (this.saveMethod) {
@@ -271,6 +282,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             try {
                 int count = this.issueSave();
                 this.methodNotFresh = false;
+                this.clearInstructionChangeMarkers();
                 this.saveError = null;
                 this.externalChanges = false;
                 Logging.info("Saved method");
@@ -290,8 +302,10 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             }
         }
 
+        ImGui.beginDisabled(this.inlineEditor != null);
         this.getPopupMenu().draw();
-        if (ImGui.isMouseClicked(0)
+        ImGui.endDisabled();
+        if (this.inlineEditor == null && ImGui.isMouseClicked(0)
                 && !ImGui.isWindowHovered(ImGuiHoveredFlags.RootAndChildWindows)) {
             this.clearInstructionSelection();
         }
@@ -344,8 +358,8 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
                     ;
                 }).
                 menu("Bytecode", bytecode -> {
-                    bytecode.menuItem("Insert First...", () -> this.openInsertDialog(0))
-                            .menuItem("Insert Last...", () -> this.openInsertDialog(instructions.size()))
+                    bytecode.menuItem("Insert First", () -> this.beginInlineInsert(0))
+                            .menuItem("Insert Last", () -> this.beginInlineInsert(instructions.size()))
                             .separator()
                             .menuItem("Go to index", () -> Main.getWindowManager().addPopup(new AssemblerBytecodeGoToIndexPopup(this, trinity)))
                             .separator()
@@ -374,6 +388,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     private void clearAll() {
+        this.cancelPendingInlineEditor();
         pushMutation(captureSnapshot(true));
         this.addHistory(new InstructionClearHistory(instructions));
         instructions.clear();
@@ -413,6 +428,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
 
     private void undoHistory() {
         if (undoSnapshots.isEmpty()) return;
+        this.cancelPendingInlineEditor();
         DocumentSnapshot snapshot = undoSnapshots.pop();
         redoSnapshots.push(captureSnapshot(snapshot.method() != null));
         restoreSnapshot(snapshot);
@@ -421,13 +437,21 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
 
     private void redoHistory() {
         if (redoSnapshots.isEmpty()) return;
+        this.cancelPendingInlineEditor();
         DocumentSnapshot snapshot = redoSnapshots.pop();
         undoSnapshots.push(captureSnapshot(snapshot.method() != null));
         restoreSnapshot(snapshot);
     }
 
     private void beginMutation() {
+        this.cancelPendingInlineEditor();
         pushMutation(captureSnapshot(false));
+    }
+
+    private void cancelPendingInlineEditor() {
+        if (this.inlineEditor != null && !this.inlineCommitInProgress) {
+            this.cancelInlineEdit(this.inlineEditor);
+        }
     }
 
     private void pushMutation(DocumentSnapshot snapshot) {
@@ -445,7 +469,9 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
                 names.add(methodInput.getLabelTable().getLabel(label.getLabel()).getName());
             }
         }
-        return new DocumentSnapshot(copy, order, names);
+        List<Boolean> changedInstructions = instructions.stream()
+                .map(InstructionComponent::isChanged).toList();
+        return new DocumentSnapshot(copy, order, names, changedInstructions);
     }
 
     private void restoreSnapshot(DocumentSnapshot snapshot) {
@@ -453,6 +479,10 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         else document.replaceInstructionOrder(snapshot.instructions());
         applyLabelNames(snapshot.labelNames());
         setInstructions(false);
+        for (int index = 0; index < Math.min(instructions.size(),
+                snapshot.changedInstructions().size()); index++) {
+            instructions.get(index).setChanged(snapshot.changedInstructions().get(index));
+        }
     }
 
     private void applyLabelNames(List<String> names) {
@@ -464,7 +494,12 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         }
     }
 
-    private record DocumentSnapshot(MethodNode method, List<AbstractInsnNode> instructions, List<String> labelNames) {
+    private record DocumentSnapshot(MethodNode method, List<AbstractInsnNode> instructions,
+                                    List<String> labelNames, List<Boolean> changedInstructions) {
+    }
+
+    private void clearInstructionChangeMarkers() {
+        for (InstructionComponent component : instructions) component.setChanged(false);
     }
 
     @Override
@@ -483,6 +518,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public void moveInstruction(InstructionComponent instruction, int delta) {
+        if (this.inlineEditor != null) return;
         final int index = instructions.indexOf(instruction);
         List<InstructionComponent> executable = instructions.stream()
                 .filter(component -> component.getInstruction().getOpcode() >= 0).toList();
@@ -503,6 +539,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public boolean moveInstructionTo(InstructionComponent instruction, int position) {
+        if (this.inlineEditor != null) return false;
         if (position < 0 || position > this.instructions.size()) return false;
 
         int instructionIndex = instructions.indexOf(instruction);
@@ -519,35 +556,96 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         return true;
     }
 
-    public void openInsertDialog(int index) {
+    public void beginInlineInsert(int index) {
         while (index > 0 && index < instructions.size()
                 && instructions.get(index).getInstruction().getOpcode() >= 0
                 && instructions.get(index - 1).getInstruction().getOpcode() < 0) index--;
-        int insertionIndex = index;
-        Main.getWindowManager().addPopup(new AssemblerEditInstructionPopup(trinity, methodInput, this::findDefaultLabel,
-                document::createIdentityLabelMap, (result) -> {
-            this.insertInstruction(insertionIndex, result.getInsnNode());
-        }));
+        this.replaceInlineEditor(AssemblerInlineEditor.insert(this, index));
     }
 
-    public void openEditDialog(int index) {
-        final var popup = new AssemblerEditInstructionPopup(trinity, methodInput, this::findDefaultLabel,
-                document::createIdentityLabelMap, (result) -> {
-            this.setInstruction(index, result.getInsnNode());
-        });
+    public void beginInlineEdit(InstructionComponent component, int operandIndex) {
+        if (component == null || !instructions.contains(component)) return;
+        this.replaceInlineEditor(AssemblerInlineEditor.edit(this, component, operandIndex));
+    }
 
-        final var component = instructions.get(index);
-        final var editingInstruction = new EditingInstruction(trinity, document.createIdentityLabelMap(), component.getInstruction());
+    public void beginInlineEdit(int index) {
+        if (index < 0 || index >= instructions.size()) return;
+        this.beginInlineEdit(instructions.get(index), -1);
+    }
 
-        popup.setOpcodeName(component.getName());
-        editingInstruction.addInstructionFields(popup.getMethodInput());
-        popup.setInstruction(editingInstruction);
+    EditingInstruction createInlineDraft(AbstractInsnNode instruction) {
+        EditingInstruction editing = new EditingInstruction(trinity,
+                document.createIdentityLabelMap(), instruction);
+        editing.addInstructionFields(methodInput);
+        for (EditField<?> field : editing.getEditFieldList()) field.updateField();
+        return editing;
+    }
 
-        for (final EditField<?> editField : popup.getInstruction().getEditFieldList()) {
-            editField.updateField();
+    AbstractInsnNode createDefaultInlineInstruction(String opcode) {
+        return OpcodeClasses.createDefault(opcode, methodInput.getOwningClass().getRealName(),
+                this.findDefaultLabel());
+    }
+
+    String validateInlineReplacement(AssemblerInlineEditor editor, AbstractInsnNode replacement) {
+        InstructionComponent target = editor.getTarget();
+        if (target != null && target.getInstruction() instanceof LabelNode label
+                && replacement != label && isLabelReferenced(label)) {
+            return "This label is still referenced";
         }
+        return null;
+    }
 
-        Main.getWindowManager().addPopup(popup);
+    void commitInlineEdit(AssemblerInlineEditor editor, AbstractInsnNode instruction) {
+        if (this.inlineEditor != editor) return;
+        this.inlineCommitInProgress = true;
+        try {
+            if (editor.isInsertion()) {
+                this.insertInstruction(editor.getInsertionIndex(), instruction);
+            } else {
+                InstructionComponent target = editor.getTarget();
+                int index = instructions.indexOf(target);
+                if (index < 0) {
+                    this.inlineEditor = null;
+                    return;
+                }
+                this.setInstruction(index, instruction);
+            }
+            this.inlineEditor = null;
+            this.saveError = null;
+        } finally {
+            this.inlineCommitInProgress = false;
+        }
+    }
+
+    void cancelInlineEdit(AssemblerInlineEditor editor) {
+        if (this.inlineEditor == editor) {
+            editor.cancel();
+            this.inlineEditor = null;
+        }
+    }
+
+    private void replaceInlineEditor(AssemblerInlineEditor replacement) {
+        this.finishInstructionDrag();
+        this.draggingReferenceArrow = null;
+        if (this.inlineEditor != null) this.inlineEditor.cancel();
+        this.inlineEditor = replacement;
+    }
+
+    private void finishInstructionDrag() {
+        if (this.draggingInstruction == null) return;
+        if (this.draggingInstruction.getIndex()
+                != this.instructions.indexOf(this.draggingInstruction.getComponent())) {
+            this.addHistory(new InstructionDragHistory(new InstructionPosition(this.instructions,
+                    this.draggingInstruction.getComponent(), this.draggingInstruction.getIndex())));
+        } else if (!undoSnapshots.isEmpty()) {
+            undoSnapshots.pop();
+        }
+        this.instructions.queueIdReset();
+        this.draggingInstruction = null;
+    }
+
+    public AssemblerInlineEditor getInlineEditor() {
+        return inlineEditor;
     }
 
     private void insertInstruction(int index, AbstractInsnNode insnNode) {
@@ -559,10 +657,12 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
                         && instructions.get(targetIndex).getInstruction().getOpcode() < 0) targetIndex++;
                 if (targetIndex == instructions.size()) targetIndex = instructions.size();
                 instructions.add(targetIndex, decoder.translateInstruction(referenced));
+                instructions.get(targetIndex).setChanged(true);
                 if (targetIndex < index) index++;
             }
         }
         InstructionComponent component = decoder.translateInstruction(insnNode);
+        component.setChanged(true);
         instructions.add(index, component);
         instructions.queueIdReset();
         decoder.rebuildReferenceArrows(instructions);
@@ -571,6 +671,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
 
     private void recomputeFramesAndMaxs() {
         try {
+            this.cancelPendingInlineEditor();
             DocumentSnapshot before = captureSnapshot(true);
             List<AbstractInsnNode> ordered = instructions.stream().map(InstructionComponent::getInstruction).toList();
             MethodNode candidate = document.buildCandidate(ordered);
@@ -601,6 +702,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
             applyLabelNames(before.labelNames());
             pushMutation(before);
             setInstructions(false);
+            for (InstructionComponent component : instructions) component.setChanged(true);
             saveError = null;
         } catch (Throwable throwable) {
             saveError = "Could not recompute frames/maxs: "
@@ -634,6 +736,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         beginMutation();
         InstructionComponent oldInstruction = instructions.get(index);
         InstructionComponent component = decoder.translateInstruction(instruction);
+        component.setChanged(true);
 
         instructions.set(index, component);
         if (selected == oldInstruction) selected = component;
@@ -685,6 +788,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public void deleteInstruction(InstructionComponent instruction) {
+        if (this.inlineEditor != null) return;
         for (InstructionReferenceArrow arrow : instructions.getInstructionReferenceArrowList()) {
             if (arrow.getTo() == instruction) {
                 saveError = "Cannot delete this instruction: label " + arrow.getLabel().getName()
@@ -711,6 +815,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public void retargetReference(InstructionReferenceArrow arrow, InstructionComponent target) {
+        if (this.inlineEditor != null) return;
         beginMutation();
         int targetIndex = instructions.indexOf(target);
         LabelNode label = null;
@@ -724,13 +829,16 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         }
         if (label == null) {
             label = new LabelNode();
-            instructions.add(targetIndex, decoder.translateInstruction(label));
+            InstructionComponent labelComponent = decoder.translateInstruction(label);
+            labelComponent.setChanged(true);
+            instructions.add(targetIndex, labelComponent);
         }
         InstructionComponent source = arrow.getFrom();
         int sourceIndex = instructions.indexOf(source);
         AbstractInsnNode replacement = source.getInstruction().clone(document.createIdentityLabelMap());
         arrow.updateLabel(replacement, label);
         instructions.set(sourceIndex, decoder.translateInstruction(replacement));
+        instructions.get(sourceIndex).setChanged(true);
         instructions.queueIdReset();
         decoder.rebuildReferenceArrows(instructions);
     }
@@ -801,6 +909,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public void pasteInstructions(InstructionComponent target) {
+        if (this.inlineEditor != null) return;
         if (target == null || !instructions.contains(target)) {
             saveError = "Hover an instruction to choose where pasted bytecode should be inserted";
             return;
@@ -829,6 +938,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
         List<InstructionComponent> pasted = new ArrayList<>(parsed.instructions().size());
         for (AbstractInsnNode instruction : parsed.instructions()) {
             InstructionComponent component = decoder.translateInstruction(instruction);
+            component.setChanged(true);
             instructions.add(insertionIndex++, component);
             pasted.add(component);
         }
@@ -869,10 +979,12 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     }
 
     public void duplicateInstruction(InstructionComponent instruction) {
+        if (this.inlineEditor != null) return;
         beginMutation();
         AbstractInsnNode copiedNode = instruction.getInstruction() instanceof LabelNode
                 ? new LabelNode() : instruction.getInstruction().clone(document.createIdentityLabelMap());
         final InstructionComponent copy = decoder.translateInstruction(copiedNode);
+        copy.setChanged(true);
         this.addHistory(new InstructionDuplicateHistory(new InstructionPosition(this.instructions, instruction, instructions.indexOf(instruction)), copy));
         this.instructions.add(instructions.indexOf(instruction), copy);
         this.instructions.queueIdReset();
@@ -899,7 +1011,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
 
     @Override
     public boolean hasUnsavedChanges() {
-        return this.methodNotFresh || this.document.isDirty();
+        return this.inlineEditor != null || this.methodNotFresh || this.document.isDirty();
     }
 
     @Override
@@ -927,6 +1039,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
     public void close() {
         if (Main.getWindowManager().isResettingWindows()
                 || forceClose || !this.hasUnsavedChanges()) {
+            if (this.inlineEditor != null) this.inlineEditor.cancel();
             super.close();
             return;
         }
@@ -943,6 +1056,7 @@ public final class AssemblerFrame extends ClosableWindow implements ICaption {
                 .action("Discard", () -> {
                     closePromptOpen = false;
                     forceClose = true;
+                    if (inlineEditor != null) inlineEditor.cancel();
                     AssemblerFrame.super.close();
                 })
                 .cancel(() -> closePromptOpen = false)

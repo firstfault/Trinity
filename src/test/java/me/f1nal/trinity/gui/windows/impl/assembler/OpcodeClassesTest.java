@@ -8,6 +8,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class OpcodeClassesTest {
@@ -35,5 +36,15 @@ class OpcodeClassesTest {
                 org.junit.jupiter.api.Assertions.assertEquals(org.objectweb.asm.Opcodes.F_SAME, frame.type);
             }
         }
+    }
+
+    @Test
+    void reportsInlineArgumentCounts() {
+        assertEquals(0, OpcodeClasses.getArgumentCount("nop"));
+        assertEquals(1, OpcodeClasses.getArgumentCount("aload"));
+        assertEquals(2, OpcodeClasses.getArgumentCount("iinc"));
+        assertEquals(3, OpcodeClasses.getArgumentCount("getfield"));
+        assertEquals(4, OpcodeClasses.getArgumentCount("invokevirtual"));
+        assertEquals(4, OpcodeClasses.getArgumentCount("invokedynamic"));
     }
 }

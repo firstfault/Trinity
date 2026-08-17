@@ -1,6 +1,7 @@
 package me.f1nal.trinity.gui.windows.impl.assembler;
 
 import imgui.*;
+import imgui.flag.ImGuiMouseCursor;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.decompiler.output.colors.ColoredString;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
@@ -36,6 +37,7 @@ public class InstructionComponent {
     private Animation selectableAnimation;
     private ImVec4 bounds;
     private int color;
+    private boolean changed;
 
     public InstructionComponent(String name, AbstractInsnNode instruction) {
         this.name = name;
@@ -54,6 +56,7 @@ public class InstructionComponent {
 
     public void setControls(AssemblerInstructionTable table) {
         this.setOperandBounds(table);
+        if (!table.acceptsAssemblerInput()) return;
 
         if (table.isWindowHovered() && (table.getDraggingReferenceArrow() != null || table.getHoveredReferenceArrow() == null)) {
             float x = this.bounds.x;
@@ -66,6 +69,29 @@ public class InstructionComponent {
             if (table.getHoveredInstruction() == this) {
                 boolean leftClicked = ImGui.isMouseClicked(0);
                 boolean toggleSelection = ImGui.getIO().getKeyCtrl();
+                boolean inlineEditing = table.getAssemblerFrame().getInlineEditor() != null
+                        && table.getAssemblerFrame().getInlineEditor().edits(this);
+                float opcodeX = bounds.x + table.instructionStartX + 5.F;
+                float opcodeWidth = ImGui.calcTextSize(this.name).x;
+                boolean opcodeHovered = ImGui.isMouseHoveringRect(opcodeX, bounds.y,
+                        opcodeX + opcodeWidth, bounds.y + bounds.w);
+                InstructionOperand hoveredOperand = this.operands.stream()
+                        .filter(operand -> GuiUtil.isMouseHoveringRect(operand.getBounds()))
+                        .findFirst().orElse(null);
+
+                if (!inlineEditing && (opcodeHovered || hoveredOperand != null)) {
+                    ImGui.setMouseCursor(ImGuiMouseCursor.Hand);
+                }
+                if (!inlineEditing && leftClicked && opcodeHovered) {
+                    table.getAssemblerFrame().beginInlineEdit(this, -1);
+                    return;
+                }
+                if (!inlineEditing && leftClicked && hoveredOperand != null) {
+                    table.getAssemblerFrame().beginInlineEdit(this,
+                            Math.max(0, this.operands.indexOf(hoveredOperand)));
+                    return;
+                }
+                if (inlineEditing) return;
                 if (leftClicked && !toggleSelection) {
                     table.getAssemblerFrame().clearInstructionSelection();
                 }
@@ -74,13 +100,7 @@ public class InstructionComponent {
                 } else if (leftClicked) {
                     if (toggleSelection) table.getAssemblerFrame().toggleInstructionSelection(this);
                     else table.setDraggingInstruction(this);
-                } else {
-                    final InstructionOperand hoveredOperand = this.operands.stream().filter(operand -> GuiUtil.isMouseHoveringRect(operand.getBounds())).findFirst().orElse(null);
-
-                    if (hoveredOperand != null) {
-                        table.setHoveredOperand(hoveredOperand);
-                    }
-                }
+                } else if (hoveredOperand != null) table.setHoveredOperand(hoveredOperand);
             }
 
             if (table.isDraggingInstruction(this)) {
@@ -108,7 +128,7 @@ public class InstructionComponent {
 
     public void draw(ImDrawList drawList, AssemblerInstructionTable table) {
         float x = this.bounds.x, y = this.bounds.y;
-        if (table.getHoveredInstruction() == this) {
+        if (table.acceptsAssemblerInput() && table.getHoveredInstruction() == this) {
             if (ImGui.isMouseClicked(1)) {
                 table.getAssemblerFrame().getPopupMenu().show(this.createPopup(table.getAssemblerFrame()));
             }
@@ -121,7 +141,7 @@ public class InstructionComponent {
             }
         }
 
-        if (table.getAssemblerFrame().isDraggingInstruction(this)) {
+        if (table.acceptsAssemblerInput() && table.getAssemblerFrame().isDraggingInstruction(this)) {
             InstructionDrag dragging = table.getDraggingInstruction();
             float deltaY = dragging.getMousePos().y - ImGui.getMousePosY();
             float height = this.bounds.w - 0.5F;
@@ -130,9 +150,20 @@ public class InstructionComponent {
             table.moveInstructionToVisibleIndex(this, targetIndex);
         }
 
-        drawList.addText(x + 5.F, y, this.getTextColor(CodeColorScheme.DISABLED),
-                this.instruction.getOpcode() < 0 ? "meta" : "+" + this.id);
-        drawList.addText(x + table.instructionStartX + 5.F, y, this.getTextColor(this.color), this.getName());
+        String lineText = this.instruction.getOpcode() < 0 ? "meta" : "+" + this.id;
+        drawList.addText(x + 5.F, y, this.getTextColor(CodeColorScheme.DISABLED), lineText);
+        if (this.changed) {
+            float dotX = x + 5.F + ImGui.calcTextSize(lineText).x + 5.F;
+            float dotY = y + this.bounds.w * 0.5F;
+            drawList.addCircleFilled(dotX, dotY, 2.5F,
+                    CodeColorScheme.setAlpha(CodeColorScheme.NOTIFY_WARN, 230));
+        }
+        boolean inlineEditing = table.getAssemblerFrame().getInlineEditor() != null
+                && table.getAssemblerFrame().getInlineEditor().edits(this);
+        if (!inlineEditing) {
+            drawList.addText(x + table.instructionStartX + 5.F, y,
+                    this.getTextColor(this.color), this.getName());
+        }
 
         if (this.instruction instanceof MethodInsnNode) {
             float lx = x + table.instructionStartX - 5.F, tp = y + (this.bounds.w / 2.2F);
@@ -148,7 +179,7 @@ public class InstructionComponent {
         float lineY = y + this.bounds.w - 1;
         drawList.addLine(0, lineY, 0x10004, lineY, ImColor.rgba(45, 45, 49, 130));
 
-        this.drawArguments(table);
+        if (!inlineEditing) this.drawArguments(table);
 
         if (!table.isInstructionHighlighted(this)) {
             drawList.addRectFilled(x, y, x + 0x10000, y + this.bounds.w - 1, CodeColorScheme.setAlpha(table.getWindowBackgroundColor(), 155));
@@ -240,6 +271,7 @@ public class InstructionComponent {
 
     public InstructionComponent copy(java.util.Map<LabelNode, LabelNode> labelMap) {
         InstructionComponent component = new InstructionComponent(this.getName(), this.getInstruction().clone(labelMap));
+        component.setChanged(this.changed);
         for (InstructionOperand argument : this.getOperands()) {
             component.getOperands().add(argument.copy());
         }
@@ -279,5 +311,13 @@ public class InstructionComponent {
 
     public int getColor() {
         return color;
+    }
+
+    public boolean isChanged() {
+        return changed;
+    }
+
+    public void setChanged(boolean changed) {
+        this.changed = changed;
     }
 }

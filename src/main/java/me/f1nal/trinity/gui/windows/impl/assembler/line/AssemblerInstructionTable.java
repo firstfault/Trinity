@@ -4,6 +4,7 @@ import imgui.*;
 import imgui.flag.ImGuiCol;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.gui.windows.impl.assembler.AssemblerFrame;
+import me.f1nal.trinity.gui.windows.impl.assembler.AssemblerInlineEditor;
 import me.f1nal.trinity.gui.windows.impl.assembler.InstructionComponent;
 import me.f1nal.trinity.gui.windows.impl.assembler.InstructionList;
 import me.f1nal.trinity.gui.windows.impl.assembler.args.InstructionOperand;
@@ -50,6 +51,7 @@ public class AssemblerInstructionTable {
     }
 
     public void setDraggingInstruction(InstructionComponent draggingInstruction) {
+        if (!this.acceptsAssemblerInput()) return;
         assemblerFrame.beginDragMutation();
         assemblerFrame.draggingInstruction = new InstructionDrag(draggingInstruction, ImGui.getMousePos(),
                 instructions.indexOf(draggingInstruction), visibleInstructions.indexOf(draggingInstruction));
@@ -69,6 +71,7 @@ public class AssemblerInstructionTable {
     }
 
     public void setDraggingReferenceArrow(InstructionReferenceArrow draggingReferenceArrow) {
+        if (draggingReferenceArrow != null && !this.acceptsAssemblerInput()) return;
         assemblerFrame.draggingReferenceArrow = draggingReferenceArrow;
     }
 
@@ -149,10 +152,31 @@ public class AssemblerInstructionTable {
         if (!selected.isEmpty()) this.highlightedInstructions = selected;
 
         y = vMin.y + 1.F;
+        AssemblerInlineEditor inlineEditor = assemblerFrame.getInlineEditor();
+        boolean insertionPlaced = inlineEditor == null || !inlineEditor.isInsertion();
+        float inlineHeight = 3.F + fontSize;
         for (InstructionComponent instruction : visible) {
+            if (!insertionPlaced && instructions.indexOf(instruction) >= inlineEditor.getInsertionIndex()) {
+                inlineEditor.setBounds(x, y, inlineHeight);
+                y += inlineHeight;
+                insertionPlaced = true;
+            }
             instruction.setBounds(this, x, y);
+            if (inlineEditor != null && inlineEditor.edits(instruction)) {
+                inlineEditor.setBounds(x, y, instruction.getBounds().w);
+            }
             ImVec4 bounds = instruction.getBounds();
             y += bounds.w;
+        }
+        if (!insertionPlaced) {
+            inlineEditor.setBounds(x, y, inlineHeight);
+            y += inlineHeight;
+        }
+        if (inlineEditor != null && inlineEditor.getBounds() != null
+                && inlineEditor.consumeRevealRequest()) {
+            float localY = ImGui.getCursorPosY() + inlineEditor.getBounds().y - vMin.y;
+            ImGui.setScrollX(0.F);
+            ImGui.setScrollFromPosY(localY, 0.5F);
         }
 
         for (InstructionReferenceArrow arrow : instructions.getInstructionReferenceArrowList()) {
@@ -166,12 +190,30 @@ public class AssemblerInstructionTable {
             }
         }
 
-        if (this.getDraggingReferenceArrow() != null) this.getDraggingReferenceArrow().setDraggingControls(this);
+        if (this.acceptsAssemblerInput() && this.getDraggingReferenceArrow() != null) {
+            this.getDraggingReferenceArrow().setDraggingControls(this);
+        }
 
         for (InstructionComponent instruction : visible) {
             ImVec4 bounds = instruction.getBounds();
             if (ImGui.isRectVisible(bounds.x, bounds.y, bounds.x + 0x10000, bounds.y + bounds.w)) {
                 instruction.draw(drawList, this);
+            }
+        }
+
+        if (inlineEditor != null && inlineEditor.getBounds() != null) {
+            ImVec4 inlineBounds = inlineEditor.getBounds();
+            if (ImGui.isRectVisible(inlineBounds.x, inlineBounds.y,
+                    inlineBounds.x + inlineBounds.z, inlineBounds.y + inlineBounds.w)) {
+                if (inlineEditor.isInsertion()) {
+                    drawList.addRectFilled(inlineBounds.x, inlineBounds.y,
+                            inlineBounds.x + inlineBounds.z, inlineBounds.y + inlineBounds.w - 1.F,
+                            ImColor.rgba(70, 70, 70, 33));
+                    drawList.addLine(inlineBounds.x, inlineBounds.y + inlineBounds.w - 1.F,
+                            inlineBounds.x + inlineBounds.z, inlineBounds.y + inlineBounds.w - 1.F,
+                            ImColor.rgba(45, 45, 49, 130));
+                }
+                inlineEditor.draw(this);
             }
         }
 
@@ -186,6 +228,7 @@ public class AssemblerInstructionTable {
     }
 
     public void moveInstructionToVisibleIndex(InstructionComponent instruction, int targetIndex) {
+        if (!this.acceptsAssemblerInput()) return;
         int currentIndex = visibleInstructions.indexOf(instruction);
         if (currentIndex < 0 || visibleInstructions.isEmpty()) return;
 
@@ -208,6 +251,11 @@ public class AssemblerInstructionTable {
 
     public boolean isWindowHovered() {
         return ImGui.isWindowHovered();
+    }
+
+    /** Background row, shortcut, and drag input is suspended while an inline editor owns input. */
+    public boolean acceptsAssemblerInput() {
+        return assemblerFrame.getInlineEditor() == null;
     }
 
     public float getViewportMinX() {

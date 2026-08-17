@@ -101,6 +101,10 @@ public class InstructionReferenceArrow {
         points[1] = new ImVec4(lx, fp, lx + lineWidth+dx, fp);
         points[2] = new ImVec4(lx, tp, lx + lineWidth+dx, tp);
 
+        // Keep the geometry current for rendering while the inline editor is open, but do
+        // not let the assembler underneath it hover, start, or complete a reference drag.
+        if (!table.acceptsAssemblerInput()) return;
+
         if (table.getHoveredReferenceArrow() == null && table.isWindowHovered()) {
             ImVec2 mousePos = ImGui.getMousePos();
 

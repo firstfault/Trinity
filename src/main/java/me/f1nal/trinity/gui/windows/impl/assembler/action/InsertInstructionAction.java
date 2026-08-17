@@ -8,7 +8,7 @@ import me.f1nal.trinity.keybindings.Bindable;
 public final class InsertInstructionAction implements InstructionAction {
     @Override
     public void execute(AssemblerFrame assemblerFrame, InstructionComponent instructionComponent) {
-        assemblerFrame.openInsertDialog(assemblerFrame.getInstructions().indexOf(instructionComponent));
+        assemblerFrame.beginInlineInsert(assemblerFrame.getInstructions().indexOf(instructionComponent));
     }
 
     @Override

@@ -36,6 +36,17 @@ public class OpcodeClasses {
         return namesToClasses.get(opcode);
     }
 
+    /** Number of top-level fields shown by the inline assembler editor. */
+    public static int getArgumentCount(String opcode) {
+        Class<?> type = getOpcodeClass(opcode);
+        if (type == null || type == InsnNode.class) return 0;
+        if (type == IincInsnNode.class || type == MultiANewArrayInsnNode.class
+                || type == LineNumberNode.class) return 2;
+        if (type == FieldInsnNode.class) return 3;
+        if (type == MethodInsnNode.class || type == InvokeDynamicInsnNode.class) return 4;
+        return 1;
+    }
+
     public static AbstractInsnNode createDefault(String opcodeName, String owner, LabelNode target) {
         int opcode = getOpcodeIndex(opcodeName);
         Class<?> type = getOpcodeClass(opcodeName);

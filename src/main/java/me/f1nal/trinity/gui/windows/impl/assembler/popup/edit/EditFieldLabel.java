@@ -56,4 +56,9 @@ public class EditFieldLabel extends EditFieldText<MethodLabel> {
     public void updateField() {
         text.set(get().getName());
     }
+
+    @Override
+    public List<String> getInlineSuggestions() {
+        return table.getLabels().stream().map(MethodLabel::getName).sorted().toList();
+    }
 }
