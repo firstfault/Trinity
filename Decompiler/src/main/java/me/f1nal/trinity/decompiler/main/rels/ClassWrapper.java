@@ -55,13 +55,15 @@ public class ClassWrapper {
 
     boolean testMode = DecompilerContext.getOption(IFernflowerPreferences.UNIT_TEST_MODE);
     DecompilerContext parentContext = DecompilerContext.getCurrentContext();
+    DecompilerContext.MethodContextFactory methodContextFactory =
+      parentContext.createMethodContextFactory();
     List<StructMethod> sourceMethods = new ArrayList<>(classStruct.getMethods());
     int threadCount = testMode ? 1 : getMethodThreadCount(sourceMethods.size());
 
     try {
       if (threadCount <= 1) {
         for (StructMethod method : sourceMethods) {
-          installMethod(processMethod(method, parentContext, testMode), methodDecompiled);
+          installMethod(processMethod(method, methodContextFactory, testMode), methodDecompiled);
         }
       }
       else {
@@ -77,7 +79,8 @@ public class ClassWrapper {
         try {
           List<Future<MethodResult>> futures = new ArrayList<>(sourceMethods.size());
           for (StructMethod method : sourceMethods) {
-            futures.add(executor.submit(() -> processMethod(method, parentContext, false)));
+            futures.add(executor.submit(() -> processMethod(
+              method, methodContextFactory, false)));
           }
           // Installation and source callbacks remain in classfile order. This keeps output stable
           // and prevents the final writer/import collector from becoming concurrent.
@@ -96,10 +99,11 @@ public class ClassWrapper {
     }
   }
 
-  private MethodResult processMethod(StructMethod mt, DecompilerContext parentContext,
+  private MethodResult processMethod(StructMethod mt,
+                                     DecompilerContext.MethodContextFactory methodContextFactory,
                                      boolean testMode) {
     DecompilerContext previousContext = DecompilerContext.getCurrentContext();
-    DecompilerContext methodContext = parentContext.forkForMethod();
+    DecompilerContext methodContext = methodContextFactory.create();
     DecompilerContext.setCurrentContext(methodContext);
     DecompilerContext.getLogger().startMethod(mt.getName() + " " + mt.getDescriptor());
 

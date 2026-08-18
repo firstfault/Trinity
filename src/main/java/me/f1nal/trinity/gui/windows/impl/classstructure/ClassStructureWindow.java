@@ -2,6 +2,7 @@ package me.f1nal.trinity.gui.windows.impl.classstructure;
 
 import com.google.common.eventbus.Subscribe;
 import imgui.ImGui;
+import imgui.ImGuiListClipper;
 import imgui.ImVec2;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiKey;
@@ -21,10 +22,14 @@ import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
 import me.f1nal.trinity.gui.windows.api.StaticWindow;
 import me.f1nal.trinity.gui.windows.impl.classstructure.nodes.ClassStructureNode;
 
+import java.util.List;
+
 public class ClassStructureWindow extends StaticWindow implements IEventListener {
     private static final MemorableCheckboxComponent showFilter = new MemorableCheckboxComponent("classStructureShowFilter", "Show Filter", false);
     private ClassStructure classStructure;
     private ListFilterComponent<ClassStructureNode> filterComponent;
+    /** Flat member rows currently accepted by the filters. The class root is drawn separately. */
+    private List<ClassStructureNode> filteredMembers = List.of();
     private final KindFilter<ClassStructureNode> kindFilter = new KindFilter<>(StructureKind.values());
     private final SearchBarFilter<ClassStructureNode> searchBarFilter = new SearchBarFilter<>(true);
     private final PopupMenuBar popupMenuBar = new PopupMenuBar(PopupItemBuilder.create());
@@ -47,6 +52,10 @@ public class ClassStructureWindow extends StaticWindow implements IEventListener
     public void setClassStructure(ClassStructure classStructure) {
         this.classStructure = classStructure;
         this.filterComponent = new ListFilterComponent<>(classStructure.getRootNode().getAllChildren(), this.searchBarFilter, this.kindFilter);
+        this.filterComponent.addFilterChangeListener(() -> this.filteredMembers =
+                this.filterComponent.getFilteredList().stream()
+                        .filter(node -> node != this.classStructure.getRootNode())
+                        .toList());
     }
 
     public ClassStructure getClassStructure() {
@@ -110,14 +119,30 @@ public class ClassStructureWindow extends StaticWindow implements IEventListener
         node.getBrowserViewerNode().draw();
 
         if (tree) {
-            for (ClassStructureNode child : node.getChildren()) {
-                if (!this.filterComponent.getFilteredList().contains(child)) {
-                    continue;
-                }
-                this.drawNode(child);
-            }
+            if (node == this.classStructure.getRootNode()) this.drawVisibleMembers();
+            else for (ClassStructureNode child : node.getChildren()) this.drawNode(child);
 
             if (!node.isLeaf()) ImGui.treePop();
+        }
+    }
+
+    private void drawVisibleMembers() {
+        if (this.filteredMembers.isEmpty()) return;
+
+        ImGuiListClipper clipper = new ImGuiListClipper();
+        try {
+            // Class members are a flat collection of leaf rows with a stable height. Only submit
+            // the rows intersecting the child viewport instead of thousands of ImGui tree items.
+            clipper.begin(this.filteredMembers.size(), ImGui.getTextLineHeightWithSpacing());
+            while (clipper.step()) {
+                int start = Math.max(0, clipper.getDisplayStart());
+                int end = Math.min(this.filteredMembers.size(), clipper.getDisplayEnd());
+                for (int index = start; index < end; index++) {
+                    this.drawNode(this.filteredMembers.get(index));
+                }
+            }
+        } finally {
+            clipper.destroy();
         }
     }
 }

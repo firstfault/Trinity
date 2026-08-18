@@ -1,6 +1,5 @@
 package me.f1nal.trinity.decompiler;
 
-import me.f1nal.trinity.decompiler.main.extern.IDecompilationProgressListener;
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassWriter;
@@ -11,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ParallelMethodDecompilationTest {
     @Test
     void parallelMethodProcessingKeepsFinalSourceDeterministic() {
-        byte[] classBytes = createClass(24);
+        byte[] classBytes = createClass(200);
         DecompileResult sequential = decompile(classBytes, 1);
         DecompileResult parallel = decompile(classBytes, 4);
 
@@ -30,6 +30,8 @@ class ParallelMethodDecompilationTest {
                 .anyMatch(name -> name.startsWith("Fernflower Method ")));
         assertTrue(parallel.workerThreads().size() > 1,
                 "Expected method analysis to use more than one worker");
+        assertTrue(parallel.progressiveMethods() > 0,
+                "Expected progressive source callbacks while workers were active");
     }
 
     private static DecompileResult decompile(byte[] classBytes, int threads) {
@@ -41,17 +43,19 @@ class ParallelMethodDecompilationTest {
 
         AtomicReference<String> source = new AtomicReference<>();
         Set<String> workerThreads = ConcurrentHashMap.newKeySet();
+        AtomicInteger progressiveMethods = new AtomicInteger();
         ClassDecompileTask task = new ClassDecompileTask(classBytes, options,
                 content -> {
                     if (content != null) source.set(content);
-                }, IDecompilationProgressListener.NONE) {
+                }, (owner, name, descriptor, content) ->
+                progressiveMethods.incrementAndGet()) {
             @Override
             public void startMethod(String methodName) {
                 workerThreads.add(Thread.currentThread().getName());
             }
         };
         task.run();
-        return new DecompileResult(source.get(), workerThreads);
+        return new DecompileResult(source.get(), workerThreads, progressiveMethods.get());
     }
 
     private static byte[] createClass(int methodCount) {
@@ -85,6 +89,7 @@ class ParallelMethodDecompilationTest {
         return writer.toByteArray();
     }
 
-    private record DecompileResult(String source, Set<String> workerThreads) {
+    private record DecompileResult(String source, Set<String> workerThreads,
+                                   int progressiveMethods) {
     }
 }

@@ -271,8 +271,18 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     private void updateClassStructure() {
+        this.updateClassStructure(false);
+    }
+
+    private void updateClassStructure(boolean force) {
         if (this.selectedClass != null) {
-            Main.getWindowManager().addStaticWindow(ClassStructureWindow.class).setClassStructure(new ClassStructure(this.selectedClass));
+            ClassStructureWindow window = Main.getWindowManager()
+                    .addStaticWindow(ClassStructureWindow.class);
+            if (!force && window.getClassStructure() != null
+                    && window.getClassStructure().getClassInput() == this.selectedClass) {
+                return;
+            }
+            window.setClassStructure(new ClassStructure(this.selectedClass));
         }
     }
 
@@ -311,14 +321,14 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     public void onClassModified(EventClassModified event) {
         if (event.getClassInput() == this.selectedClass) {
             this.forceRefreshDecompiler();
-            this.updateClassStructure();
+            this.updateClassStructure(true);
         }
     }
 
     @Subscribe
     public void onMemberModified(EventMemberModified event) {
         if (event.getClassInput() == this.selectedClass) {
-            this.updateClassStructure();
+            this.updateClassStructure(true);
         }
     }
 

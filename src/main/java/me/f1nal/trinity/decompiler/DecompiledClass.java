@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class DecompiledClass {
     private static final int PROGRESSIVE_RENDER_LINE_LIMIT = 50_000;
+    private static final int PROGRESSIVE_RENDER_METHOD_LIMIT = 500;
     private final Trinity trinity;
     private final ClassInput classInput;
     private final Map<MethodInput, DecompiledMethod> decompiledMethodMap = new HashMap<>();
@@ -51,6 +52,8 @@ public final class DecompiledClass {
     private final Set<MemberDetails> queuedMethodOutputs = ConcurrentHashMap.newKeySet();
     private volatile DecompiledClass completedClass;
     private volatile boolean progressive;
+    /** Whether individual method completions are cheap enough to merge into the live document. */
+    private volatile boolean progressiveMethodUpdatesEnabled;
     /**
      * Lines of the decompiled source code file, each containing a {@link DecompilerLine} which holds the
      * text components to be rendered on that specific line.
@@ -69,6 +72,7 @@ public final class DecompiledClass {
         this.componentList = new ArrayList<>(reader.getComponentList());
         this.methodComponents = new HashMap<>(reader.getMethodComponents());
         this.fieldComponents = new HashMap<>(reader.getFieldComponents());
+        this.progressiveMethodUpdatesEnabled = false;
 
         this.resetLines();
         this.setComponentHighlighted(null);
@@ -82,10 +86,15 @@ public final class DecompiledClass {
         this.componentList = new ArrayList<>(reader.getComponentList());
         this.methodComponents = new HashMap<>(reader.getMethodComponents());
         this.fieldComponents = new HashMap<>(reader.getFieldComponents());
-        this.progressiveMethods.addAll(this.methodComponents.keySet());
         this.progressive = true;
 
         this.resetLines();
+        this.progressiveMethodUpdatesEnabled = this.classInput.getMethodMap().size()
+                <= PROGRESSIVE_RENDER_METHOD_LIMIT
+                && this.lines.size() < PROGRESSIVE_RENDER_LINE_LIMIT;
+        if (this.progressiveMethodUpdatesEnabled) {
+            this.progressiveMethods.addAll(this.methodComponents.keySet());
+        }
         this.setComponentHighlighted(null);
     }
 
@@ -94,7 +103,8 @@ public final class DecompiledClass {
     }
 
     public void queueMethodOutput(MemberDetails method, String rawOutput) {
-        if (progressive && progressiveMethods.contains(method) && queuedMethodOutputs.add(method)) {
+        if (progressive && progressiveMethodUpdatesEnabled
+                && progressiveMethods.contains(method) && queuedMethodOutputs.add(method)) {
             pendingMethodOutputs.add(new MethodOutput(method, rawOutput));
         }
     }
@@ -115,6 +125,7 @@ public final class DecompiledClass {
         queuedMethodOutputs.clear();
         progressiveMethods.clear();
         progressive = false;
+        progressiveMethodUpdatesEnabled = false;
     }
 
     /**
@@ -136,11 +147,14 @@ public final class DecompiledClass {
             return true;
         }
 
-        if (progressive) {
+        if (progressive && progressiveMethodUpdatesEnabled) {
             // Rebuilding an already enormous progressive document for each arriving method is
             // more expensive than waiting for the final model. The finished result is still
             // produced in the background and adopted immediately above.
-            if (lines.size() >= PROGRESSIVE_RENDER_LINE_LIMIT) return false;
+            if (lines.size() >= PROGRESSIVE_RENDER_LINE_LIMIT) {
+                this.disableProgressiveMethodUpdates();
+                return false;
+            }
             MethodOutput methodOutput = pendingMethodOutputs.poll();
             if (methodOutput != null) {
                 replaceMethod(methodOutput);
@@ -149,6 +163,13 @@ public final class DecompiledClass {
         }
 
         return false;
+    }
+
+    private void disableProgressiveMethodUpdates() {
+        this.progressiveMethodUpdatesEnabled = false;
+        this.pendingMethodOutputs.clear();
+        this.queuedMethodOutputs.clear();
+        this.progressiveMethods.clear();
     }
 
     private void adoptCompletedClass(DecompiledClass completed) {
@@ -173,6 +194,7 @@ public final class DecompiledClass {
         progressiveMethods.clear();
         completedClass = null;
         progressive = false;
+        progressiveMethodUpdatesEnabled = false;
         layoutVersion++;
         setComponentHighlighted(null);
     }

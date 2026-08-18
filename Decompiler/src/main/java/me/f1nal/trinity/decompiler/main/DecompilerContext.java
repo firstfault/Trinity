@@ -13,8 +13,9 @@ import me.f1nal.trinity.decompiler.modules.decompiler.vars.VarProcessor;
 import me.f1nal.trinity.decompiler.modules.renamer.PoolInterceptor;
 import me.f1nal.trinity.decompiler.struct.StructContext;
 
-import java.util.Map;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class DecompilerContext {
@@ -124,16 +125,34 @@ public class DecompilerContext {
   }
 
   /**
-   * Creates isolated mutable method state while sharing the immutable class model and the
-   * cancellation service. The import collector is shared for read-only type resolution during
-   * analysis; source writing remains serialized on the parent context.
+   * Captures class-wide context once before parallel method processing begins. Method workers
+   * receive private mutable maps created from this stable snapshot; source-writing callbacks may
+   * therefore continue changing the parent context without racing context creation.
    */
-  public DecompilerContext forkForMethod() {
-    DecompilerContext context = new DecompilerContext(new HashMap<>(properties), logger,
-      structContext, classProcessor, poolInterceptor, cancellationManager,
-      decompilationProgressListener);
-    context.importCollector = importCollector;
-    return context;
+  public MethodContextFactory createMethodContextFactory() {
+    return new MethodContextFactory(this,
+      Collections.unmodifiableMap(new HashMap<>(properties)), importCollector);
+  }
+
+  public static final class MethodContextFactory {
+    private final DecompilerContext parent;
+    private final Map<String, Object> properties;
+    private final ImportCollector importCollector;
+
+    private MethodContextFactory(DecompilerContext parent, Map<String, Object> properties,
+                                 ImportCollector importCollector) {
+      this.parent = parent;
+      this.properties = properties;
+      this.importCollector = importCollector;
+    }
+
+    public DecompilerContext create() {
+      DecompilerContext context = new DecompilerContext(new HashMap<>(properties), parent.logger,
+        parent.structContext, parent.classProcessor, parent.poolInterceptor,
+        parent.cancellationManager, parent.decompilationProgressListener);
+      context.importCollector = importCollector;
+      return context;
+    }
   }
 
   // *****************************************************************************
