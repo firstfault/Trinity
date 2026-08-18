@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -38,6 +39,8 @@ public final class Decompiler implements IEventListener {
     private final Map<ClassInput, Long> decompileGenerations = new ConcurrentHashMap<>();
     private final Map<ClassInput, Boolean> enumClassModes = new ConcurrentHashMap<>();
     private final Map<Object, Long> memberRefreshGenerations = new ConcurrentHashMap<>();
+    private final Map<ClassInput, MethodPriorityState> methodPriorityStates =
+            new ConcurrentHashMap<>();
     private final Set<DecompiledClass> staleRenderedText = ConcurrentHashMap.newKeySet();
     private final AtomicLong generationCounter = new AtomicLong();
 
@@ -87,12 +90,16 @@ public final class Decompiler implements IEventListener {
         }
 
         Map<String, Object> options = createOptions(treatEnumAsClass);
+        byte[] classBytes = this.serializeClassBytes(classInput, treatEnumAsClass);
+        MethodPriorityState priorityState = new MethodPriorityState();
+        methodPriorityStates.put(classInput, priorityState);
 
         AtomicBoolean finished = new AtomicBoolean(false);
         Consumer<String> output = content -> {
             if (!finished.compareAndSet(false, true)) {
                 return;
             }
+            methodPriorityStates.remove(classInput, priorityState);
 
             if (!Objects.equals(decompileGenerations.get(classInput), generation)) {
                 return;
@@ -135,14 +142,41 @@ public final class Decompiler implements IEventListener {
             decompileStack.remove(classInput);
         };
 
-        IDecompilationProgressListener progressListener = (owner, name, descriptor, content) -> {
-            if (!finished.get() && Objects.equals(decompileGenerations.get(classInput), generation)) {
-                progressiveClass.queueMethodOutput(new MemberDetails(owner, name, descriptor), content);
+        IDecompilationProgressListener progressListener = new IDecompilationProgressListener() {
+            @Override
+            public void methodProcessed(String owner, String name, String descriptor) {
+                if (!finished.get() && classInput.getRealName().equals(owner)
+                        && Objects.equals(decompileGenerations.get(classInput), generation)) {
+                    progressiveClass.markMethodProcessed(
+                            new MemberDetails(owner, name, descriptor));
+                }
+            }
+
+            @Override
+            public void methodDecompiled(String owner, String name, String descriptor,
+                                         String content) {
+                if (!finished.get()
+                        && Objects.equals(decompileGenerations.get(classInput), generation)) {
+                    IDecompilationProgressListener.MethodKey key =
+                            new IDecompilationProgressListener.MethodKey(name, descriptor);
+                    progressiveClass.queueMethodOutput(
+                            new MemberDetails(owner, name, descriptor), content,
+                            priorityState.isActivePriority(key));
+                }
+            }
+
+            @Override
+            public List<MethodKey> priorityMethods(String owner) {
+                if (!classInput.getRealName().equals(owner)
+                        || !Objects.equals(decompileGenerations.get(classInput), generation)) {
+                    return List.of();
+                }
+                return priorityState.activePriorities();
             }
         };
 
         ClassDecompileTask classDecompileTask = new ClassDecompileTask(
-                this.serializeClassBytes(classInput, treatEnumAsClass), options, output, progressListener);
+                classBytes, options, output, progressListener);
         Thread thread = new Thread(classDecompileTask, "Decompiler");
         thread.start();
     }
@@ -225,6 +259,26 @@ public final class Decompiler implements IEventListener {
         return true;
     }
 
+    /**
+     * Publishes the methods intersecting the live decompiler viewport. The state is only retained
+     * while a class is actively decompiling and expires when its window stops rendering.
+     */
+    public void prioritizeVisibleMethods(ClassInput classInput, List<MethodInput> methods) {
+        MethodPriorityState state = methodPriorityStates.get(classInput);
+        if (state != null) {
+            state.update(methods);
+            DecompiledClass decompiledClass = decompileCache.get(classInput);
+            if (decompiledClass != null) {
+                decompiledClass.queuePrioritizedMethodOutputs(methods);
+            }
+        }
+    }
+
+    public void clearVisibleMethodPriorities(ClassInput classInput) {
+        MethodPriorityState state = methodPriorityStates.get(classInput);
+        if (state != null) state.clear();
+    }
+
     private Map<String, Object> createOptions(boolean treatEnumAsClass) {
         Map<String, Object> options = new HashMap<>();
         options.put(IFernflowerPreferences.BYTECODE_SOURCE_MAPPING, "1");
@@ -279,6 +333,57 @@ public final class Decompiler implements IEventListener {
         }
         decompileGenerations.remove(owningClass);
         enumClassModes.remove(owningClass);
+        methodPriorityStates.remove(owningClass);
         decompileStack.remove(owningClass);
+    }
+
+    private static final class MethodPriorityState {
+        private static final long VIEWPORT_EXPIRY_NANOS = 750_000_000L;
+        private final AtomicReference<List<IDecompilationProgressListener.MethodKey>> priorities =
+                new AtomicReference<>(List.of());
+        private volatile long lastUpdateNanos;
+
+        private void update(List<MethodInput> methods) {
+            lastUpdateNanos = System.nanoTime();
+            List<IDecompilationProgressListener.MethodKey> current = priorities.get();
+            if (matches(current, methods)) return;
+
+            List<IDecompilationProgressListener.MethodKey> updated = new ArrayList<>(methods.size());
+            for (MethodInput method : methods) {
+                updated.add(new IDecompilationProgressListener.MethodKey(
+                        method.getName(), method.getDescriptor()));
+            }
+            priorities.set(List.copyOf(updated));
+        }
+
+        private void clear() {
+            priorities.set(List.of());
+            lastUpdateNanos = 0L;
+        }
+
+        private List<IDecompilationProgressListener.MethodKey> activePriorities() {
+            long update = lastUpdateNanos;
+            return update != 0L && System.nanoTime() - update <= VIEWPORT_EXPIRY_NANOS
+                    ? priorities.get() : List.of();
+        }
+
+        private boolean isActivePriority(IDecompilationProgressListener.MethodKey method) {
+            return activePriorities().contains(method);
+        }
+
+        private static boolean matches(
+                List<IDecompilationProgressListener.MethodKey> current,
+                List<MethodInput> methods) {
+            if (current.size() != methods.size()) return false;
+            for (int index = 0; index < current.size(); index++) {
+                IDecompilationProgressListener.MethodKey key = current.get(index);
+                MethodInput method = methods.get(index);
+                if (!key.name().equals(method.getName())
+                        || !key.descriptor().equals(method.getDescriptor())) {
+                    return false;
+                }
+            }
+            return true;
+        }
     }
 }

@@ -34,7 +34,7 @@ public class PopupMenuBar {
 
             ImGui.textColored(CodeColorScheme.TEXT, progress.getRoutineName() + ": ");
             ImGui.sameLine(0.F, 0.F);
-            ImGui.textColored(CodeColorScheme.DISABLED, progress.getProgress() == -1 ? progress.getTaskName() : String.format("%s (%s%%)", progress.getTaskName(), progress.getProgress()));
+            ImGui.textColored(CodeColorScheme.DISABLED, progress.getDisplayText());
         }
         ImGui.endMenuBar();
         PopupMenu.style(false);

@@ -8,6 +8,7 @@ import me.f1nal.trinity.decompiler.main.collectors.CounterContainer;
 import me.f1nal.trinity.decompiler.main.collectors.VarNamesCollector;
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerLogger;
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
+import me.f1nal.trinity.decompiler.main.extern.IDecompilationProgressListener;
 import me.f1nal.trinity.decompiler.struct.attr.StructGeneralAttribute;
 import me.f1nal.trinity.decompiler.struct.attr.StructLocalVariableTableAttribute;
 import me.f1nal.trinity.decompiler.struct.attr.StructMethodParametersAttribute;
@@ -23,13 +24,16 @@ import me.f1nal.trinity.decompiler.struct.StructClass;
 import me.f1nal.trinity.decompiler.struct.StructMethod;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -59,43 +63,124 @@ public class ClassWrapper {
       parentContext.createMethodContextFactory();
     List<StructMethod> sourceMethods = new ArrayList<>(classStruct.getMethods());
     int threadCount = testMode ? 1 : getMethodThreadCount(sourceMethods.size());
+    IDecompilationProgressListener progressListener =
+      DecompilerContext.getDecompilationProgressListener();
 
     try {
-      if (threadCount <= 1) {
+      if (testMode) {
         for (StructMethod method : sourceMethods) {
-          installMethod(processMethod(method, methodContextFactory, testMode), methodDecompiled);
+          installMethod(processMethod(method, methodContextFactory, true), methodDecompiled);
         }
       }
+      else if (threadCount <= 1) {
+        processPrioritizedSequentially(sourceMethods, methodContextFactory,
+          progressListener, methodDecompiled);
+      }
       else {
-        // Initialize lazy class state once before workers begin reading it.
-        classStruct.getPool();
-        AtomicInteger threadNumber = new AtomicInteger();
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount, runnable -> {
-          Thread thread = new Thread(runnable,
-            "Fernflower Method " + threadNumber.incrementAndGet());
-          thread.setDaemon(true);
-          return thread;
-        });
-        try {
-          List<Future<MethodResult>> futures = new ArrayList<>(sourceMethods.size());
-          for (StructMethod method : sourceMethods) {
-            futures.add(executor.submit(() -> processMethod(
-              method, methodContextFactory, false)));
-          }
-          // Installation and source callbacks remain in classfile order. This keeps output stable
-          // and prevents the final writer/import collector from becoming concurrent.
-          for (Future<MethodResult> future : futures) {
-            installMethod(await(future), methodDecompiled);
-          }
-        }
-        finally {
-          executor.shutdownNow();
-        }
+        processPrioritizedInParallel(sourceMethods, methodContextFactory, progressListener,
+          methodDecompiled, threadCount);
       }
     }
     finally {
       DecompilerContext.setCurrentContext(parentContext);
       DecompilerContext.getLogger().endClass();
+    }
+  }
+
+  private void processPrioritizedSequentially(
+    List<StructMethod> sourceMethods,
+    DecompilerContext.MethodContextFactory methodContextFactory,
+    IDecompilationProgressListener progressListener,
+    Consumer<StructMethod> methodDecompiled
+  ) {
+    MethodScheduler scheduler = new MethodScheduler(
+      classStruct.qualifiedName, sourceMethods, progressListener);
+    MethodResult[] orderedResults = new MethodResult[sourceMethods.size()];
+    int nextInstall = 0;
+    ScheduledMethod scheduled;
+    while ((scheduled = scheduler.claimNext()) != null) {
+      MethodResult result = processMethod(scheduled.method(), methodContextFactory, false);
+      orderedResults[scheduled.index()] = result;
+      markMethodProcessed(result);
+      while (nextInstall < orderedResults.length && orderedResults[nextInstall] != null) {
+        installMethod(orderedResults[nextInstall++], methodDecompiled);
+      }
+    }
+  }
+
+  private void processPrioritizedInParallel(
+    List<StructMethod> sourceMethods,
+    DecompilerContext.MethodContextFactory methodContextFactory,
+    IDecompilationProgressListener progressListener,
+    Consumer<StructMethod> methodDecompiled,
+    int threadCount
+  ) {
+    // Initialize lazy class state once before workers begin reading it.
+    classStruct.getPool();
+    MethodScheduler scheduler = new MethodScheduler(
+      classStruct.qualifiedName, sourceMethods, progressListener);
+    BlockingQueue<CompletedMethod> completions = new LinkedBlockingQueue<>();
+    AtomicBoolean stopped = new AtomicBoolean();
+    AtomicInteger threadNumber = new AtomicInteger();
+    ExecutorService executor = Executors.newFixedThreadPool(threadCount, runnable -> {
+      Thread thread = new Thread(runnable,
+        "Fernflower Method " + threadNumber.incrementAndGet());
+      thread.setDaemon(true);
+      return thread;
+    });
+
+    try {
+      // Keep only one long-lived task per worker. A worker claims its next method only after it
+      // finishes the current one, so a viewport change never has to reprioritize a 10,000-item
+      // executor queue.
+      for (int worker = 0; worker < threadCount; worker++) {
+        executor.execute(() -> runMethodWorker(
+          scheduler, methodContextFactory, completions, stopped));
+      }
+
+      MethodResult[] orderedResults = new MethodResult[sourceMethods.size()];
+      int nextInstall = 0;
+      for (int completed = 0; completed < sourceMethods.size(); completed++) {
+        CompletedMethod completion = takeCompletion(completions);
+        if (completion.failure() != null) {
+          throwUnchecked(completion.failure());
+        }
+        MethodResult result = completion.result();
+        orderedResults[completion.index()] = result;
+        markMethodProcessed(result);
+        // Fernflower's class-wide writers assume the installed wrapper collection is always a
+        // classfile-order prefix. Analysis may finish in any order, but only the contiguous
+        // completed prefix is committed and progressively rendered.
+        while (nextInstall < orderedResults.length && orderedResults[nextInstall] != null) {
+          installMethod(orderedResults[nextInstall++], methodDecompiled);
+        }
+      }
+    }
+    finally {
+      stopped.set(true);
+      executor.shutdownNow();
+    }
+  }
+
+  private void runMethodWorker(
+    MethodScheduler scheduler,
+    DecompilerContext.MethodContextFactory methodContextFactory,
+    BlockingQueue<CompletedMethod> completions,
+    AtomicBoolean stopped
+  ) {
+    while (!stopped.get()) {
+      ScheduledMethod scheduled = scheduler.claimNext();
+      if (scheduled == null) return;
+      try {
+        MethodResult result = processMethod(scheduled.method(), methodContextFactory, false);
+        completions.add(new CompletedMethod(scheduled.index(), result, null));
+      }
+      catch (Throwable throwable) {
+        if (stopped.compareAndSet(false, true)) {
+          completions.add(new CompletedMethod(scheduled.index(), null, throwable));
+        }
+        return;
+      }
     }
   }
 
@@ -201,24 +286,33 @@ public class ClassWrapper {
     methodDecompiled.accept(method);
   }
 
-  private static MethodResult await(Future<MethodResult> future) {
+  private void markMethodProcessed(MethodResult result) {
+    StructMethod method = result.method();
+    DecompilerContext.getDecompilationProgressListener().methodProcessed(
+      classStruct.qualifiedName, method.getName(), method.getDescriptor());
+  }
+
+  private static CompletedMethod takeCompletion(BlockingQueue<CompletedMethod> completions) {
     try {
-      return future.get();
+      return completions.take();
     }
     catch (InterruptedException exception) {
       Thread.currentThread().interrupt();
       throw new CancellationManager.CanceledException(exception);
     }
-    catch (ExecutionException exception) {
-      Throwable cause = exception.getCause();
-      if (cause instanceof CancellationManager.CanceledException canceledException) {
-        throw canceledException;
-      }
-      if (cause instanceof RuntimeException runtimeException) {
-        throw runtimeException;
-      }
-      throw new RuntimeException(cause);
+  }
+
+  private static void throwUnchecked(Throwable cause) {
+    if (cause instanceof CancellationManager.CanceledException canceledException) {
+      throw canceledException;
     }
+    if (cause instanceof RuntimeException runtimeException) {
+      throw runtimeException;
+    }
+    if (cause instanceof Error error) {
+      throw error;
+    }
+    throw new RuntimeException(cause);
   }
 
   private static int getMethodThreadCount(int methodCount) {
@@ -234,6 +328,58 @@ public class ClassWrapper {
   }
 
   private record MethodResult(StructMethod method, MethodWrapper wrapper) { }
+
+  private record ScheduledMethod(int index, StructMethod method) { }
+
+  private record CompletedMethod(int index, MethodResult result, Throwable failure) { }
+
+  /**
+   * Claims visible methods first and otherwise advances a single classfile-order cursor. Claiming
+   * costs O(visible methods), not O(all methods), after the one-time index construction.
+   */
+  private static final class MethodScheduler {
+    private final String owner;
+    private final List<StructMethod> methods;
+    private final IDecompilationProgressListener progressListener;
+    private final Map<IDecompilationProgressListener.MethodKey, Integer> methodIndexes;
+    private final boolean[] claimed;
+    private int nextIndexed;
+
+    private MethodScheduler(String owner, List<StructMethod> methods,
+                            IDecompilationProgressListener progressListener) {
+      this.owner = owner;
+      this.methods = methods;
+      this.progressListener = progressListener;
+      this.claimed = new boolean[methods.size()];
+      this.methodIndexes = new HashMap<>(Math.max(16, methods.size()));
+      for (int index = 0; index < methods.size(); index++) {
+        StructMethod method = methods.get(index);
+        methodIndexes.put(new IDecompilationProgressListener.MethodKey(
+          method.getName(), method.getDescriptor()), index);
+      }
+    }
+
+    private synchronized ScheduledMethod claimNext() {
+      List<IDecompilationProgressListener.MethodKey> priorities =
+        progressListener.priorityMethods(owner);
+      for (int priorityIndex = 0; priorityIndex < priorities.size(); priorityIndex++) {
+        IDecompilationProgressListener.MethodKey key = priorities.get(priorityIndex);
+        Integer index = methodIndexes.get(key);
+        if (index != null && !claimed[index]) {
+          claimed[index] = true;
+          return new ScheduledMethod(index, methods.get(index));
+        }
+      }
+
+      while (nextIndexed < methods.size() && claimed[nextIndexed]) {
+        nextIndexed++;
+      }
+      if (nextIndexed >= methods.size()) return null;
+      int index = nextIndexed++;
+      claimed[index] = true;
+      return new ScheduledMethod(index, methods.get(index));
+    }
+  }
 
   private static void applyParameterNames(StructMethod mt, MethodDescriptor md, VarProcessor varProc) {
     if (DecompilerContext.getOption(IFernflowerPreferences.USE_METHOD_PARAMETERS)) {

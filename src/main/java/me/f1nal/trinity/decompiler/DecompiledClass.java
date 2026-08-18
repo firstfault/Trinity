@@ -33,6 +33,7 @@ public final class DecompiledClass {
     private static final int PROGRESSIVE_RENDER_METHOD_LIMIT = 500;
     private final Trinity trinity;
     private final ClassInput classInput;
+    private final int totalMethodCount;
     private final Map<MethodInput, DecompiledMethod> decompiledMethodMap = new HashMap<>();
     private final List<DecompilerComponent> componentList;
     private final Map<MemberDetails, DecompilerMemberReader.MemberComponents> methodComponents;
@@ -40,6 +41,8 @@ public final class DecompiledClass {
     private final Map<Integer, ClassPreview> classPreviewCache = new HashMap<>();
     private final Map<MethodPreviewKey, MethodPreview> methodPreviewCache = new HashMap<>();
     private final Map<MethodUsagePreviewKey, MethodUsagePreview> methodUsagePreviewCache = new HashMap<>();
+    private final Map<VariableUsagePreviewKey, MethodUsagePreview> variableUsagePreviewCache =
+            new HashMap<>();
     private final Map<MemberDetails, List<DecompilerLineText>> fieldPreviewCache = new HashMap<>();
     private final Map<VariablePreviewKey, List<DecompilerLineText>> variablePreviewCache = new HashMap<>();
     private DecompilerImportSection importSection;
@@ -47,13 +50,15 @@ public final class DecompiledClass {
     private String longestLineText = "";
     private StickyHeaders stickyHeaders;
     private final Set<MemberDetails> progressiveMethods = ConcurrentHashMap.newKeySet();
+    private final Set<MemberDetails> processedMethods = ConcurrentHashMap.newKeySet();
+    private final Map<MemberDetails, String> completedMethodOutputs = new ConcurrentHashMap<>();
     private final Queue<MethodOutput> pendingMethodOutputs = new ConcurrentLinkedQueue<>();
     private final Queue<MemberReplacement> pendingMemberReplacements = new ConcurrentLinkedQueue<>();
     private final Set<MemberDetails> queuedMethodOutputs = ConcurrentHashMap.newKeySet();
     private volatile DecompiledClass completedClass;
     private volatile boolean progressive;
-    /** Whether individual method completions are cheap enough to merge into the live document. */
-    private volatile boolean progressiveMethodUpdatesEnabled;
+    /** Whether every completion is cheap enough to merge, rather than only viewport methods. */
+    private volatile boolean progressiveBulkMethodUpdatesEnabled;
     /**
      * Lines of the decompiled source code file, each containing a {@link DecompilerLine} which holds the
      * text components to be rendered on that specific line.
@@ -67,12 +72,13 @@ public final class DecompiledClass {
     public DecompiledClass(Trinity trinity, ClassInput classInput, final String rawOutput) throws IOException {
         this.trinity = trinity;
         this.classInput = classInput;
+        this.totalMethodCount = classInput.getMethodMap().size();
 
         final DecompilerMemberReader reader = new DecompilerMemberReader(this, rawOutput);
         this.componentList = new ArrayList<>(reader.getComponentList());
         this.methodComponents = new HashMap<>(reader.getMethodComponents());
         this.fieldComponents = new HashMap<>(reader.getFieldComponents());
-        this.progressiveMethodUpdatesEnabled = false;
+        this.progressiveBulkMethodUpdatesEnabled = false;
 
         this.resetLines();
         this.setComponentHighlighted(null);
@@ -81,6 +87,7 @@ public final class DecompiledClass {
     private DecompiledClass(Trinity trinity, ClassInput classInput, ProgressiveDecompilerSource.Result source) throws IOException {
         this.trinity = trinity;
         this.classInput = classInput;
+        this.totalMethodCount = classInput.getMethodMap().size();
 
         DecompilerMemberReader reader = new DecompilerMemberReader(this, source.rawOutput());
         this.componentList = new ArrayList<>(reader.getComponentList());
@@ -89,12 +96,12 @@ public final class DecompiledClass {
         this.progressive = true;
 
         this.resetLines();
-        this.progressiveMethodUpdatesEnabled = this.classInput.getMethodMap().size()
+        this.progressiveBulkMethodUpdatesEnabled = this.classInput.getMethodMap().size()
                 <= PROGRESSIVE_RENDER_METHOD_LIMIT
                 && this.lines.size() < PROGRESSIVE_RENDER_LINE_LIMIT;
-        if (this.progressiveMethodUpdatesEnabled) {
-            this.progressiveMethods.addAll(this.methodComponents.keySet());
-        }
+        // Large classes still merge methods which remain in the viewport. Merging every indexed
+        // completion would rebuild tens of thousands of placeholder lines once per method.
+        this.progressiveMethods.addAll(this.methodComponents.keySet());
         this.setComponentHighlighted(null);
     }
 
@@ -102,11 +109,41 @@ public final class DecompiledClass {
         return new DecompiledClass(trinity, classInput, ProgressiveDecompilerSource.build(classInput));
     }
 
-    public void queueMethodOutput(MemberDetails method, String rawOutput) {
-        if (progressive && progressiveMethodUpdatesEnabled
-                && progressiveMethods.contains(method) && queuedMethodOutputs.add(method)) {
-            pendingMethodOutputs.add(new MethodOutput(method, rawOutput));
+    public void queueMethodOutput(MemberDetails method, String rawOutput,
+                                  boolean viewportPrioritized) {
+        if (!progressive || !progressiveMethods.contains(method)) return;
+        completedMethodOutputs.put(method, rawOutput);
+        if ((progressiveBulkMethodUpdatesEnabled || viewportPrioritized)
+                && queuedMethodOutputs.add(method)) {
+            pendingMethodOutputs.add(new MethodOutput(method, rawOutput, viewportPrioritized));
         }
+    }
+
+    public void markMethodProcessed(MemberDetails method) {
+        if (progressive && progressiveMethods.contains(method)) {
+            processedMethods.add(method);
+        }
+    }
+
+    /** Queues cached source for methods which completed before they entered the viewport. */
+    public void queuePrioritizedMethodOutputs(List<MethodInput> methods) {
+        if (!progressive) return;
+        for (MethodInput methodInput : methods) {
+            MemberDetails method = methodInput.getDetails();
+            String rawOutput = completedMethodOutputs.get(method);
+            if (rawOutput != null && progressiveMethods.contains(method)
+                    && queuedMethodOutputs.add(method)) {
+                pendingMethodOutputs.add(new MethodOutput(method, rawOutput, true));
+            }
+        }
+    }
+
+    public int getProcessedMethodCount() {
+        return processedMethods.size();
+    }
+
+    public int getTotalMethodCount() {
+        return totalMethodCount;
     }
 
     public void queueMemberReplacement(MemberDetails previousDetails, MemberDetails currentDetails,
@@ -124,8 +161,10 @@ public final class DecompiledClass {
         pendingMemberReplacements.clear();
         queuedMethodOutputs.clear();
         progressiveMethods.clear();
+        processedMethods.clear();
+        completedMethodOutputs.clear();
         progressive = false;
-        progressiveMethodUpdatesEnabled = false;
+        progressiveBulkMethodUpdatesEnabled = false;
     }
 
     /**
@@ -147,29 +186,26 @@ public final class DecompiledClass {
             return true;
         }
 
-        if (progressive && progressiveMethodUpdatesEnabled) {
+        if (progressive) {
             // Rebuilding an already enormous progressive document for each arriving method is
-            // more expensive than waiting for the final model. The finished result is still
-            // produced in the background and adopted immediately above.
-            if (lines.size() >= PROGRESSIVE_RENDER_LINE_LIMIT) {
-                this.disableProgressiveMethodUpdates();
-                return false;
+            // only allowed for methods deliberately held in the viewport. Indexed completions
+            // continue in the background and arrive with the finished model.
+            if (progressiveBulkMethodUpdatesEnabled
+                    && lines.size() >= PROGRESSIVE_RENDER_LINE_LIMIT) {
+                this.progressiveBulkMethodUpdatesEnabled = false;
             }
-            MethodOutput methodOutput = pendingMethodOutputs.poll();
-            if (methodOutput != null) {
+            MethodOutput methodOutput;
+            while ((methodOutput = pendingMethodOutputs.poll()) != null) {
+                if (!progressiveBulkMethodUpdatesEnabled && !methodOutput.viewportPrioritized()) {
+                    queuedMethodOutputs.remove(methodOutput.method());
+                    continue;
+                }
                 replaceMethod(methodOutput);
                 return true;
             }
         }
 
         return false;
-    }
-
-    private void disableProgressiveMethodUpdates() {
-        this.progressiveMethodUpdatesEnabled = false;
-        this.pendingMethodOutputs.clear();
-        this.queuedMethodOutputs.clear();
-        this.progressiveMethods.clear();
     }
 
     private void adoptCompletedClass(DecompiledClass completed) {
@@ -192,9 +228,11 @@ public final class DecompiledClass {
         pendingMethodOutputs.clear();
         queuedMethodOutputs.clear();
         progressiveMethods.clear();
+        processedMethods.clear();
+        completedMethodOutputs.clear();
         completedClass = null;
         progressive = false;
-        progressiveMethodUpdatesEnabled = false;
+        progressiveBulkMethodUpdatesEnabled = false;
         layoutVersion++;
         setComponentHighlighted(null);
     }
@@ -202,6 +240,7 @@ public final class DecompiledClass {
     private void replaceMethod(MethodOutput methodOutput) {
         queuedMethodOutputs.remove(methodOutput.method());
         progressiveMethods.remove(methodOutput.method());
+        completedMethodOutputs.remove(methodOutput.method());
         DecompilerMemberReader.MemberComponents components = methodComponents.get(methodOutput.method());
         if (components == null) {
             return;
@@ -416,6 +455,7 @@ public final class DecompiledClass {
         this.classPreviewCache.clear();
         this.methodPreviewCache.clear();
         this.methodUsagePreviewCache.clear();
+        this.variableUsagePreviewCache.clear();
         this.fieldPreviewCache.clear();
         this.variablePreviewCache.clear();
     }
@@ -461,13 +501,50 @@ public final class DecompiledClass {
                 }
             }
             if (signatureLine != null) {
-                methods.add(new StickyMethod(signatureLine, endLine,
+                MethodInput methodInput = classInput.getDeclaredMethod(
+                        entry.getKey().getName(), entry.getKey().getDesc());
+                methods.add(new StickyMethod(methodInput, signatureLine, endLine,
                         signatureLine.getLineNumber() - 1, endLine.getLineNumber() - 1));
             }
         }
         methods.sort(Comparator.comparingInt(StickyMethod::signatureLineIndex));
         return new StickyHeaders(classLine,
                 classLine == null ? -1 : classLine.getLineNumber() - 1, List.copyOf(methods));
+    }
+
+    /**
+     * Finds methods intersecting a source-line range without scanning the class. Sticky method
+     * spans are sorted once per layout, so viewport updates cost O(log n + visible methods).
+     */
+    public List<MethodInput> getMethodsInLineRange(int firstLineIndex, int lastLineIndex) {
+        if (firstLineIndex > lastLineIndex) return List.of();
+        List<StickyMethod> methods = getStickyHeaders().methods();
+        if (methods.isEmpty()) return List.of();
+
+        int low = 0;
+        int high = methods.size();
+        while (low < high) {
+            int middle = (low + high) >>> 1;
+            if (methods.get(middle).signatureLineIndex() < firstLineIndex) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+
+        int start = low;
+        if (start > 0 && methods.get(start - 1).endLineIndex() >= firstLineIndex) {
+            start--;
+        }
+        List<MethodInput> visible = new ArrayList<>();
+        for (int index = start; index < methods.size(); index++) {
+            StickyMethod method = methods.get(index);
+            if (method.signatureLineIndex() > lastLineIndex) break;
+            if (method.endLineIndex() >= firstLineIndex && method.methodInput() != null) {
+                visible.add(method.methodInput());
+            }
+        }
+        return visible.isEmpty() ? List.of() : List.copyOf(visible);
     }
 
     private DecompilerLine findFirstComponentLine(int start, int end) {
@@ -670,10 +747,14 @@ public final class DecompiledClass {
     public MethodUsagePreview getVariableUsagePreview(MethodInput methodInput, int variableIndex,
                                                        int componentOccurrence,
                                                        int surroundingLines) {
-        DecompilerComponent usageComponent = findVariableComponent(
-                methodInput, variableIndex, componentOccurrence);
-        return createComponentUsagePreview(
-                methodInput, usageComponent, usageComponent, surroundingLines);
+        VariableUsagePreviewKey key = new VariableUsagePreviewKey(
+                methodInput.getDetails(), variableIndex, componentOccurrence, surroundingLines);
+        return variableUsagePreviewCache.computeIfAbsent(key, ignored -> {
+            DecompilerComponent usageComponent = findVariableComponent(
+                    methodInput, variableIndex, componentOccurrence);
+            return createComponentUsagePreview(
+                    methodInput, usageComponent, usageComponent, surroundingLines);
+        });
     }
 
     private MethodUsagePreview createComponentUsagePreview(MethodInput methodInput,
@@ -685,8 +766,8 @@ public final class DecompiledClass {
             return MethodUsagePreview.EMPTY;
         }
 
-        int startIndex = componentList.indexOf(boundaries.start());
-        int endIndex = componentList.indexOf(boundaries.end());
+        int startIndex = boundaries.start().getLayoutIndex();
+        int endIndex = boundaries.end().getLayoutIndex();
         if (startIndex < 0 || endIndex < startIndex) {
             return MethodUsagePreview.EMPTY;
         }
@@ -698,7 +779,15 @@ public final class DecompiledClass {
         int signatureLine = -1;
         int usageLine = -1;
         String methodKey = methodInput.getDetails().toString();
-        for (DecompilerLine line : lines) {
+        DecompilerLine firstMethodLine = this.findFirstComponentLine(startIndex, endIndex);
+        DecompilerLine lastMethodLine = this.findLastComponentLine(startIndex, endIndex);
+        if (firstMethodLine == null || lastMethodLine == null) {
+            return MethodUsagePreview.EMPTY;
+        }
+        int firstMethodLineIndex = firstMethodLine.getLineNumber() - 1;
+        int lastMethodLineIndex = lastMethodLine.getLineNumber() - 1;
+        for (int lineIndex = firstMethodLineIndex; lineIndex <= lastMethodLineIndex; lineIndex++) {
+            DecompilerLine line = lines.get(lineIndex);
             List<DecompilerLineText> previewLine = line.getComponents().stream()
                     .filter(text -> methodComponentSet.contains(text.getComponent()))
                     .filter(text -> !text.getText().isEmpty())
@@ -909,14 +998,20 @@ public final class DecompiledClass {
         DecompilerMemberReader.MemberComponents boundaries = methodComponents.get(methodInput.getDetails());
         if (boundaries == null) return List.of();
 
-        int startIndex = componentList.indexOf(boundaries.start());
-        int endIndex = componentList.indexOf(boundaries.end());
+        int startIndex = boundaries.start().getLayoutIndex();
+        int endIndex = boundaries.end().getLayoutIndex();
         if (startIndex < 0 || endIndex < startIndex) return List.of();
 
         Set<DecompilerComponent> methodComponentSet = Collections.newSetFromMap(new IdentityHashMap<>());
         methodComponentSet.addAll(componentList.subList(startIndex, endIndex + 1));
+        DecompilerLine firstMethodLine = this.findFirstComponentLine(startIndex, endIndex);
+        DecompilerLine lastMethodLine = this.findLastComponentLine(startIndex, endIndex);
+        if (firstMethodLine == null || lastMethodLine == null) return List.of();
+        int firstMethodLineIndex = firstMethodLine.getLineNumber() - 1;
+        int lastMethodLineIndex = lastMethodLine.getLineNumber() - 1;
         String methodKey = methodInput.getDetails().toString();
-        DecompilerLine signatureLine = lines.stream()
+        DecompilerLine signatureLine = lines.subList(firstMethodLineIndex, lastMethodLineIndex + 1)
+                .stream()
                 .filter(line -> line.getComponents().stream().anyMatch(text ->
                         methodComponentSet.contains(text.getComponent())
                                 && methodKey.equals(text.getComponent().memberKey)))
@@ -924,7 +1019,8 @@ public final class DecompiledClass {
 
         List<DecompilerVariableReference> references = new ArrayList<>();
         int componentOccurrence = 0;
-        for (DecompilerLine line : lines) {
+        for (int lineIndex = firstMethodLineIndex; lineIndex <= lastMethodLineIndex; lineIndex++) {
+            DecompilerLine line = lines.get(lineIndex);
             int textOffset = 0;
             String lineText = line.getText();
             for (DecompilerLineText text : line.getComponents()) {
@@ -951,11 +1047,26 @@ public final class DecompiledClass {
 
     public DecompilerComponent findVariableComponent(MethodInput methodInput, int variableIndex,
                                                       int componentOccurrence) {
+        DecompilerMemberReader.MemberComponents boundaries =
+                methodComponents.get(methodInput.getDetails());
+        if (boundaries == null) return null;
+        int startIndex = boundaries.start().getLayoutIndex();
+        int endIndex = boundaries.end().getLayoutIndex();
+        if (startIndex < 0 || endIndex < startIndex) return null;
+        DecompilerLine firstMethodLine = this.findFirstComponentLine(startIndex, endIndex);
+        DecompilerLine lastMethodLine = this.findLastComponentLine(startIndex, endIndex);
+        if (firstMethodLine == null || lastMethodLine == null) return null;
+
         int occurrence = 0;
-        for (DecompilerLine line : lines) {
-            for (DecompilerLineText text : line.getComponents()) {
+        for (int lineIndex = firstMethodLine.getLineNumber() - 1;
+             lineIndex < lastMethodLine.getLineNumber(); lineIndex++) {
+            for (DecompilerLineText text : lines.get(lineIndex).getComponents()) {
                 DecompilerComponent component = text.getComponent();
-                if (!isVariable(component.getPreviewVariable(), methodInput, variableIndex)) continue;
+                int layoutIndex = component.getLayoutIndex();
+                if (layoutIndex < startIndex || layoutIndex > endIndex
+                        || !isVariable(component.getPreviewVariable(), methodInput, variableIndex)) {
+                    continue;
+                }
                 if (occurrence++ == componentOccurrence) return component;
             }
         }
@@ -964,11 +1075,25 @@ public final class DecompiledClass {
 
     public DecompilerComponent findVariableDeclarationComponent(MethodInput methodInput,
                                                                  int variableIndex) {
-        for (DecompilerLine line : lines) {
-            for (DecompilerLineText text : line.getComponents()) {
+        DecompilerMemberReader.MemberComponents boundaries =
+                methodComponents.get(methodInput.getDetails());
+        if (boundaries == null) return null;
+        int startIndex = boundaries.start().getLayoutIndex();
+        int endIndex = boundaries.end().getLayoutIndex();
+        if (startIndex < 0 || endIndex < startIndex) return null;
+        DecompilerLine firstMethodLine = this.findFirstComponentLine(startIndex, endIndex);
+        DecompilerLine lastMethodLine = this.findLastComponentLine(startIndex, endIndex);
+        if (firstMethodLine == null || lastMethodLine == null) return null;
+
+        for (int lineIndex = firstMethodLine.getLineNumber() - 1;
+             lineIndex < lastMethodLine.getLineNumber(); lineIndex++) {
+            for (DecompilerLineText text : lines.get(lineIndex).getComponents()) {
                 DecompilerComponent component = text.getComponent();
+                int layoutIndex = component.getLayoutIndex();
                 DecompilerComponent.VariablePreview variable = component.getPreviewVariable();
-                if (isVariable(variable, methodInput, variableIndex) && variable.declaration()) {
+                if (layoutIndex >= startIndex && layoutIndex <= endIndex
+                        && isVariable(variable, methodInput, variableIndex)
+                        && variable.declaration()) {
                     return component;
                 }
             }
@@ -988,15 +1113,21 @@ public final class DecompiledClass {
             return List.of();
         }
 
-        int startIndex = componentList.indexOf(boundaries.start());
-        int endIndex = componentList.indexOf(boundaries.end());
+        int startIndex = boundaries.start().getLayoutIndex();
+        int endIndex = boundaries.end().getLayoutIndex();
         if (startIndex < 0 || endIndex < startIndex) {
             return List.of();
         }
 
         Set<DecompilerComponent> methodComponentSet = Collections.newSetFromMap(new IdentityHashMap<>());
         methodComponentSet.addAll(componentList.subList(startIndex, endIndex + 1));
-        for (DecompilerLine line : lines) {
+        DecompilerLine firstMethodLine = this.findFirstComponentLine(startIndex, endIndex);
+        DecompilerLine lastMethodLine = this.findLastComponentLine(startIndex, endIndex);
+        if (firstMethodLine == null || lastMethodLine == null) return List.of();
+        int firstMethodLineIndex = firstMethodLine.getLineNumber() - 1;
+        int lastMethodLineIndex = lastMethodLine.getLineNumber() - 1;
+        for (int lineIndex = firstMethodLineIndex; lineIndex <= lastMethodLineIndex; lineIndex++) {
+            DecompilerLine line = lines.get(lineIndex);
             boolean declarationLine = line.getComponents().stream().anyMatch(text -> {
                 DecompilerComponent component = text.getComponent();
                 DecompilerComponent.VariablePreview variable = component.getPreviewVariable();
@@ -1122,7 +1253,8 @@ public final class DecompiledClass {
         return lineIndex >= 0 && lineIndex < lines.size() && lines.get(lineIndex) == line;
     }
 
-    private record MethodOutput(MemberDetails method, String rawOutput) {
+    private record MethodOutput(MemberDetails method, String rawOutput,
+                                boolean viewportPrioritized) {
     }
 
     private record MemberReplacement(MemberDetails previousDetails, MemberDetails currentDetails,
@@ -1138,6 +1270,10 @@ public final class DecompiledClass {
                                          int constantOccurrence) {
     }
 
+    private record VariableUsagePreviewKey(MemberDetails details, int variableIndex,
+                                           int componentOccurrence, int surroundingLines) {
+    }
+
     private record VariablePreviewKey(MemberDetails method, int variableIndex) {
     }
 
@@ -1149,7 +1285,8 @@ public final class DecompiledClass {
                                 List<StickyMethod> methods) {
     }
 
-    public record StickyMethod(DecompilerLine signatureLine, DecompilerLine endLine,
+    public record StickyMethod(MethodInput methodInput, DecompilerLine signatureLine,
+                               DecompilerLine endLine,
                                int signatureLineIndex, int endLineIndex) {
     }
 

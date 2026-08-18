@@ -81,6 +81,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private static final float ENUM_CARD_MARGIN = 11.F;
     private static final float COLLAPSED_IMPORT_ALPHA = 0.30F;
     private static final long IMPORT_ALPHA_ANIMATION_TIME = 120L;
+    private static final long METHOD_PRIORITY_DWELL_NANOS = 50_000_000L;
     private ClassInput selectedClass;
     private Input<?> navigationTarget;
     private AbstractInsnNode navigationInstruction;
@@ -131,6 +132,13 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private boolean renderedImportsExpanded;
     private int viewportFirstVisibleRow;
     private int viewportEndVisibleRow;
+    private DecompiledClass prioritizedViewportClass;
+    private long prioritizedViewportLayoutVersion = -1L;
+    private int prioritizedViewportFirstLine = -1;
+    private int prioritizedViewportLastLine = -1;
+    private List<MethodInput> prioritizedViewportMethods = List.of();
+    private long prioritizedViewportDwellStartNanos;
+    private boolean viewportPriorityPublished;
     private DecompiledClass measuredWidthClass;
     private long measuredWidthLayoutVersion = -1L;
     private float measuredWidthFontSize = -1.F;
@@ -172,6 +180,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     @Override
     protected void onDispose() {
         trinity.getEventManager().unregisterListener(this);
+        this.clearVisibleMethodPriorities();
         this.selectedClass = null;
         this.navigationTarget = null;
         this.navigationInstruction = null;
@@ -227,6 +236,7 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         if (classInput == selectedClass) {
             return;
         }
+        this.clearVisibleMethodPriorities();
         selectedClass = classInput;
         this.clearDelimiterMatch();
         this.importsExpanded = false;
@@ -312,8 +322,15 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         DecompiledClass decompiledClass = this.getDecompiledClass();
         boolean decompiling = trinity.getDecompiler().isDecompiling(selectedClass);
         boolean progressive = decompiledClass != null && decompiledClass.isProgressive();
+        int completedMethods = decompiledClass == null
+                ? 0 : decompiledClass.getProcessedMethodCount();
+        int totalMethods = decompiledClass == null
+                ? selectedClass == null ? 0 : selectedClass.getMethodMap().size()
+                : decompiledClass.getTotalMethodCount();
         getMenuBar().setProgress(decompiling || progressive
-                ? new MenuBarProgress("Decompiler", decompiling ? "Decompiling Methods" : "Rendering Methods", -1)
+                ? new MenuBarProgress("Decompiler",
+                decompiling ? "Decompiling Methods" : "Rendering Methods",
+                completedMethods, totalMethods)
                 : null);
     }
 
@@ -670,6 +687,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         this.viewportEndVisibleRow = Math.max(this.viewportFirstVisibleRow,
                 Math.min(visibleLineCount, (int) Math.ceil(
                         (ImGui.getScrollY() + ImGui.getWindowHeight() - contentStartY) / lineHeight) + 1));
+        this.updateVisibleMethodPriorities(decompiledClass, importSection,
+                importsExpandedForFrame, visibleLineCount);
 
         ImGuiListClipper clipper = new ImGuiListClipper();
         try {
@@ -1043,6 +1062,70 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                                          boolean importsExpanded) {
         return section == null ? visibleRow
                 : section.sourceIndexForVisibleRow(visibleRow, importsExpanded);
+    }
+
+    private void updateVisibleMethodPriorities(DecompiledClass decompiledClass,
+                                               DecompilerImportSection importSection,
+                                               boolean importsExpanded,
+                                               int visibleLineCount) {
+        int firstSourceLine = -1;
+        int lastSourceLine = -1;
+        if (visibleLineCount > 0 && this.viewportFirstVisibleRow < visibleLineCount) {
+            int firstVisibleRow = Math.min(
+                    this.viewportFirstVisibleRow, visibleLineCount - 1);
+            int lastVisibleRow = Math.min(visibleLineCount - 1,
+                    Math.max(firstVisibleRow, this.viewportEndVisibleRow - 1));
+            firstSourceLine = this.sourceIndexForVisibleRow(
+                    firstVisibleRow, importSection, importsExpanded);
+            lastSourceLine = this.sourceIndexForVisibleRow(
+                    lastVisibleRow, importSection, importsExpanded);
+        }
+
+        long layoutVersion = decompiledClass.getLayoutVersion();
+        if (this.prioritizedViewportClass != decompiledClass
+                || this.prioritizedViewportLayoutVersion != layoutVersion
+                || this.prioritizedViewportFirstLine != firstSourceLine
+                || this.prioritizedViewportLastLine != lastSourceLine) {
+            this.prioritizedViewportClass = decompiledClass;
+            this.prioritizedViewportLayoutVersion = layoutVersion;
+            this.prioritizedViewportFirstLine = firstSourceLine;
+            this.prioritizedViewportLastLine = lastSourceLine;
+            List<MethodInput> visibleMethods = firstSourceLine < 0
+                    ? List.of()
+                    : decompiledClass.getMethodsInLineRange(firstSourceLine, lastSourceLine);
+            if (!visibleMethods.equals(this.prioritizedViewportMethods)) {
+                // The old viewport must stop affecting the scheduler immediately. The new one is
+                // published only after its method set remains stable for the dwell interval.
+                trinity.getDecompiler().clearVisibleMethodPriorities(this.selectedClass);
+                this.prioritizedViewportMethods = visibleMethods;
+                this.prioritizedViewportDwellStartNanos = System.nanoTime();
+                this.viewportPriorityPublished = false;
+            }
+        }
+
+        if (!this.prioritizedViewportMethods.isEmpty()
+                && (this.viewportPriorityPublished
+                || System.nanoTime() - this.prioritizedViewportDwellStartNanos
+                >= METHOD_PRIORITY_DWELL_NANOS)) {
+            this.viewportPriorityPublished = true;
+            // This also acts as a cheap heartbeat. The scheduler drops stale priorities when this
+            // dock tab is no longer being rendered.
+            trinity.getDecompiler().prioritizeVisibleMethods(
+                    this.selectedClass, this.prioritizedViewportMethods);
+        }
+    }
+
+    private void clearVisibleMethodPriorities() {
+        if (this.selectedClass != null) {
+            trinity.getDecompiler().clearVisibleMethodPriorities(this.selectedClass);
+        }
+        this.prioritizedViewportClass = null;
+        this.prioritizedViewportLayoutVersion = -1L;
+        this.prioritizedViewportFirstLine = -1;
+        this.prioritizedViewportLastLine = -1;
+        this.prioritizedViewportMethods = List.of();
+        this.prioritizedViewportDwellStartNanos = 0L;
+        this.viewportPriorityPublished = false;
     }
 
     private int visibleRowForSourceIndex(int sourceIndex, DecompilerImportSection section,

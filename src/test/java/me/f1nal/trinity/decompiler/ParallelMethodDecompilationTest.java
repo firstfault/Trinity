@@ -1,12 +1,15 @@
 package me.f1nal.trinity.decompiler;
 
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
+import me.f1nal.trinity.decompiler.main.extern.IDecompilationProgressListener;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,6 +35,43 @@ class ParallelMethodDecompilationTest {
                 "Expected method analysis to use more than one worker");
         assertTrue(parallel.progressiveMethods() > 0,
                 "Expected progressive source callbacks while workers were active");
+        assertEquals(201, parallel.processedMethods(),
+                "Every method must be processed regardless of viewport priority");
+    }
+
+    @Test
+    void viewportMethodsPreemptClassfileOrderThenResumeIt() {
+        byte[] classBytes = createClass(40);
+        Map<String, Object> options = new HashMap<>();
+        options.put(IFernflowerPreferences.METHOD_PROCESSING_THREADS, "1");
+        options.put(IFernflowerPreferences.REMOVE_BRIDGE, "0");
+        options.put(IFernflowerPreferences.REMOVE_SYNTHETIC, "0");
+
+        List<String> startedMethods = new ArrayList<>();
+        IDecompilationProgressListener listener = new IDecompilationProgressListener() {
+            @Override
+            public void methodDecompiled(String owner, String name, String descriptor,
+                                         String content) {
+            }
+
+            @Override
+            public List<MethodKey> priorityMethods(String owner) {
+                return List.of(new MethodKey("method39", "(I)I"),
+                        new MethodKey("method38", "(I)I"));
+            }
+        };
+        ClassDecompileTask task = new ClassDecompileTask(
+                classBytes, options, ignored -> { }, listener) {
+            @Override
+            public void startMethod(String methodName) {
+                startedMethods.add(methodName);
+            }
+        };
+
+        task.run();
+
+        assertEquals(List.of("method39 (I)I", "method38 (I)I", "<init> ()V"),
+                startedMethods.subList(0, 3));
     }
 
     private static DecompileResult decompile(byte[] classBytes, int threads) {
@@ -44,18 +84,31 @@ class ParallelMethodDecompilationTest {
         AtomicReference<String> source = new AtomicReference<>();
         Set<String> workerThreads = ConcurrentHashMap.newKeySet();
         AtomicInteger progressiveMethods = new AtomicInteger();
+        AtomicInteger processedMethods = new AtomicInteger();
+        IDecompilationProgressListener listener = new IDecompilationProgressListener() {
+            @Override
+            public void methodProcessed(String owner, String name, String descriptor) {
+                processedMethods.incrementAndGet();
+            }
+
+            @Override
+            public void methodDecompiled(String owner, String name, String descriptor,
+                                         String content) {
+                progressiveMethods.incrementAndGet();
+            }
+        };
         ClassDecompileTask task = new ClassDecompileTask(classBytes, options,
                 content -> {
                     if (content != null) source.set(content);
-                }, (owner, name, descriptor, content) ->
-                progressiveMethods.incrementAndGet()) {
+                }, listener) {
             @Override
             public void startMethod(String methodName) {
                 workerThreads.add(Thread.currentThread().getName());
             }
         };
         task.run();
-        return new DecompileResult(source.get(), workerThreads, progressiveMethods.get());
+        return new DecompileResult(source.get(), workerThreads, progressiveMethods.get(),
+                processedMethods.get());
     }
 
     private static byte[] createClass(int methodCount) {
@@ -90,6 +143,6 @@ class ParallelMethodDecompilationTest {
     }
 
     private record DecompileResult(String source, Set<String> workerThreads,
-                                   int progressiveMethods) {
+                                   int progressiveMethods, int processedMethods) {
     }
 }
