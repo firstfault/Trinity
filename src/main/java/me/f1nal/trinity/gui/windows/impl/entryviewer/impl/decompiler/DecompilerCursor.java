@@ -153,6 +153,27 @@ public class DecompilerCursor {
         this.setScrollToCursor();
     }
 
+    void restoreNavigationState(DecompilerCoordinates coordinates,
+                                DecompilerCoordinates selectionEnd,
+                                boolean selectionUsesBoundaries) {
+        this.draggingSelection = false;
+        this.scroll = false;
+        this.scrollAnimation = null;
+        this.highlightSelectionMatches = selectionEnd != null;
+        this.selectionUsesBoundaries = selectionEnd != null && selectionUsesBoundaries;
+        this.selectionEnd = null;
+        this.coordinates = null;
+        if (coordinates != null) {
+            this.setCoordinates(coordinates);
+            this.selectionEnd = selectionEnd;
+        }
+        this.blink.reset();
+    }
+
+    boolean isSelectionUsingBoundaries() {
+        return this.selectionUsesBoundaries;
+    }
+
     public void selectRange(DecompilerCoordinates from, DecompilerCoordinates to, boolean highlightMatches) {
         this.draggingSelection = false;
         this.highlightSelectionMatches = highlightMatches;

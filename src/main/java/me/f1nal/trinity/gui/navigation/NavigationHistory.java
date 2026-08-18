@@ -47,6 +47,15 @@ public final class NavigationHistory implements IDatabaseSavable<DatabaseNavigat
         return entry;
     }
 
+    /** Updates where the user currently is without creating another history entry. */
+    public boolean updateCurrentViewState(NavigationViewState viewState) {
+        NavigationEntry current = getCurrent();
+        if (current == null || Objects.equals(current.viewState(), viewState)) return false;
+        entries.set(currentIndex, current.withViewState(viewState));
+        changed();
+        return true;
+    }
+
     public Optional<NavigationEntry> back() {
         if (!canGoBack()) return Optional.empty();
         NavigationEntry entry = entries.get(--currentIndex);

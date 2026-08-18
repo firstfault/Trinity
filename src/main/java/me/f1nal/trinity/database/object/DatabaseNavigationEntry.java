@@ -1,6 +1,7 @@
 package me.f1nal.trinity.database.object;
 
 import me.f1nal.trinity.gui.navigation.NavigationEntry;
+import me.f1nal.trinity.gui.navigation.NavigationViewState;
 
 public final class DatabaseNavigationEntry {
     private final long id;
@@ -12,6 +13,15 @@ public final class DatabaseNavigationEntry {
     private final String action;
     private final long timestampMillis;
     private final String displayText;
+    private final boolean hasViewState;
+    private final int cursorLine;
+    private final int cursorCharacter;
+    private final int selectionLine;
+    private final int selectionCharacter;
+    private final boolean selectionUsesBoundaries;
+    private final float scrollX;
+    private final float scrollY;
+    private final boolean importsExpanded;
 
     public DatabaseNavigationEntry(NavigationEntry entry) {
         this.id = entry.id();
@@ -23,6 +33,16 @@ public final class DatabaseNavigationEntry {
         this.action = entry.action().name();
         this.timestampMillis = entry.timestampMillis();
         this.displayText = entry.displayText();
+        NavigationViewState viewState = entry.viewState();
+        this.hasViewState = viewState != null;
+        this.cursorLine = viewState == null ? -1 : viewState.cursorLine();
+        this.cursorCharacter = viewState == null ? 0 : viewState.cursorCharacter();
+        this.selectionLine = viewState == null ? -1 : viewState.selectionLine();
+        this.selectionCharacter = viewState == null ? 0 : viewState.selectionCharacter();
+        this.selectionUsesBoundaries = viewState != null && viewState.selectionUsesBoundaries();
+        this.scrollX = viewState == null ? 0.F : viewState.scrollX();
+        this.scrollY = viewState == null ? 0.F : viewState.scrollY();
+        this.importsExpanded = viewState != null && viewState.importsExpanded();
     }
 
     public long getId() {
@@ -59,5 +79,12 @@ public final class DatabaseNavigationEntry {
 
     public String getDisplayText() {
         return displayText;
+    }
+
+    public NavigationViewState getViewState() {
+        if (!hasViewState) return null;
+        return new NavigationViewState(cursorLine, cursorCharacter,
+                selectionLine, selectionCharacter, selectionUsesBoundaries,
+                scrollX, scrollY, importsExpanded);
     }
 }

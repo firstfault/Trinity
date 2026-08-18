@@ -70,7 +70,7 @@ public final class DatabaseNavigationHistory extends AbstractDatabaseObject {
         }
         NavigationTarget target = NavigationTarget.capture(input, instruction);
         return new NavigationEntry(entry.getId(), target, action,
-                entry.getTimestampMillis(), entry.getDisplayText());
+                entry.getTimestampMillis(), entry.getDisplayText(), entry.getViewState());
     }
 
     @Override

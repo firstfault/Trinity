@@ -40,6 +40,8 @@ import me.f1nal.trinity.gui.components.popup.MenuBarProgress;
 import me.f1nal.trinity.gui.components.popup.PopupItemBuilder;
 import me.f1nal.trinity.gui.components.popup.PopupMenuBar;
 import me.f1nal.trinity.gui.navigation.NavigationAction;
+import me.f1nal.trinity.gui.navigation.NavigationTarget;
+import me.f1nal.trinity.gui.navigation.NavigationViewState;
 import me.f1nal.trinity.gui.viewport.notifications.Notification;
 import me.f1nal.trinity.gui.viewport.notifications.NotificationType;
 import me.f1nal.trinity.gui.viewport.notifications.SimpleCaption;
@@ -141,6 +143,12 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     private DecompilerHighlight navigationHighlight;
     private DecompilerDelimiterMatcher.Match delimiterMatch;
     private DecompiledClass delimiterMatchClass;
+    private NavigationViewState pendingNavigationViewState;
+    private float lastDecompilerScrollX;
+    private float lastDecompilerScrollY;
+    private float restoreScrollX;
+    private float restoreScrollY;
+    private int restoreScrollFrames;
     private final Stopwatch focusTime = new Stopwatch();
     private static Stopwatch viewMember = new Stopwatch();
 
@@ -210,6 +218,8 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     public void setDecompileTarget(ClassInput classInput) {
+        this.pendingNavigationViewState = null;
+        this.restoreScrollFrames = 0;
         this.navigationTarget = classInput;
         this.navigationInstruction = null;
         this.autoscrollTo = null;
@@ -230,8 +240,34 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     @Override
     protected void onFocusGain() {
         this.focusTime.reset();
-        Main.getDisplayManager().trackCurrentDecompilerView(this.navigationTarget, this.navigationInstruction);
+        Main.getDisplayManager().trackCurrentDecompilerView(
+                this, this.navigationTarget, this.navigationInstruction);
         this.updateClassStructure();
+    }
+
+    public boolean isShowing(NavigationTarget target) {
+        return target != null && this.selectedClass != null
+                && target.getClassTarget() == this.selectedClass.getClassTarget();
+    }
+
+    public NavigationViewState captureNavigationViewState() {
+        DecompilerCoordinates caret = this.cursor.coordinates;
+        DecompilerCoordinates selection = this.cursor.selectionEnd;
+        return new NavigationViewState(
+                caret == null ? -1 : caret.getLine().getLineNumber() - 1,
+                caret == null ? 0 : caret.getCharacter(),
+                selection == null ? -1 : selection.getLine().getLineNumber() - 1,
+                selection == null ? 0 : selection.getCharacter(),
+                this.cursor.isSelectionUsingBoundaries(),
+                this.lastDecompilerScrollX, this.lastDecompilerScrollY,
+                this.importsExpanded);
+    }
+
+    public void restoreNavigationViewState(NavigationViewState viewState) {
+        if (viewState == null) return;
+        this.pendingNavigationViewState = viewState;
+        this.autoscrollTo = null;
+        this.navigationHighlight = null;
     }
 
     private void updateClassStructure() {
@@ -557,6 +593,15 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
     }
 
     private void drawDecompiledOutput(DecompiledClass decompiledClass, boolean enumCardHovered) {
+        this.applyPendingNavigationViewState(decompiledClass);
+        if (this.restoreScrollFrames > 0) {
+            ImGui.setScrollX(this.restoreScrollX);
+            ImGui.setScrollY(this.restoreScrollY);
+        }
+        // Capture the live child viewport before input handling. Ctrl-click navigation can
+        // leave this window later in the same frame.
+        this.lastDecompilerScrollX = ImGui.getScrollX();
+        this.lastDecompilerScrollY = ImGui.getScrollY();
         this.validateDelimiterMatch(decompiledClass);
         this.hoveredComponent = null;
         this.cursor.updateScrollAnimation();
@@ -686,7 +731,12 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
                             && !disclosureHovered && !collapsedImportHovered
                             && mousePosY >= cursorPosY && mousePosY < cursorPosY + lineHeight;
 
-                    if (hovered) {
+                    boolean memberNavigationClick = hoveredComponent != null
+                            && hoveredComponent.getViewMember() != null
+                            && ImGui.getIO().getKeyCtrl()
+                            && ImGui.isMouseClicked(ImGuiMouseButton.Left)
+                            && focusTime.hasPassed(150L) && viewMember.hasPassed(250L);
+                    if (hovered && !memberNavigationClick) {
                         this.cursor.handleHoveredLineInputs(
                                 cursorScreenPosX, currentLineNumberSpacing, mousePosX, line);
                     }
@@ -790,6 +840,42 @@ public class DecompilerWindow extends ArchiveEntryViewerWindow<ClassTarget> impl
         }
 
         this.handleMemberKeyMappings();
+        if (this.restoreScrollFrames > 0) {
+            // Submit the full virtualized extent before restoring the viewport. New windows
+            // do not have a useful scroll maximum until the end of their first frame.
+            ImGui.setScrollX(this.restoreScrollX);
+            ImGui.setScrollY(this.restoreScrollY);
+            this.restoreScrollFrames--;
+        }
+        this.lastDecompilerScrollX = ImGui.getScrollX();
+        this.lastDecompilerScrollY = ImGui.getScrollY();
+    }
+
+    private void applyPendingNavigationViewState(DecompiledClass decompiledClass) {
+        NavigationViewState viewState = this.pendingNavigationViewState;
+        if (viewState == null || decompiledClass.isProgressive()) return;
+
+        List<DecompilerLine> lines = decompiledClass.getLines();
+        DecompilerCoordinates caret = this.navigationCoordinates(
+                lines, viewState.cursorLine(), viewState.cursorCharacter());
+        DecompilerCoordinates selection = caret == null ? null : this.navigationCoordinates(
+                lines, viewState.selectionLine(), viewState.selectionCharacter());
+        this.cursor.restoreNavigationState(
+                caret, selection, viewState.selectionUsesBoundaries());
+        this.importsExpanded = viewState.importsExpanded();
+        this.restoreScrollX = Math.max(0.F, viewState.scrollX());
+        this.restoreScrollY = Math.max(0.F, viewState.scrollY());
+        this.restoreScrollFrames = 2;
+        this.pendingNavigationViewState = null;
+        this.updateDelimiterMatch(this.cursor.getActiveCoordinates());
+    }
+
+    private DecompilerCoordinates navigationCoordinates(List<DecompilerLine> lines,
+                                                        int lineIndex, int character) {
+        if (lineIndex < 0 || lines.isEmpty()) return null;
+        DecompilerLine line = lines.get(Math.min(lineIndex, lines.size() - 1));
+        return new DecompilerCoordinates(line,
+                Math.max(0, Math.min(character, line.getText().length())));
     }
 
     void updateDelimiterMatch(DecompilerCoordinates caret) {

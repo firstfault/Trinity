@@ -83,6 +83,24 @@ class NavigationHistoryTest {
         assertEquals("\"second\"", history.getEntries().get(1).displayText());
     }
 
+    @Test
+    void viewStateIsAttachedToTheCurrentEntryWithoutChangingHistoryPosition() {
+        NavigationHistory history = new NavigationHistory();
+        NavigationTarget first = target("sample/First");
+        NavigationTarget second = target("sample/Second");
+        history.record(first, NavigationAction.NAVIGATE);
+        NavigationViewState state = new NavigationViewState(
+                41, 7, 43, 2, true, 18.F, 920.F, true);
+
+        assertTrue(history.updateCurrentViewState(state));
+        history.record(second, NavigationAction.FOLLOW_MEMBER);
+
+        NavigationEntry restored = history.back().orElseThrow();
+        assertSame(first, restored.target());
+        assertEquals(state, restored.viewState());
+        assertEquals(2, history.getEntries().size());
+    }
+
     private static NavigationTarget target(String name) {
         ClassNode node = new ClassNode(Opcodes.ASM9);
         node.name = name;

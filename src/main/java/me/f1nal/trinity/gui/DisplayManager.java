@@ -28,6 +28,7 @@ import me.f1nal.trinity.gui.navigation.NavigationAction;
 import me.f1nal.trinity.gui.navigation.NavigationEntry;
 import me.f1nal.trinity.gui.navigation.NavigationHistory;
 import me.f1nal.trinity.gui.navigation.NavigationTarget;
+import me.f1nal.trinity.gui.navigation.NavigationViewState;
 import me.f1nal.trinity.gui.search.GlobalSearchOverlay;
 import me.f1nal.trinity.gui.windows.WindowManager;
 import me.f1nal.trinity.gui.windows.api.ClosableWindow;
@@ -94,6 +95,7 @@ public final class DisplayManager extends ImGuiApplication {
     private final NavigationHistory navigationHistory = new NavigationHistory(this::persistNavigationHistory);
     private FileSelectorComponent databaseOpenFileSelector;
     private NavigationTarget currentDecompilerTarget;
+    private DecompilerWindow currentDecompilerWindow;
     private boolean initialized;
     private boolean defaultDockLayoutPending;
     private boolean unsavedChangesDialogOpen;
@@ -120,6 +122,7 @@ public final class DisplayManager extends ImGuiApplication {
         Main.runLater(this.windowManager::resetAllWindows);
         this.navigationHistory.reset();
         this.currentDecompilerTarget = null;
+        this.currentDecompilerWindow = null;
 
         if (this.trinity != null) {
             this.trinity.getExecution().getDexIndex().close();
@@ -596,11 +599,14 @@ public final class DisplayManager extends ImGuiApplication {
         if (track) {
             if (action != NavigationAction.FOLLOW_CONSTANT && action != NavigationAction.FOLLOW_PATTERN) {
                 ensureCurrentNavigationRecorded();
+            } else {
+                updateCurrentNavigationViewState();
             }
             this.navigationHistory.record(target, action, displayText);
         }
         DecompilerWindow window = this.openDecompilerViewDirect(input, instruction);
         this.currentDecompilerTarget = target;
+        this.currentDecompilerWindow = window;
         if (track) {
             showNavigationNotification(action.getNotificationPrefix() + " " + target.describe(trinity));
         }
@@ -615,8 +621,11 @@ public final class DisplayManager extends ImGuiApplication {
         return decompilerWindow;
     }
 
-    public void trackCurrentDecompilerView(Input<?> input, AbstractInsnNode instruction) {
-        if (input != null) this.currentDecompilerTarget = NavigationTarget.capture(input, instruction);
+    public void trackCurrentDecompilerView(DecompilerWindow window, Input<?> input,
+                                           AbstractInsnNode instruction) {
+        if (input == null) return;
+        this.currentDecompilerWindow = window;
+        this.currentDecompilerTarget = NavigationTarget.capture(input, instruction);
     }
 
     public boolean navigateBack() {
@@ -627,12 +636,14 @@ public final class DisplayManager extends ImGuiApplication {
     }
 
     public boolean navigateForward() {
+        updateCurrentNavigationViewState();
         return this.navigationHistory.forward()
                 .map(entry -> replayNavigation(entry, "Navigated forward to"))
                 .orElse(false);
     }
 
     public boolean replayNavigation(int index) {
+        updateCurrentNavigationViewState();
         return this.navigationHistory.select(index)
                 .map(entry -> replayNavigation(entry, "Reopened"))
                 .orElse(false);
@@ -644,8 +655,11 @@ public final class DisplayManager extends ImGuiApplication {
             showNavigationNotification("Navigation target is no longer available");
             return false;
         }
-        this.openDecompilerViewDirect(resolved.input(), resolved.instruction());
+        DecompilerWindow window = this.openDecompilerViewDirect(
+                resolved.input(), resolved.instruction());
+        window.restoreNavigationViewState(entry.viewState());
         this.currentDecompilerTarget = entry.target();
+        this.currentDecompilerWindow = window;
         showNavigationNotification(prefix + " " + entry.target().describe(trinity));
         return true;
     }
@@ -656,6 +670,20 @@ public final class DisplayManager extends ImGuiApplication {
         if (current == null || !current.target().equals(currentDecompilerTarget)) {
             navigationHistory.record(currentDecompilerTarget, NavigationAction.NAVIGATE);
         }
+        updateCurrentNavigationViewState();
+    }
+
+    private void updateCurrentNavigationViewState() {
+        NavigationEntry current = navigationHistory.getCurrent();
+        DecompilerWindow window = this.currentDecompilerWindow;
+        if (current == null || currentDecompilerTarget == null
+                || !current.target().equals(currentDecompilerTarget)
+                || window == null || window.isDisposed() || !window.isVisible()
+                || !window.isShowing(currentDecompilerTarget)) {
+            return;
+        }
+        NavigationViewState viewState = window.captureNavigationViewState();
+        navigationHistory.updateCurrentViewState(viewState);
     }
 
     private void showNavigationNotification(String message) {
