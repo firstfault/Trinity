@@ -84,7 +84,8 @@ public class NestedMemberAccess {
                     (parcount == 0 && fexpr.isStatic())) {
                   if (fexpr.getClassname().equals(node.classStruct.qualifiedName)) {  // FIXME: check for private flag of the field
                     if (fexpr.isStatic() ||
-                        (fexpr.getInstance().type == Exprent.EXPRENT_VAR && ((VarExprent)fexpr.getInstance()).getIndex() == 0)) {
+                        (fexpr.getInstance() != null && fexpr.getInstance().type == Exprent.EXPRENT_VAR
+                         && ((VarExprent)fexpr.getInstance()).getIndex() == 0)) {
                       type = MethodAccess.FIELD_GET;
                     }
                   }
@@ -117,7 +118,8 @@ public class NestedMemberAccess {
                       (parcount == 1 && fexpras.isStatic())) {
                     if (fexpras.getClassname().equals(node.classStruct.qualifiedName)) { // FIXME: check for private flag of the field
                       if (fexpras.isStatic() ||
-                          (fexpras.getInstance().type == Exprent.EXPRENT_VAR && ((VarExprent)fexpras.getInstance()).getIndex() == 0)) {
+                          (fexpras.getInstance() != null && fexpras.getInstance().type == Exprent.EXPRENT_VAR
+                           && ((VarExprent)fexpras.getInstance()).getIndex() == 0)) {
                         if (((VarExprent)asexpr.getRight()).getIndex() == parcount - 1) {
                           type = MethodAccess.FIELD_SET;
                         }
@@ -136,7 +138,8 @@ public class NestedMemberAccess {
 
               boolean isStatic = invexpr.isStatic();
               if ((isStatic && invexpr.getParameters().size() == parcount) ||
-                  (!isStatic && invexpr.getInstance().type == Exprent.EXPRENT_VAR
+                  (!isStatic && invexpr.getInstance() != null
+                   && invexpr.getInstance().type == Exprent.EXPRENT_VAR
                    && ((VarExprent)invexpr.getInstance()).getIndex() == 0 && invexpr.getParameters().size() == parcount - 1)) {
 
                 boolean equalpars = true;
@@ -174,7 +177,8 @@ public class NestedMemberAccess {
                     (parcount == 1 && fexpras.isStatic())) {
                   if (fexpras.getClassname().equals(node.classStruct.qualifiedName)) { // FIXME: check for private flag of the field
                     if (fexpras.isStatic() ||
-                        (fexpras.getInstance().type == Exprent.EXPRENT_VAR && ((VarExprent)fexpras.getInstance()).getIndex() == 0)) {
+                        (fexpras.getInstance() != null && fexpras.getInstance().type == Exprent.EXPRENT_VAR
+                         && ((VarExprent)fexpras.getInstance()).getIndex() == 0)) {
                       if (((VarExprent)asexpr.getRight()).getIndex() == parcount - 1) {
 
                         ExitExprent exexpr = (ExitExprent)exprentSecond;

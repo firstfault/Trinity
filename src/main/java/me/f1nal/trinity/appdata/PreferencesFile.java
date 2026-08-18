@@ -21,11 +21,13 @@ import java.util.Map;
 import java.util.Set;
 
 public class PreferencesFile extends AppDataFile {
+    private static final int MAX_DECOMPILER_THREADS = 256;
     private NumberDisplayTypeEnum defaultNumberDisplayType = NumberDisplayTypeEnum.DECIMAL;
     private SearchMaxDisplay searchMaxDisplay = SearchMaxDisplay.MAX_200;
     private boolean decompilerHideComments = false;
     private boolean decompilerNormalizeText = false;
     private boolean decompilerEnumClass = false;
+    private int decompilerThreads = defaultDecompilerThreads();
     private boolean autoviewXref = false;
     private boolean checkForUpdates = true;
     private boolean navigationNotifications = false;
@@ -92,6 +94,24 @@ public class PreferencesFile extends AppDataFile {
 
     public boolean isDecompilerEnumClass() {
         return decompilerEnumClass;
+    }
+
+    /**
+     * Uses the logical processor count reported to this JVM while reserving one processor for the
+     * render thread and other application work.
+     */
+    public static int defaultDecompilerThreads() {
+        return Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+    }
+
+    public int getDecompilerThreads() {
+        if (decompilerThreads <= 0) decompilerThreads = defaultDecompilerThreads();
+        decompilerThreads = Math.min(decompilerThreads, MAX_DECOMPILER_THREADS);
+        return decompilerThreads;
+    }
+
+    public void setDecompilerThreads(int decompilerThreads) {
+        this.decompilerThreads = Math.max(1, Math.min(decompilerThreads, MAX_DECOMPILER_THREADS));
     }
 
     public void setCurrentTheme(Theme currentTheme) {

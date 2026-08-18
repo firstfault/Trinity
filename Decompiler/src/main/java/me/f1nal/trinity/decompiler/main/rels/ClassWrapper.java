@@ -22,14 +22,20 @@ import me.f1nal.trinity.decompiler.modules.decompiler.vars.VarVersionPair;
 import me.f1nal.trinity.decompiler.struct.StructClass;
 import me.f1nal.trinity.decompiler.struct.StructMethod;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class ClassWrapper {
   private final StructClass classStruct;
-  private final Set<String> hiddenMembers = new HashSet<>();
+  private final Set<String> hiddenMembers = ConcurrentHashMap.newKeySet();
   private final VBStyleCollection<Exprent, String> staticFieldInitializers = new VBStyleCollection<>();
   private final VBStyleCollection<Exprent, String> dynamicFieldInitializers = new VBStyleCollection<>();
   private final VBStyleCollection<MethodWrapper, String> methods = new VBStyleCollection<>();
@@ -48,19 +54,64 @@ public class ClassWrapper {
     DecompilerContext.getLogger().startClass(classStruct.qualifiedName);
 
     boolean testMode = DecompilerContext.getOption(IFernflowerPreferences.UNIT_TEST_MODE);
-    CancellationManager cancellationManager = DecompilerContext.getCancellationManager();
-    for (StructMethod mt : classStruct.getMethods()) {
-      DecompilerContext.getLogger().startMethod(mt.getName() + " " + mt.getDescriptor());
+    DecompilerContext parentContext = DecompilerContext.getCurrentContext();
+    List<StructMethod> sourceMethods = new ArrayList<>(classStruct.getMethods());
+    int threadCount = testMode ? 1 : getMethodThreadCount(sourceMethods.size());
 
+    try {
+      if (threadCount <= 1) {
+        for (StructMethod method : sourceMethods) {
+          installMethod(processMethod(method, parentContext, testMode), methodDecompiled);
+        }
+      }
+      else {
+        // Initialize lazy class state once before workers begin reading it.
+        classStruct.getPool();
+        AtomicInteger threadNumber = new AtomicInteger();
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount, runnable -> {
+          Thread thread = new Thread(runnable,
+            "Fernflower Method " + threadNumber.incrementAndGet());
+          thread.setDaemon(true);
+          return thread;
+        });
+        try {
+          List<Future<MethodResult>> futures = new ArrayList<>(sourceMethods.size());
+          for (StructMethod method : sourceMethods) {
+            futures.add(executor.submit(() -> processMethod(method, parentContext, false)));
+          }
+          // Installation and source callbacks remain in classfile order. This keeps output stable
+          // and prevents the final writer/import collector from becoming concurrent.
+          for (Future<MethodResult> future : futures) {
+            installMethod(await(future), methodDecompiled);
+          }
+        }
+        finally {
+          executor.shutdownNow();
+        }
+      }
+    }
+    finally {
+      DecompilerContext.setCurrentContext(parentContext);
+      DecompilerContext.getLogger().endClass();
+    }
+  }
+
+  private MethodResult processMethod(StructMethod mt, DecompilerContext parentContext,
+                                     boolean testMode) {
+    DecompilerContext previousContext = DecompilerContext.getCurrentContext();
+    DecompilerContext methodContext = parentContext.forkForMethod();
+    DecompilerContext.setCurrentContext(methodContext);
+    DecompilerContext.getLogger().startMethod(mt.getName() + " " + mt.getDescriptor());
+
+    try {
       MethodDescriptor md = MethodDescriptor.parseDescriptor(mt.getDescriptor());
       VarProcessor varProc = new VarProcessor(classStruct, mt, md);
       DecompilerContext.startMethod(varProc);
 
       VarNamesCollector vc = varProc.getVarNamesCollector();
       CounterContainer counter = DecompilerContext.getCounterContainer();
-
+      CancellationManager cancellationManager = DecompilerContext.getCancellationManager();
       RootStatement root = null;
-
       boolean isError = false;
       Throwable errorThrowable = null;
 
@@ -75,7 +126,7 @@ public class ClassWrapper {
             try {
               cancellationManager.startMethod(classStruct.qualifiedName, mt.getName());
               MethodProcessorRunnable mtProc =
-                new MethodProcessorRunnable(classStruct, mt, md, varProc, DecompilerContext.getCurrentContext());
+                new MethodProcessorRunnable(classStruct, mt, md, varProc, context);
               mtProc.run();
               cancellationManager.checkCanceled();
               root = mtProc.getResult();
@@ -121,26 +172,64 @@ public class ClassWrapper {
         methodWrapper.setErrorStacktrace(errorThrowable);
       }
 
-      methods.addWithKey(methodWrapper, InterpreterUtil.makeUniqueKey(mt.getName(), mt.getDescriptor()));
-
       if (!isError) {
         // rename vars so that no one has the same name as a field
         VarNamesCollector namesCollector = new VarNamesCollector();
         classStruct.getFields().forEach(f -> namesCollector.addName(f.getName()));
         varProc.refreshVarNames(namesCollector);
 
-        applyParameterNames(mt, md, varProc);  // if parameter names are present and should be used
-
-        applyDebugInfo(mt, varProc, methodWrapper);  // if debug information is present and should be used
+        applyParameterNames(mt, md, varProc);
+        applyDebugInfo(mt, varProc, methodWrapper);
       }
-
-      methodDecompiled.accept(mt);
-
-      DecompilerContext.getLogger().endMethod();
+      return new MethodResult(mt, methodWrapper);
     }
-
-    DecompilerContext.getLogger().endClass();
+    finally {
+      DecompilerContext.getLogger().endMethod();
+      DecompilerContext.setCurrentContext(previousContext);
+    }
   }
+
+  private void installMethod(MethodResult result, Consumer<StructMethod> methodDecompiled) {
+    StructMethod method = result.method();
+    MethodWrapper wrapper = result.wrapper();
+    methods.addWithKey(wrapper, InterpreterUtil.makeUniqueKey(method.getName(), method.getDescriptor()));
+    DecompilerContext.restoreMethod(wrapper.varproc, wrapper.counter);
+    methodDecompiled.accept(method);
+  }
+
+  private static MethodResult await(Future<MethodResult> future) {
+    try {
+      return future.get();
+    }
+    catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new CancellationManager.CanceledException(exception);
+    }
+    catch (ExecutionException exception) {
+      Throwable cause = exception.getCause();
+      if (cause instanceof CancellationManager.CanceledException canceledException) {
+        throw canceledException;
+      }
+      if (cause instanceof RuntimeException runtimeException) {
+        throw runtimeException;
+      }
+      throw new RuntimeException(cause);
+    }
+  }
+
+  private static int getMethodThreadCount(int methodCount) {
+    Object value = DecompilerContext.getProperty(IFernflowerPreferences.METHOD_PROCESSING_THREADS);
+    int configured;
+    try {
+      configured = Integer.parseInt(String.valueOf(value));
+    }
+    catch (NumberFormatException ignored) {
+      configured = 1;
+    }
+    return Math.max(1, Math.min(configured, methodCount));
+  }
+
+  private record MethodResult(StructMethod method, MethodWrapper wrapper) { }
 
   private static void applyParameterNames(StructMethod mt, MethodDescriptor md, VarProcessor varProc) {
     if (DecompilerContext.getOption(IFernflowerPreferences.USE_METHOD_PARAMETERS)) {

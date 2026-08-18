@@ -231,6 +231,8 @@ public final class Decompiler implements IEventListener {
         options.put(IFernflowerPreferences.DECOMPILE_ENUM, treatEnumAsClass ? "0" : "1");
         options.put(IFernflowerPreferences.REMOVE_BRIDGE, "0");
         options.put(IFernflowerPreferences.REMOVE_SYNTHETIC, "0");
+        options.put(IFernflowerPreferences.METHOD_PROCESSING_THREADS,
+                Integer.toString(Main.getPreferences().getDecompilerThreads()));
         return options;
     }
 

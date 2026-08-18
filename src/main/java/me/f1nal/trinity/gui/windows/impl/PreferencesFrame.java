@@ -5,6 +5,7 @@ import imgui.flag.ImGuiColorEditFlags;
 import imgui.flag.ImGuiKey;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiWindowFlags;
+import imgui.type.ImInt;
 import me.f1nal.trinity.Main;
 import me.f1nal.trinity.Trinity;
 import me.f1nal.trinity.appdata.PreferencesFile;
@@ -27,6 +28,7 @@ public class PreferencesFrame extends StaticWindow {
     private final EnumComboBox<NumberDisplayTypeEnum> numberDisplayTypeComboBox;
     private final EnumComboBox<SearchMaxDisplay> searchMaxDisplayComboBox;
     private final PreferencesFile preferencesFile;
+    private final ImInt decompilerThreads;
     private Bindable editingBind;
     private boolean captureArmed;
     private String keyMappingStatus;
@@ -38,6 +40,7 @@ public class PreferencesFrame extends StaticWindow {
         this.windowFlags |= ImGuiWindowFlags.AlwaysAutoResize;
         this.numberDisplayTypeComboBox = new EnumComboBox<>("Number Display Type", NumberDisplayTypeEnum.values(), preferencesFile.getDefaultNumberDisplayType());
         this.searchMaxDisplayComboBox = new EnumComboBox<>("Search Element Limit", SearchMaxDisplay.values(), preferencesFile.getSearchMaxDisplay());
+        this.decompilerThreads = new ImInt(preferencesFile.getDecompilerThreads());
     }
 
     @Override
@@ -101,6 +104,18 @@ public class PreferencesFrame extends StaticWindow {
                     preferencesFile.setDecompilerEnumClass(!preferencesFile.isDecompilerEnumClass());
                 }
                 GuiUtil.tooltip("Treat enums as plain Java classes. Requires decompiler refresh.");
+
+                ImGui.spacing();
+                ImGui.separatorText("Performance");
+                ImGui.text("Method decompilation threads");
+                ImGui.setNextItemWidth(110.F);
+                if (ImGui.inputInt("###DecompilerThreads", this.decompilerThreads, 1, 2)) {
+                    preferencesFile.setDecompilerThreads(this.decompilerThreads.get());
+                    this.decompilerThreads.set(preferencesFile.getDecompilerThreads());
+                }
+                GuiUtil.tooltip("Maximum methods analyzed at once for new decompilations. "
+                        + "This JVM reports " + Runtime.getRuntime().availableProcessors()
+                        + " logical processors.");
 
                 ImGui.endTabItem();
             }

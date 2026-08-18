@@ -14,6 +14,7 @@ import me.f1nal.trinity.decompiler.modules.renamer.PoolInterceptor;
 import me.f1nal.trinity.decompiler.struct.StructContext;
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Objects;
 
 public class DecompilerContext {
@@ -114,6 +115,25 @@ public class DecompilerContext {
     DecompilerContext context = getCurrentContext();
     context.varProcessor = varProcessor;
     context.counterContainer = new CounterContainer();
+  }
+
+  public static void restoreMethod(VarProcessor varProcessor, CounterContainer counterContainer) {
+    DecompilerContext context = getCurrentContext();
+    context.varProcessor = varProcessor;
+    context.counterContainer = counterContainer;
+  }
+
+  /**
+   * Creates isolated mutable method state while sharing the immutable class model and the
+   * cancellation service. The import collector is shared for read-only type resolution during
+   * analysis; source writing remains serialized on the parent context.
+   */
+  public DecompilerContext forkForMethod() {
+    DecompilerContext context = new DecompilerContext(new HashMap<>(properties), logger,
+      structContext, classProcessor, poolInterceptor, cancellationManager,
+      decompilationProgressListener);
+    context.importCollector = importCollector;
+    return context;
   }
 
   // *****************************************************************************

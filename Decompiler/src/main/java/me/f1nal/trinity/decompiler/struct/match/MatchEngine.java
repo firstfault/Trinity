@@ -80,7 +80,10 @@ public class MatchEngine {
     "string", VarType.VARTYPE_STRING);
 
   private final MatchNode rootNode;
-  private final Map<String, Object> variables = new HashMap<>();
+  // MatchEngine instances may be reused by concurrent method workers. Captures belong to one
+  // match operation/thread and must never bleed into another method's expression tree.
+  private final ThreadLocal<Map<String, Object>> variables =
+    ThreadLocal.withInitial(HashMap::new);
 
   public MatchEngine(String description) {
     // each line is a separate statement/expression
@@ -154,7 +157,7 @@ public class MatchEngine {
   }
 
   public boolean match(IMatchable object) {
-    variables.clear();
+    variables.get().clear();
     return match(this.rootNode, object);
   }
 
@@ -185,17 +188,18 @@ public class MatchEngine {
   }
 
   public boolean checkAndSetVariableValue(String name, Object value) {
-    Object old_value = variables.get(name);
+    Map<String, Object> captures = variables.get();
+    Object old_value = captures.get(name);
     if (old_value != null) {
       return old_value.equals(value);
     }
     else {
-      variables.put(name, value);
+      captures.put(name, value);
       return true;
     }
   }
 
   public Object getVariableValue(String name) {
-    return variables.get(name);
+    return variables.get().get(name);
   }
 }

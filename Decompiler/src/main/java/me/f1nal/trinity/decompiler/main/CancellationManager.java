@@ -43,7 +43,7 @@ public interface CancellationManager {
 
   class TimeoutCancellationManager implements CancellationManager {
     private final long maxMilis;
-    private long startMilis = 0;
+    private final ThreadLocal<Long> startMilis = ThreadLocal.withInitial(() -> 0L);
 
     protected TimeoutCancellationManager(int maxMethodTimeoutSec) {
       this.maxMilis = maxMethodTimeoutSec * 1000L;
@@ -51,23 +51,24 @@ public interface CancellationManager {
 
     @Override
     public void checkCanceled() throws CanceledException {
-      if (maxMilis <= 0 || startMilis <= 0) {
+      long startedAt = startMilis.get();
+      if (maxMilis <= 0 || startedAt <= 0) {
         return;
       }
       long timeMillis = System.currentTimeMillis();
-      if (timeMillis - startMilis > maxMilis) {
+      if (timeMillis - startedAt > maxMilis) {
         throw new TimeExceedException();
       }
     }
 
     @Override
     public void startMethod(String className, String methodName) {
-      startMilis = System.currentTimeMillis();
+      startMilis.set(System.currentTimeMillis());
     }
 
     @Override
     public void finishMethod(String className, String methodName) {
-      startMilis = 0;
+      startMilis.remove();
     }
   }
 }
