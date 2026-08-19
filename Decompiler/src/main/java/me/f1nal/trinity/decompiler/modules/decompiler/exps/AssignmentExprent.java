@@ -6,6 +6,8 @@ import me.f1nal.trinity.decompiler.main.ClassesProcessor;
 import me.f1nal.trinity.decompiler.main.DecompilerContext;
 import me.f1nal.trinity.decompiler.main.collectors.BytecodeMappingTracer;
 import me.f1nal.trinity.decompiler.modules.decompiler.ExprProcessor;
+import me.f1nal.trinity.decompiler.output.impl.FieldOutputMember;
+import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import me.f1nal.trinity.decompiler.struct.gen.VarType;
 import me.f1nal.trinity.decompiler.util.InterpreterUtil;
 import me.f1nal.trinity.decompiler.util.TextBuffer;
@@ -116,7 +118,10 @@ public class AssignmentExprent extends Exprent {
     TextBuffer buffer = new TextBuffer();
 
     if (fieldInClassInit) {
-      buffer.append(((FieldExprent)left).getName());
+      FieldExprent field = (FieldExprent)left;
+      buffer.append(OutputMemberSerializer.tag(field.getName(), length ->
+        new FieldOutputMember(length, field.getClassname(), field.getName(),
+          field.getDescriptor().descriptorString)));
     }
     else {
       buffer.append(left.toJava(indent, tracer));

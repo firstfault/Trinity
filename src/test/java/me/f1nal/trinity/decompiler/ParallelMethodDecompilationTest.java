@@ -2,8 +2,11 @@ package me.f1nal.trinity.decompiler;
 
 import me.f1nal.trinity.decompiler.main.extern.IFernflowerPreferences;
 import me.f1nal.trinity.decompiler.main.extern.IDecompilationProgressListener;
+import me.f1nal.trinity.decompiler.output.impl.FieldOutputMember;
+import me.f1nal.trinity.decompiler.output.serialize.OutputMemberSerializer;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
@@ -74,6 +77,20 @@ class ParallelMethodDecompilationTest {
                 startedMethods.subList(0, 3));
     }
 
+    @Test
+    void staticFinalWritesInClassInitializerCarryFieldMetadata() {
+        String owner = "fixture/StaticFieldWrites";
+        byte[] classBytes = createStaticFieldWriteClass(owner);
+
+        String source = decompile(classBytes, 2).source();
+        String fieldTag = OutputMemberSerializer.serializeTags(
+                new FieldOutputMember("VALUE".length(), owner, "VALUE", "I"));
+
+        assertNotNull(source);
+        // One tagged declaration plus both PUTSTATIC assignments in <clinit>.
+        assertEquals(3, countOccurrences(source, fieldTag + "VALUE"));
+    }
+
     private static DecompileResult decompile(byte[] classBytes, int threads) {
         Map<String, Object> options = new HashMap<>();
         options.put(IFernflowerPreferences.METHOD_PROCESSING_THREADS,
@@ -140,6 +157,47 @@ class ParallelMethodDecompilationTest {
         }
         writer.visitEnd();
         return writer.toByteArray();
+    }
+
+    private static byte[] createStaticFieldWriteClass(String owner) {
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        writer.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, owner,
+                null, "java/lang/Object", null);
+        writer.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
+                "VALUE", "I", null, null).visitEnd();
+
+        MethodVisitor initializer = writer.visitMethod(Opcodes.ACC_STATIC,
+                "<clinit>", "()V", null, null);
+        initializer.visitCode();
+        initializer.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System",
+                "nanoTime", "()J", false);
+        initializer.visitInsn(Opcodes.LCONST_0);
+        initializer.visitInsn(Opcodes.LCMP);
+        Label nonPositive = new Label();
+        Label end = new Label();
+        initializer.visitJumpInsn(Opcodes.IFLE, nonPositive);
+        initializer.visitInsn(Opcodes.ICONST_1);
+        initializer.visitFieldInsn(Opcodes.PUTSTATIC, owner, "VALUE", "I");
+        initializer.visitJumpInsn(Opcodes.GOTO, end);
+        initializer.visitLabel(nonPositive);
+        initializer.visitInsn(Opcodes.ICONST_2);
+        initializer.visitFieldInsn(Opcodes.PUTSTATIC, owner, "VALUE", "I");
+        initializer.visitLabel(end);
+        initializer.visitInsn(Opcodes.RETURN);
+        initializer.visitMaxs(0, 0);
+        initializer.visitEnd();
+        writer.visitEnd();
+        return writer.toByteArray();
+    }
+
+    private static int countOccurrences(String text, String target) {
+        int count = 0;
+        int offset = 0;
+        while ((offset = text.indexOf(target, offset)) >= 0) {
+            count++;
+            offset += target.length();
+        }
+        return count;
     }
 
     private record DecompileResult(String source, Set<String> workerThreads,
